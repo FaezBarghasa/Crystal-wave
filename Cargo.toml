@@ -9,107 +9,99 @@ description = "Clean-room pure Rust implementation and verification engine for A
 thiserror = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-# Bounded, wait-free Single-Producer Single-Consumer (SPSC) ringbuffer
+# -------------------------------------------------------------
+# 1. UI & GPU Graphics Pipeline
+# -------------------------------------------------------------
+# Core UI toolkit; enable 'wgpu', 'canvas', 'multi-window', and 'advanced'
+iced = { version = "0.14", features = [
+    "wgpu",
+    "canvas",
+    "multi-window",
+    "advanced",
+] }
+iced_wgpu = "0.14"
+
+# Raw GPU access for high-density waveform timelines (embedded in iced shader)
+wgpu = "30.0"
+bytemuck = { version = "1.20", features = ["derive"] }
+cosmic-text = "0.19.0"                                 # High-performance sub-pixel text rendering for rulers
+
+# -------------------------------------------------------------
+# 2. Audio Hardware I/O & Real-Time Kernel Promotion
+# -------------------------------------------------------------
+cpal = { version = "0.18", features = ["asio"] }
+jack = "0.13"
+
+# Real-time thread priority elevation (prevent OS kernel preemption)
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.61.2", features = ["Win32_System_Threading"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+mach2 = "0.7.0"
+
+# -------------------------------------------------------------
+# 3. Real-Time Safety & Lock-Free IPC
+# -------------------------------------------------------------
+# Wait-free bounded SPSC queue for audio <-> GUI telemetry
 rtrb = "0.4.0"
 
-# Defer dropping audio allocations to a background thread without stalling the audio loop
+# Deferred drop collector (never drop memory on the audio thread)
 basedrop = "0.1"
 
-# Cross-thread channels for non-realtime worker orchestration
+# Cross-thread channels for non-realtime workers (disk/analysis)
 crossbeam-channel = "0.5"
 
-# Lock-free atomic primitives for cross-thread playhead & meter values
+# Lock-free atomic floats for playheads, BPM, and parameter sliders
 atomic_float = "1.1"
 portable-atomic = "1.10"
 
-# Cross-platform stream abstraction (CoreAudio, WASAPI, ALSA)
-cpal = { version = "0.18.2", features = ["asio"] }
-
-# Pro-audio direct Linux backend for low latency & routing
-jack = "0.13"
-# Portable, platform-agnostic explicit SIMD (AVX2, AVX-512, ARM Neon)
+# -------------------------------------------------------------
+# 4. DSP Math, SIMD & Signal Processing
+# -------------------------------------------------------------
+# Explicit cross-platform SIMD vectorization (AVX2, AVX-512, NEON)
 wide = "1.7.1"
 
-# High-quality sync & async sample rate conversion (Sinc/FFT polyphase)
-rubato = "5.0.1"
+# High-quality sample rate conversion (polyphase sinc/FFT)
+rubato = "5.0"
 
-# Fast, lightweight FFT for spectral analyzers and phase correlation
+# Ultra-fast real-time FFT for spectrum analyzers
 microfft = "0.6"
 
-# Offline topology construction, dependency sorting & PDC path calculation
+# Graph DAG scheduling & latency compensation (PDC) calculation
 petgraph = "0.8.3"
+crossbeam-deque = "0.8" # Real-time task work queues for parallel DSP
+core_affinity = "0.8"   # Pin audio threads to performance cores
 
-# Work stealing / task queues for multi-core DSP graph processing
-crossbeam-deque = "0.8"
+# -------------------------------------------------------------
+# 5. Audio Codecs, Disk Streaming & Caching
+# -------------------------------------------------------------
+symphonia = { version = "0.6.1", features = ["all"] } # FLAC, MP3, AAC, OGG
+hound = "3.5" # Uncompressed WAV
+memmap2 = "0.9" # Peak pyramid mipmaps (zero-RAM wave files)
+rkyv = { version = "0.8", features = [
+    "validation",
+] } # Zero-copy project serialization
+rayon = "1.10" # Background disk buffering & offline render
 
-# CPU core affinity pinning for real-time DSP worker pools
-core_affinity = "0.8"
+# -------------------------------------------------------------
+# 6. MIDI 1.0 / 2.0 & Hardware Control
+# -------------------------------------------------------------
+midir = "0.11.1"
+wmidi = "4.0"    # Zero-alloc parsing for the real-time callback
+midly = "0.5"    # Fast SMF parsing for timeline clip loading
 
-# Zero-C-dependency audio decoder (FLAC, MP3, AAC, OGG, Vorbis)
-symphonia = { version = "0.6.1", features = ["all"] }
-
-# High-throughput uncompressed WAV reader/writer
-hound = "3.5"
-
-# Fast memory-mapping for waveform peak pyramids (mipmaps)
-memmap2 = "0.9"
-
-# Fast zero-copy project file serialization/deserialization
-rkyv = { version = "0.8", features = ["validation"] }
-zstd = "0.14.2"
-
-# Low-overhead parallel background jobs (waveform generation, offline bounce)
-rayon = "1.10"
-
-
-# Real-time hardware MIDI port binding
-midir = "0.11"
-
-# Real-time safe, zero-allocation MIDI 1.0/2.0 message parser for audio callback
-wmidi = "4.0"
-
-# Zero-copy SMF (Standard MIDI File) reader/writer for project loading
-midly = "0.5"
-
-# Safe, low-level wrapper for CLAP plugin hosting
-clack-host = "0.2.0"
+# -------------------------------------------------------------
+# 7. Plugin Hosting (CLAP & VST3)
+# -------------------------------------------------------------
+clack-host = "0.2"
 clack-extensions = "0.2"
-
-# VST3 C-ABI bindings
-vst3-sys = "*"
-
-# Dynamic library loading across OS platforms
+#vst3-sys = "0.6"
+raw-window-handle = "0.6"
 libloading = "0.9.0"
 
-# Native window handles to pass to CLAP/VST3 plugin GUI editors
-raw-window-handle = "0.6"
-
-
-# Primary DAW shell (mixer strips, channel parameters, transport, inspector)
-slint = { version = "1.18.1", features = ["backend-winit", "renderer-wgpu"] }
-
-# Low-level GPU pipeline for arrangement timeline, waveforms, and piano roll
-wgpu = "30.0.1"
-bytemuck = { version = "1.20", features = ["derive"] }
-
-# Multi-window and native event loop orchestration
-winit = "0.30"
-
-# High-performance text shaping for timeline rulers and track labels
-cosmic-text = "0.19.0"
-
-
-# Real-time thread priority promotion
-[target.'cfg(target_os = "linux")'.dependencies]
-libc = "0.2" # pthread_setschedparam, SCHED_FIFO
-
-[target.'cfg(target_os = "windows")'.dependencies]
-windows-sys = { version = "0.61.2", features = [
-    "Win32_System_Threading", # AvSetMmThreadCharacteristicsA (MMCSS "Pro Audio")
-] }
-
-[target.'cfg(target_os = "macos")'.dependencies]
-mach2 = "0.7.0" # THREAD_TIME_CONSTRAINT_POLICY (Mach RT audio policy)
 
 [dev-dependencies]
 proptest = "1.6"
