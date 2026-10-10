@@ -16,7 +16,6 @@ serde_json = "1.0"
 iced = { version = "0.14", features = [
     "wgpu",
     "canvas",
-    "multi-window",
     "advanced",
 ] }
 iced_wgpu = "0.14"
@@ -30,7 +29,7 @@ cosmic-text = "0.19.0"                                 # High-performance sub-pi
 # 2. Audio Hardware I/O & Real-Time Kernel Promotion
 # -------------------------------------------------------------
 cpal = { version = "0.18", features = ["asio"] }
-jack = "0.13"
+# jack = "0.13" # Optional hardware backend, requires libjack-dev
 
 # Real-time thread priority elevation (prevent OS kernel preemption)
 [target.'cfg(target_os = "linux")'.dependencies]
@@ -82,7 +81,7 @@ symphonia = { version = "0.6.1", features = ["all"] } # FLAC, MP3, AAC, OGG
 hound = "3.5" # Uncompressed WAV
 memmap2 = "0.9" # Peak pyramid mipmaps (zero-RAM wave files)
 rkyv = { version = "0.8", features = [
-    "validation",
+    "bytecheck",
 ] } # Zero-copy project serialization
 rayon = "1.10" # Background disk buffering & offline render
 

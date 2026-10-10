@@ -1,6 +1,27 @@
+pub mod arrangement_view;
+pub mod loop_region;
+pub mod marker;
+pub mod quantize_mode;
+pub mod region;
+pub mod snapping_mode;
+pub mod swing;
+pub mod track;
+pub mod track_group;
+
+pub use arrangement_view::ArrangementView;
+pub use loop_region::LoopRegion;
+pub use marker::Marker;
+pub use quantize_mode::QuantizeMode;
+pub use region::{Region, RegionKind};
+pub use snapping_mode::SnappingMode;
+pub use swing::SwingAmount;
+pub use track::{Color, ReturnNode, SendNode, Track, TrackType};
+pub use track_group::{GroupType, TrackGroup};
+
 use crate::error::{LogicError, Result};
 
 pub const PPQN: u64 = 960;
+pub const MAX_TRACKS: usize = 1000;
 
 #[derive(Debug, Clone)]
 pub struct TempoEvent {
@@ -19,6 +40,10 @@ pub struct TimeSignatureEvent {
 pub struct Timeline {
     pub tempo_map: Vec<TempoEvent>,
     pub signature_map: Vec<TimeSignatureEvent>,
+    pub tracks: Vec<Track>,
+    pub loop_region: LoopRegion,
+    pub swing: SwingAmount,
+    pub snapping_mode: SnappingMode,
 }
 
 impl Default for Timeline {
@@ -26,11 +51,71 @@ impl Default for Timeline {
         Self {
             tempo_map: vec![TempoEvent { tick: 0, bpm: 120.0 }],
             signature_map: vec![TimeSignatureEvent { tick: 0, numerator: 4, denominator: 4 }],
+            tracks: Vec::new(),
+            loop_region: LoopRegion::default(),
+            swing: SwingAmount::default(),
+            snapping_mode: SnappingMode::default(),
         }
     }
 }
 
 impl Timeline {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn add_track(&mut self, track: Track) -> Result<usize> {
+        if self.tracks.len() >= MAX_TRACKS {
+            return Err(LogicError::DspError("Maximum tracks (1000) reached".into()));
+        }
+        let id = self.tracks.len();
+        self.tracks.push(track);
+        Ok(id)
+    }
+
+    pub fn set_loop_region(&mut self, start_tick: u64, end_tick: u64) {
+        self.loop_region = LoopRegion::new(start_tick, end_tick);
+    }
+
+    pub fn set_swing(&mut self, swing: SwingAmount) {
+        self.swing = swing;
+    }
+
+    pub fn snap_to(&self, tick: u64, fps: f32) -> u64 {
+        let (num, denom) = self.current_signature(tick);
+        let bpm = self.current_bpm(tick);
+        self.snapping_mode.snap(tick, num, denom, fps, bpm)
+    }
+
+    pub fn quantize(&self, region: &mut Region, mode: QuantizeMode) {
+        let (num, denom) = self.current_signature(region.start_tick);
+        region.start_tick = mode.quantize_tick(region.start_tick, num, denom);
+    }
+
+    pub fn current_bpm(&self, tick: u64) -> f32 {
+        let mut bpm = 120.0f32;
+        for ev in &self.tempo_map {
+            if ev.tick <= tick {
+                bpm = ev.bpm;
+            } else {
+                break;
+            }
+        }
+        bpm
+    }
+
+    pub fn current_signature(&self, tick: u64) -> (u8, u8) {
+        let mut sig = (4u8, 4u8);
+        for ev in &self.signature_map {
+            if ev.tick <= tick {
+                sig = (ev.numerator, ev.denominator);
+            } else {
+                break;
+            }
+        }
+        sig
+    }
+
     pub fn tick_to_seconds(&self, target_tick: u64) -> f64 {
         let mut total_seconds = 0.0;
         let mut prev_tick = 0u64;
@@ -70,7 +155,7 @@ pub struct CompSlice {
 pub struct TakeFolder {
     pub takes: Vec<Take>,
     pub comp_slices: Vec<CompSlice>,
-    pub crossfade_samples: usize, // e.g. 5ms at 44.1kHz = ~220 samples
+    pub crossfade_samples: usize,
 }
 
 impl TakeFolder {
@@ -101,7 +186,6 @@ impl TakeFolder {
         Ok(())
     }
 
-    /// Render final composite audio track with equal-power crossfades at slice boundaries
     pub fn render_comp(&self, total_samples: usize) -> Vec<f32> {
         let mut output = vec![0.0; total_samples];
         let xfade_len = self.crossfade_samples;
@@ -114,14 +198,12 @@ impl TakeFolder {
                 for i in start..end {
                     let mut sample = take.audio_samples[i];
 
-                    // Equal-power crossfade at start
                     if i < start + xfade_len && start > 0 {
                         let phase = (i - start) as f32 / xfade_len as f32;
                         let fade_in = (phase * std::f32::consts::FRAC_PI_2).sin();
                         sample *= fade_in;
                     }
 
-                    // Equal-power crossfade at end
                     if i + xfade_len > end && end < output.len() {
                         let phase = (end - i) as f32 / xfade_len as f32;
                         let fade_out = (phase * std::f32::consts::FRAC_PI_2).sin();
