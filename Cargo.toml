@@ -2,5 +2,13 @@
 name = "Crystal-wave"
 version = "0.1.0"
 edition = "2024"
+authors = ["Faez Barghasa <faez.barghasa@gmail.com>"]
+description = "Clean-room pure Rust implementation and verification engine for Apple Logic Pro 12.3.1 core architectures"
 
 [dependencies]
+thiserror = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[dev-dependencies]
+proptest = "1.6"
