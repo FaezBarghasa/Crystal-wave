@@ -15,6 +15,15 @@ pub struct WaveformPeak {
     pub max: f32,
 }
 
+#[derive(Debug, Clone)]
+pub struct TimelineClipDisplay {
+    pub track_index: usize,
+    pub start_tick: u64,
+    pub length_ticks: u64,
+    pub name: String,
+    pub color_rgb: [u8; 3],
+}
+
 pub struct ArrangementCanvasProgram {
     pub playhead_tick: u64,
     pub visible_start_tick: u64,
@@ -23,6 +32,7 @@ pub struct ArrangementCanvasProgram {
     pub track_count: usize,
     pub loop_range: Option<(u64, u64)>,
     pub sample_peaks: Vec<WaveformPeak>,
+    pub clips: Vec<TimelineClipDisplay>,
 }
 
 impl ArrangementCanvasProgram {
@@ -35,6 +45,7 @@ impl ArrangementCanvasProgram {
             track_count: track_count.max(1),
             loop_range: Some((0, 3840 * 4)),
             sample_peaks: Vec::new(),
+            clips: Vec::new(),
         }
     }
 

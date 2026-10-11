@@ -48,3 +48,28 @@ impl FruitySoftClipper {
         }
     }
 }
+
+impl crate::plugins::plugin_host::AudioPlugin for FruitySoftClipper {
+    fn descriptor(&self) -> &crate::plugins::plugin_descriptor::PluginDescriptor {
+        static DESC: std::sync::OnceLock<crate::plugins::plugin_descriptor::PluginDescriptor> =
+            std::sync::OnceLock::new();
+        DESC.get_or_init(|| {
+            crate::plugins::plugin_descriptor::PluginDescriptor::new(
+                1004,
+                "Fruity Soft Clipper",
+                crate::plugins::plugin_descriptor::PluginCategory::Dynamics,
+            )
+        })
+    }
+
+    fn process(&mut self, left: &mut [f32], right: &mut [f32], _sidechain: Option<&[f32]>) {
+        FruitySoftClipper::process(self, left, right);
+    }
+
+    fn reset(&mut self) {}
+
+    fn parameters(&self) -> &[crate::plugins::plugin_parameters::PluginParameter] {
+        &[]
+    }
+}
+

@@ -2,6 +2,7 @@ use crate::mixing::meter::LevelMeter;
 use crate::mixing::routing_mode::SidechainRouting;
 use crate::mixing::send_node::SendNode;
 use crate::mixing::spatial_audio_processor::SpatialObjectPanner;
+use crate::plugins::PluginChain;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PanMode {
@@ -57,6 +58,7 @@ pub struct ChannelStrip {
     pub vca_group: Option<usize>,
     pub output_bus: usize,
     pub meter: LevelMeter,
+    pub plugins: PluginChain,
 }
 
 impl ChannelStrip {
@@ -75,6 +77,7 @@ impl ChannelStrip {
             vca_group: None,
             output_bus: 0,
             meter: LevelMeter::default(),
+            plugins: PluginChain::new(),
         }
     }
 
@@ -107,6 +110,10 @@ impl ChannelStrip {
     }
 
     pub fn process_block(&mut self, left: &mut [f32], right: &mut [f32], vca_gain: f32) {
+        // 1. Process inserts through plugin chain
+        self.plugins.process(left, right, None);
+
+        // 2. Linear gain & phase invert
         let gain = self.linear_gain() * vca_gain;
         let phase_mult = if self.phase_invert { -1.0 } else { 1.0 };
 

@@ -23,6 +23,8 @@ pub struct GrossBeatEngine {
     buffer_r: Vec<f32>,
     write_pos: usize,
     capacity: usize,
+    pub sample_rate: f32,
+    pub tempo_bpm: f32,
     pub time_preset: GrossBeatTimePreset,
     pub volume_preset: GrossBeatVolumePreset,
     pub mix: f32, // 0.0 to 1.0
@@ -37,6 +39,8 @@ impl GrossBeatEngine {
             buffer_r: vec![0.0; capacity],
             write_pos: 0,
             capacity,
+            sample_rate,
+            tempo_bpm: 120.0,
             time_preset: GrossBeatTimePreset::Off,
             volume_preset: GrossBeatVolumePreset::Off,
             mix: 1.0,
@@ -53,6 +57,12 @@ impl GrossBeatEngine {
         }
 
         let cap = self.capacity;
+        let samples_per_beat = ((self.sample_rate * 60.0) / self.tempo_bpm.max(10.0)).round() as usize;
+        let quarter_window = samples_per_beat.max(1);
+        let sixteenth_window = (samples_per_beat / 4).max(1);
+        let eighth_window = (samples_per_beat / 2).max(1);
+        let triplet_window = (samples_per_beat / 3).max(1);
+        let stop_window = (samples_per_beat * 2).max(1);
 
         for i in 0..len {
             let in_l = left[i];
@@ -77,12 +87,11 @@ impl GrossBeatEngine {
                 }
                 GrossBeatTimePreset::TapeStop => {
                     // Exponential deceleration pitch drop
-                    let decel = ((self.write_pos % 22050) as f32 / 22050.0).powi(2);
+                    let decel = ((self.write_pos % stop_window) as f32 / stop_window as f32).powi(2);
                     let read_idx = ((self.write_pos as f32 * (1.0 - decel)) as usize) % cap;
                     (self.buffer_l[read_idx], self.buffer_r[read_idx])
                 }
                 GrossBeatTimePreset::TripletStutter => {
-                    let triplet_window = 1470; // ~33ms
                     let read_idx = (self.write_pos / triplet_window * triplet_window) % cap;
                     (self.buffer_l[read_idx], self.buffer_r[read_idx])
                 }
@@ -92,15 +101,15 @@ impl GrossBeatEngine {
             let vol_gain = match self.volume_preset {
                 GrossBeatVolumePreset::Off => 1.0,
                 GrossBeatVolumePreset::SidechainPump => {
-                    let phase = (self.write_pos % 11025) as f32 / 11025.0; // 1/4 note pump
+                    let phase = (self.write_pos % quarter_window) as f32 / quarter_window as f32; // 1/4 note pump
                     (phase * std::f32::consts::FRAC_PI_2).sin()
                 }
                 GrossBeatVolumePreset::Gate16th => {
-                    let phase = (self.write_pos % 2756) as f32 / 2756.0; // 1/16 note
+                    let phase = (self.write_pos % sixteenth_window) as f32 / sixteenth_window as f32; // 1/16 note
                     if phase < 0.5 { 1.0 } else { 0.0 }
                 }
                 GrossBeatVolumePreset::SawDecay => {
-                    let phase = (self.write_pos % 5512) as f32 / 5512.0;
+                    let phase = (self.write_pos % eighth_window) as f32 / eighth_window as f32;
                     1.0 - phase
                 }
             };
@@ -115,3 +124,32 @@ impl GrossBeatEngine {
         }
     }
 }
+
+impl crate::plugins::plugin_host::AudioPlugin for GrossBeatEngine {
+    fn descriptor(&self) -> &crate::plugins::plugin_descriptor::PluginDescriptor {
+        static DESC: std::sync::OnceLock<crate::plugins::plugin_descriptor::PluginDescriptor> =
+            std::sync::OnceLock::new();
+        DESC.get_or_init(|| {
+            crate::plugins::plugin_descriptor::PluginDescriptor::new(
+                1005,
+                "Gross Beat",
+                crate::plugins::plugin_descriptor::PluginCategory::Modulation,
+            )
+        })
+    }
+
+    fn process(&mut self, left: &mut [f32], right: &mut [f32], _sidechain: Option<&[f32]>) {
+        GrossBeatEngine::process(self, left, right);
+    }
+
+    fn reset(&mut self) {
+        self.buffer_l.fill(0.0);
+        self.buffer_r.fill(0.0);
+        self.write_pos = 0;
+    }
+
+    fn parameters(&self) -> &[crate::plugins::plugin_parameters::PluginParameter] {
+        &[]
+    }
+}
+

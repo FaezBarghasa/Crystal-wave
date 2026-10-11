@@ -29,12 +29,12 @@ impl AuxBus {
     }
 
     pub fn prepare_buffer(&mut self, block_size: usize) {
-        if self.left_accumulator.len() != block_size {
-            self.left_accumulator = vec![0.0; block_size];
-            self.right_accumulator = vec![0.0; block_size];
-        } else {
-            self.clear();
+        if self.left_accumulator.len() < block_size {
+            self.left_accumulator.resize(block_size, 0.0);
+            self.right_accumulator.resize(block_size, 0.0);
         }
+        self.left_accumulator[..block_size].fill(0.0);
+        self.right_accumulator[..block_size].fill(0.0);
     }
 
     pub fn clear(&mut self) {

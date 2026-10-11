@@ -91,12 +91,25 @@ impl FlexPitchEngine {
         }
 
         let linear_gain = 10.0f32.powf(hotspot.gain_db / 20.0);
+        let slice_len = end - start;
+        let source_copy = buffer[start..end].to_vec();
 
-        // Simple time-domain pitch modulation approximation & gain
         for (local_idx, s) in buffer[start..end].iter_mut().enumerate() {
-            let _pitch_offset = self.calculate_instantaneous_pitch_offset(hotspot, local_idx);
-            // Apply gain
-            *s *= linear_gain;
+            let pitch_offset_semitones = self.calculate_instantaneous_pitch_offset(hotspot, local_idx);
+            let speed_ratio = 2.0f32.powf(pitch_offset_semitones / 12.0);
+            let src_f = local_idx as f32 * speed_ratio;
+            let src_i0 = src_f.floor() as usize;
+            let frac = src_f - src_f.floor();
+
+            let resampled = if src_i0 + 1 < slice_len {
+                source_copy[src_i0] * (1.0 - frac) + source_copy[src_i0 + 1] * frac
+            } else if src_i0 < slice_len {
+                source_copy[src_i0]
+            } else {
+                source_copy[slice_len.saturating_sub(1)]
+            };
+
+            *s = resampled * linear_gain;
         }
     }
 }
