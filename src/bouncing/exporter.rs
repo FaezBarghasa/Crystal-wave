@@ -56,6 +56,73 @@ impl Exporter {
         bit_conv.convert_to_bytes(&interleaved)
     }
 
+    /// Exports stereo audio stream to standard RIFF/WAV byte container using Hound
+    pub fn export_stereo_wav(
+        &self,
+        left: &[f32],
+        right: &[f32],
+        source_rate: f32,
+    ) -> Result<Vec<u8>, hound::Error> {
+        let mut work_l = left.to_vec();
+        let mut work_r = right.to_vec();
+
+        self.bounce_engine
+            .apply_normalization(&mut work_l, &mut work_r);
+
+        let (resampled_l, resampled_r) = if (source_rate - self.config.sample_rate).abs() > 1e-3 {
+            let src = SampleRateConverter::new(source_rate, self.config.sample_rate);
+            (src.resample(&work_l), src.resample(&work_r))
+        } else {
+            (work_l, work_r)
+        };
+
+        let spec = hound::WavSpec {
+            channels: 2,
+            sample_rate: self.config.sample_rate as u32,
+            bits_per_sample: match self.bit_depth {
+                BitDepth::Bit16 => 16,
+                BitDepth::Bit24 => 24,
+                BitDepth::Bit32Float => 32,
+            },
+            sample_format: match self.bit_depth {
+                BitDepth::Bit32Float => hound::SampleFormat::Float,
+                _ => hound::SampleFormat::Int,
+            },
+        };
+
+        let mut buffer = std::io::Cursor::new(Vec::new());
+        {
+            let mut writer = hound::WavWriter::new(&mut buffer, spec)?;
+            let len = resampled_l.len().min(resampled_r.len());
+            match self.bit_depth {
+                BitDepth::Bit16 => {
+                    for i in 0..len {
+                        let sl = (resampled_l[i].clamp(-1.0, 1.0) * 32767.0).round() as i16;
+                        let sr = (resampled_r[i].clamp(-1.0, 1.0) * 32767.0).round() as i16;
+                        writer.write_sample(sl)?;
+                        writer.write_sample(sr)?;
+                    }
+                }
+                BitDepth::Bit24 => {
+                    for i in 0..len {
+                        let sl = (resampled_l[i].clamp(-1.0, 1.0) * 8388607.0).round() as i32;
+                        let sr = (resampled_r[i].clamp(-1.0, 1.0) * 8388607.0).round() as i32;
+                        writer.write_sample(sl)?;
+                        writer.write_sample(sr)?;
+                    }
+                }
+                BitDepth::Bit32Float => {
+                    for i in 0..len {
+                        writer.write_sample(resampled_l[i])?;
+                        writer.write_sample(resampled_r[i])?;
+                    }
+                }
+            }
+            writer.finalize()?;
+        }
+        Ok(buffer.into_inner())
+    }
+
     /// Multi-track stems export
     pub fn export_stems(
         &self,

@@ -223,6 +223,47 @@ impl CrystalWaveApp {
             UiMessage::SaveProject => {
                 self.dirty = false;
             }
+            UiMessage::MenuAction(cmd) => match cmd {
+                crate::ui::message::MenuCommand::NewProject => {
+                    self.playhead_tick = 0;
+                    self.is_playing = false;
+                    self.dirty = false;
+                }
+                crate::ui::message::MenuCommand::SaveSession
+                | crate::ui::message::MenuCommand::SaveSessionAs => {
+                    self.dirty = false;
+                }
+                crate::ui::message::MenuCommand::ToggleMixer => {
+                    self.workspace.mixer_drawer_open = !self.workspace.mixer_drawer_open;
+                }
+                crate::ui::message::MenuCommand::TogglePianoRoll => {
+                    self.workspace.editor_drawer_open = true;
+                    self.workspace.active_editor = crate::ui_state::EditorDrawerTab::PianoRoll;
+                }
+                crate::ui::message::MenuCommand::ToggleInspector => {
+                    self.workspace.inspector_open = !self.workspace.inspector_open;
+                }
+                crate::ui::message::MenuCommand::AddAudioTrack => {
+                    let _ = self
+                        .mixer
+                        .add_channel(format!("Audio {}", self.mixer.channels.len() + 1));
+                    self.dirty = true;
+                }
+                crate::ui::message::MenuCommand::AddMidiTrack => {
+                    let _ = self
+                        .mixer
+                        .add_channel(format!("Inst {}", self.mixer.channels.len() + 1));
+                    self.dirty = true;
+                }
+                crate::ui::message::MenuCommand::SplitAtCursor => {
+                    self.update(UiMessage::KeyboardFocusCommand(
+                        crate::pro_tools::KeyboardFocusCommand::SplitAtCursor,
+                    ));
+                }
+                _ => {
+                    self.dirty = true;
+                }
+            },
         }
     }
 }

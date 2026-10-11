@@ -50,4 +50,33 @@ pub enum UiMessage {
     // Project Actions
     NewProject,
     SaveProject,
+    MenuAction(MenuCommand),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MenuCommand {
+    NewProject,
+    OpenSession,
+    SaveSession,
+    SaveSessionAs,
+    BounceWav,
+    ExportAaf,
+    Undo,
+    Redo,
+    Cut,
+    Copy,
+    Paste,
+    SplitAtCursor,
+    Quantize,
+    AddAudioTrack,
+    AddMidiTrack,
+    DuplicateTrack,
+    FreezeTrack,
+    DeleteTrack,
+    AudioSettings,
+    MidiSettings,
+    ToggleMixer,
+    TogglePianoRoll,
+    TogglePatcher,
+    ToggleInspector,
 }

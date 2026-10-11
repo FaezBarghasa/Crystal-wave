@@ -23,7 +23,7 @@ impl SampleRateConverter {
         }
     }
 
-    /// Resample buffer using windowed polyphase sinc interpolation
+    /// Windowed polyphase sinc interpolation with Blackman window
     pub fn resample(&self, input: &[f32]) -> Vec<f32> {
         if input.is_empty() {
             return Vec::new();
