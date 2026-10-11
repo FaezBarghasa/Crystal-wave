@@ -11,6 +11,7 @@ pub mod instruments;
 pub mod midi;
 pub mod mixer;
 pub mod mixing;
+pub mod os;
 pub mod plugins;
 pub mod smart_controls;
 pub mod timeline;
@@ -18,6 +19,7 @@ pub mod ui;
 pub mod ui_state;
 
 // Re-exports for convenience and backwards-compatibility
+pub use os::{ThreadPriorityManager, ThreadPriorityStatus};
 pub use ui::{CrystalWaveApp, UiMessage, UiSessionDriver};
 pub use dsp::compressor::{Compressor, CompressorConfig, CompressorModel, MultibandCompressor};
 pub use dsp::equalizer::{BiquadCoeffs, ChannelEq, EqBand, FilterType};

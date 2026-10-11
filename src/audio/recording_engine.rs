@@ -44,6 +44,7 @@ pub struct RecordingEngine {
     pub armed_tracks: Vec<usize>,
     pub track_buffers: Vec<Arc<Mutex<AudioTrackBuffer>>>,
     pub circular_buffers: Vec<CircularAudioBuffer>,
+    pub record_producers: Vec<Option<rtrb::Producer<f32>>>,
     pub takes: Vec<Take>,
     pub is_recording: bool,
     pub sample_rate: f32,
@@ -61,6 +62,7 @@ impl RecordingEngine {
             armed_tracks: Vec::new(),
             track_buffers: Vec::new(),
             circular_buffers: Vec::new(),
+            record_producers: Vec::new(),
             takes: Vec::new(),
             is_recording: false,
             sample_rate,
@@ -83,6 +85,16 @@ impl RecordingEngine {
             let cap = (self.sample_rate * 5.0).round() as usize;
             self.circular_buffers.push(CircularAudioBuffer::new(cap));
         }
+    }
+
+    pub fn arm_track_lock_free(&mut self, track_id: usize, capacity: usize) -> rtrb::Consumer<f32> {
+        self.arm_track(track_id);
+        let (prod, cons) = rtrb::RingBuffer::new(capacity);
+        while self.record_producers.len() <= track_id {
+            self.record_producers.push(None);
+        }
+        self.record_producers[track_id] = Some(prod);
+        cons
     }
 
     pub fn disarm_track(&mut self, track_id: usize) {
@@ -113,7 +125,7 @@ impl RecordingEngine {
         self.is_recording = false;
     }
 
-    pub fn append_samples(&mut self, track_id: usize, samples: &[f32]) {
+    pub fn append_samples_wait_free(&mut self, track_id: usize, samples: &[f32]) {
         if !self.is_armed(track_id) {
             return;
         }
@@ -137,13 +149,27 @@ impl RecordingEngine {
             chunk_start < self.punch_out_sample && chunk_end > self.punch_in_sample
         };
 
-        if should_record && track_id < self.track_buffers.len() {
-            if let Ok(mut buf) = self.track_buffers[track_id].lock() {
-                buf.extend_from_slice(samples);
+        if should_record {
+            // Lock-free SPSC streaming
+            if let Some(Some(prod)) = self.record_producers.get_mut(track_id) {
+                for &s in samples {
+                    let _ = prod.push(s);
+                }
+            }
+
+            // Non-blocking try_lock for legacy buffers
+            if track_id < self.track_buffers.len() {
+                if let Ok(mut buf) = self.track_buffers[track_id].try_lock() {
+                    buf.extend_from_slice(samples);
+                }
             }
         }
 
         self.current_sample_position = chunk_end;
+    }
+
+    pub fn append_samples(&mut self, track_id: usize, samples: &[f32]) {
+        self.append_samples_wait_free(track_id, samples);
     }
 
     pub fn commit_take(&mut self, track_id: usize, name: impl Into<String>) -> Option<Take> {

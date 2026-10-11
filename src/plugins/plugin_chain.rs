@@ -11,11 +11,17 @@ pub struct InsertSlot {
 
 pub struct PluginChain {
     pub slots: Vec<InsertSlot>,
+    dry_scratch_l: Vec<f32>,
+    dry_scratch_r: Vec<f32>,
 }
 
 impl Default for PluginChain {
     fn default() -> Self {
-        Self { slots: Vec::new() }
+        Self {
+            slots: Vec::new(),
+            dry_scratch_l: Vec::with_capacity(1024),
+            dry_scratch_r: Vec::with_capacity(1024),
+        }
     }
 }
 
@@ -53,8 +59,17 @@ impl PluginChain {
     }
 
     pub fn process(&mut self, left: &mut [f32], right: &mut [f32], sidechain: Option<&[f32]>) {
-        let mut dry_l = left.to_vec();
-        let mut dry_r = right.to_vec();
+        let len = left.len().min(right.len());
+        if len == 0 {
+            return;
+        }
+
+        if self.dry_scratch_l.len() < len {
+            self.dry_scratch_l.resize(len, 0.0);
+        }
+        if self.dry_scratch_r.len() < len {
+            self.dry_scratch_r.resize(len, 0.0);
+        }
 
         for slot in &mut self.slots {
             if slot.bypassed {
@@ -62,17 +77,17 @@ impl PluginChain {
             }
 
             if (slot.mix - 1.0).abs() > 1e-4 {
-                dry_l.copy_from_slice(left);
-                dry_r.copy_from_slice(right);
+                self.dry_scratch_l[..len].copy_from_slice(&left[..len]);
+                self.dry_scratch_r[..len].copy_from_slice(&right[..len]);
             }
 
             slot.plugin.process(left, right, sidechain);
 
             if (slot.mix - 1.0).abs() > 1e-4 {
                 let mix = slot.mix;
-                for i in 0..left.len().min(right.len()) {
-                    left[i] = dry_l[i] * (1.0 - mix) + left[i] * mix;
-                    right[i] = dry_r[i] * (1.0 - mix) + right[i] * mix;
+                for i in 0..len {
+                    left[i] = self.dry_scratch_l[i] * (1.0 - mix) + left[i] * mix;
+                    right[i] = self.dry_scratch_r[i] * (1.0 - mix) + right[i] * mix;
                 }
             }
         }

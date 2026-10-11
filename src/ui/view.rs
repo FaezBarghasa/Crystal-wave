@@ -54,12 +54,13 @@ impl CrystalWaveApp {
             content = content.push(inspector_box);
         }
 
-        let arrangement_box = container(text(format!(
-            "Arrangement Timeline [H-Zoom: {:.1}x]",
-            self.arrangement.horizontal_zoom
-        )))
-        .width(Length::Fill);
-        content = content.push(arrangement_box);
+        let canvas_program = crate::ui::canvas_timeline::ArrangementCanvasProgram::new(
+            self.playhead_tick,
+            self.arrangement.horizontal_zoom,
+            self.mixer.channels.len(),
+        );
+        let arrangement_canvas = crate::ui::canvas_timeline::view_canvas_timeline(canvas_program);
+        content = content.push(arrangement_canvas);
 
         content.into()
     }
