@@ -1,4 +1,5 @@
 pub mod arrangement_view;
+pub mod hybrid_pattern;
 pub mod loop_region;
 pub mod marker;
 pub mod quantize_mode;
@@ -9,6 +10,7 @@ pub mod track;
 pub mod track_group;
 
 pub use arrangement_view::{ArrangementView, BeatMappingPoint, CatchPlayheadMode, MovieTrackInfo};
+pub use hybrid_pattern::{HybridTimelineManager, Pattern, PatternInstance, PatternNote};
 pub use loop_region::{LoopRegion, RecordingOverdubMode};
 pub use marker::{Marker, MarkerType};
 pub use quantize_mode::{MusicalScale, QuantizeMode};

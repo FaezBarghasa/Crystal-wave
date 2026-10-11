@@ -22,7 +22,11 @@ pub mod timeline;
 pub mod ui;
 pub mod ui_state;
 
-// Re-exports for convenience and backwards-compatibility
+pub use audio::{
+    AudioHardwareDriver, OnTheFlyPunchEngine, PunchState, StemSeparationResult, StemSeparatorEngine,
+    StemType,
+};
+pub use audio_edit::{DecoupledPlayheadSelection, PlaybackTarget, TapeScrubEngine};
 pub use dsp::compressor::{Compressor, CompressorConfig, CompressorModel, MultibandCompressor};
 pub use dsp::equalizer::{BiquadCoeffs, ChannelEq, EqBand, FilterType};
 pub use dsp::flex::{FlexMode, FlexPitchNote, FlexProcessor};
@@ -34,17 +38,23 @@ pub use fl_studio::{
     FlPianoRollNote, FlPianoRollTools, FlPlaylist, FlWindowManager, FruitySoftClipper,
     GrossBeatEngine, GrossBeatTimePreset, GrossBeatVolumePreset, PlaylistItem, SplineNode,
 };
+pub use format::{
+    AafClip, AafSession, AafTrack, EdlEvent, EdlTransition, SmpteFrameRate, SmpteTimecode,
+};
 pub use generative::{GenerativePerformanceParams, SessionPlayer, SessionPlayerType};
 pub use harmony::{Chord, ChordQuality, ChordTrack, MarkovProgressionEngine};
-pub use midi::{MidiDirection, SequencerStep, StepSequencerLane};
+pub use midi::{GhostNote, GhostPolyphonyView, MidiDirection, SequencerStep, StepSequencerLane};
 pub use mixer::{ChannelStrip, DolbyAtmosPanner, PanMode, PanPosition, SendMode, SendSlot};
+pub use mixing::{
+    AutomationPreviewManager, ChannelCueSend, CueMatrix, CueMix, FloatingAutomationObject,
+};
 pub use os::{ThreadPriorityManager, ThreadPriorityStatus};
 pub use pro_tools::{
     ClipGeometry, GroupedTake, HardwareInsert, IoMatrix, KeyboardFocusCommand, MemoryLocation,
     MemoryLocationBank, MultiTrackPlaylistGroup, PhysicalPort, PortDirection, ProToolsClip,
-    SmartToolAction, SmartToolContext, VcaManager, VcaMaster,
+    SmartToolAction, SmartToolContext, TrackSpillState, VcaManager, VcaMaster,
 };
 pub use smart_controls::{ParameterMapping, SmartControlsLayout, SmartKnob};
-pub use timeline::{PPQN, TakeFolder, Timeline};
+pub use timeline::{HybridTimelineManager, Pattern, PatternInstance, PatternNote, PPQN, TakeFolder, Timeline};
 pub use ui::{CrystalWaveApp, UiMessage, UiSessionDriver};
 pub use ui_state::{DualChannelInspector, EditorDrawerTab, LcdDisplayMode, WorkspaceState};

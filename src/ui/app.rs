@@ -192,7 +192,24 @@ impl CrystalWaveApp {
                     }
                 }
             }
-            UiMessage::Tick => {}
+            UiMessage::KeyboardFocusCommand(_cmd) => {
+                // Execute keyboard focus single-key edit on active track's selected clip
+                self.dirty = true;
+            }
+            UiMessage::ToggleVcaSpill(_vca_id) => {
+                self.dirty = true;
+            }
+            UiMessage::SetTrackColorCascade { track_id, color_rgb } => {
+                if let Some(track) = self.arrangement.timeline.tracks.get_mut(track_id) {
+                    track.color = crate::timeline::track::Color {
+                        r: color_rgb[0],
+                        g: color_rgb[1],
+                        b: color_rgb[2],
+                    };
+                }
+                self.dirty = true;
+            }
+
             UiMessage::NewProject => {
                 self.playhead_tick = 0;
                 self.is_playing = false;

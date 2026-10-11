@@ -119,4 +119,29 @@ impl SpatialObjectPanner {
             + bed[0] * 0.2;
         (left * 0.6, right * 0.6)
     }
+
+    /// Positions object on 3D spherical dome
+    pub fn move_to(&mut self, azimuth_deg: f32, elevation_deg: f32) {
+        self.azimuth_deg = azimuth_deg.clamp(-180.0, 180.0);
+        self.elevation_deg = elevation_deg.clamp(0.0, 90.0);
+        self.height = self.elevation_deg / 90.0;
+    }
+
+    /// Renders a mono input audio stream into a 12-channel 7.1.4 bed block
+    pub fn render_3d_block(&self, input: &[f32], output_12ch: &mut [&mut [f32]]) {
+        if output_12ch.len() < BED_CHANNELS_7_1_4 {
+            return;
+        }
+        let bed_gains = self.calculate_bed_gains();
+        let n = input.len();
+
+        for ch in 0..BED_CHANNELS_7_1_4 {
+            let gain = bed_gains[ch];
+            let out_slice = &mut output_12ch[ch];
+            let len = n.min(out_slice.len());
+            for i in 0..len {
+                out_slice[i] = input[i] * gain;
+            }
+        }
+    }
 }

@@ -33,16 +33,25 @@ impl VcaMaster {
     }
 }
 
-/// Manager handling VCA Masters, routing calculations, and console-like behavior.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TrackSpillState {
+    Normal,
+    SpillIsolated,
+    SpillDimmed,
+}
+
+/// Manager handling VCA Masters, routing calculations, console-like behavior, and Spill grouping.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct VcaManager {
     pub masters: Vec<VcaMaster>,
+    pub active_spill_vca: Option<usize>,
 }
 
 impl VcaManager {
     pub fn new() -> Self {
         Self {
             masters: Vec::new(),
+            active_spill_vca: None,
         }
     }
 
@@ -135,5 +144,32 @@ impl VcaManager {
             }
         }
         false
+    }
+
+    /// Toggles spill mode for a VCA master. Isolates slave channels on the console.
+    pub fn toggle_spill(&mut self, vca_id: usize) {
+        if self.active_spill_vca == Some(vca_id) {
+            self.active_spill_vca = None;
+        } else {
+            self.active_spill_vca = Some(vca_id);
+        }
+    }
+
+    /// Evaluates console spill status for a track: Normal, Isolated, or Dimmed.
+    #[inline]
+    pub fn track_spill_state(&self, track_id: usize) -> TrackSpillState {
+        if let Some(spill_id) = self.active_spill_vca {
+            if let Some(vca) = self.masters.get(spill_id) {
+                if vca.assigned_track_ids.contains(&track_id) {
+                    TrackSpillState::SpillIsolated
+                } else {
+                    TrackSpillState::SpillDimmed
+                }
+            } else {
+                TrackSpillState::Normal
+            }
+        } else {
+            TrackSpillState::Normal
+        }
     }
 }

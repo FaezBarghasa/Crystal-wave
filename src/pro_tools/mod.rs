@@ -11,4 +11,4 @@ pub use smart_tool::{
     ClipGeometry, KeyboardFocusCommand, ProToolsClip, SmartToolAction, SmartToolContext,
     handle_keyboard_focus_key,
 };
-pub use vca_group::{VcaManager, VcaMaster};
+pub use vca_group::{TrackSpillState, VcaManager, VcaMaster};

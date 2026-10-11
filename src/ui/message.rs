@@ -42,6 +42,11 @@ pub enum UiMessage {
     TelemetryReceived(TelemetryBatch),
     Tick,
 
+    // Keyboard Focus Single-Key Editing ('B', 'A', 'S', 'D', 'G', 'F')
+    KeyboardFocusCommand(crate::pro_tools::KeyboardFocusCommand),
+    ToggleVcaSpill(usize),
+    SetTrackColorCascade { track_id: usize, color_rgb: [u8; 3] },
+
     // Project Actions
     NewProject,
     SaveProject,
