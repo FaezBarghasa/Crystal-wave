@@ -39,7 +39,8 @@ pub use fl_studio::{
     GrossBeatEngine, GrossBeatTimePreset, GrossBeatVolumePreset, PlaylistItem, SplineNode,
 };
 pub use format::{
-    AafClip, AafSession, AafTrack, EdlEvent, EdlTransition, SmpteFrameRate, SmpteTimecode,
+    AafClip, AafSession, AafTrack, CrystaSessionEnvelope, EdgeRayAudioPacket,
+    EdgeRayTelemetryDatagram, EdlEvent, EdlTransition, SmpteFrameRate, SmpteTimecode,
 };
 pub use generative::{GenerativePerformanceParams, SessionPlayer, SessionPlayerType};
 pub use harmony::{Chord, ChordQuality, ChordTrack, MarkovProgressionEngine};

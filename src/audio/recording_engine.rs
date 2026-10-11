@@ -16,25 +16,42 @@ impl CircularAudioBuffer {
         Self {
             buffer: vec![0.0; capacity],
             write_pos: 0,
-            capacity,
+            capacity: capacity.max(1),
         }
     }
 
     pub fn write_samples(&mut self, samples: &[f32]) {
-        for &s in samples {
-            self.buffer[self.write_pos] = s;
-            self.write_pos = (self.write_pos + 1) % self.capacity;
+        let n = samples.len();
+        if n == 0 {
+            return;
+        }
+        if n >= self.capacity {
+            self.buffer.copy_from_slice(&samples[n - self.capacity..]);
+            self.write_pos = 0;
+            return;
+        }
+        let first_len = (self.capacity - self.write_pos).min(n);
+        self.buffer[self.write_pos..self.write_pos + first_len]
+            .copy_from_slice(&samples[..first_len]);
+        let remaining = n - first_len;
+        if remaining > 0 {
+            self.buffer[..remaining].copy_from_slice(&samples[first_len..]);
+            self.write_pos = remaining;
+        } else {
+            self.write_pos = (self.write_pos + first_len) % self.capacity;
         }
     }
 
     /// Read the latest N samples in chronological order
     pub fn read_latest(&self, n: usize) -> Vec<f32> {
         let count = n.min(self.capacity);
-        let mut out = Vec::with_capacity(count);
+        let mut out = vec![0.0; count];
         let start_pos = (self.write_pos + self.capacity - count) % self.capacity;
-        for i in 0..count {
-            let idx = (start_pos + i) % self.capacity;
-            out.push(self.buffer[idx]);
+        let first_len = (self.capacity - start_pos).min(count);
+        out[..first_len].copy_from_slice(&self.buffer[start_pos..start_pos + first_len]);
+        let remaining = count - first_len;
+        if remaining > 0 {
+            out[first_len..].copy_from_slice(&self.buffer[..remaining]);
         }
         out
     }
@@ -150,10 +167,18 @@ impl RecordingEngine {
         };
 
         if should_record {
-            // Lock-free SPSC streaming
+            // Bulk lock-free SPSC chunk write
             if let Some(Some(prod)) = self.record_producers.get_mut(track_id) {
-                for &s in samples {
-                    let _ = prod.push(s);
+                let slots = prod.slots();
+                let to_write = slots.min(samples.len());
+                if to_write > 0
+                    && let Ok(mut chunk) = prod.write_chunk(to_write)
+                {
+                    let (s1, s2) = chunk.as_mut_slices();
+                    let s1_len = s1.len();
+                    s1.copy_from_slice(&samples[..s1_len]);
+                    s2.copy_from_slice(&samples[s1_len..to_write]);
+                    chunk.commit_all();
                 }
             }
 

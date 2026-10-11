@@ -71,13 +71,24 @@ impl AudioHardwareDriver {
             .build_output_stream(
                 config,
                 move |data: &mut [f32], _: &OutputCallbackInfo| {
-                    for sample in data.iter_mut() {
-                        if let Ok(val) = consumer.pop() {
-                            *sample = val;
-                        } else {
-                            *sample = 0.0;
-                            underrun_counter.fetch_add(1, Ordering::Relaxed);
-                        }
+                    crate::os::ThreadPriorityManager::enable_ftz_daz();
+                    let needed = data.len();
+                    let available = consumer.slots();
+                    let to_read = available.min(needed);
+
+                    if to_read > 0
+                        && let Ok(chunk) = consumer.read_chunk(to_read)
+                    {
+                        let (s1, s2) = chunk.as_slices();
+                        let s1_len = s1.len();
+                        data[..s1_len].copy_from_slice(s1);
+                        data[s1_len..to_read].copy_from_slice(s2);
+                        chunk.commit_all();
+                    }
+
+                    if to_read < needed {
+                        data[to_read..].fill(0.0);
+                        underrun_counter.fetch_add(1, Ordering::Relaxed);
                     }
                 },
                 err_fn,

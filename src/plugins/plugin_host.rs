@@ -18,6 +18,7 @@ pub struct NativeTapeDelay {
     delay_buffer_l: Vec<f32>,
     delay_buffer_r: Vec<f32>,
     write_pos: usize,
+    sample_rate: f32,
 }
 
 impl Default for NativeTapeDelay {
@@ -39,6 +40,7 @@ impl NativeTapeDelay {
             delay_buffer_l: vec![0.0; max_samples],
             delay_buffer_r: vec![0.0; max_samples],
             write_pos: 0,
+            sample_rate,
         }
     }
 }
@@ -54,7 +56,7 @@ impl AudioPlugin for NativeTapeDelay {
         let mix = self.parameters[2].get_value();
 
         let cap = self.delay_buffer_l.len();
-        let delay_samples = ((delay_ms / 1000.0) * 44100.0).round() as usize;
+        let delay_samples = ((delay_ms / 1000.0) * self.sample_rate).round() as usize;
         let delay_samples = delay_samples.clamp(1, cap - 1);
 
         let len = left.len().min(right.len());

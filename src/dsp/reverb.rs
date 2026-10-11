@@ -94,12 +94,27 @@ impl ChromaVerbEngine {
                 self.damp_state_r[d] =
                     out_d_r * (1.0 - self.damping) + self.damp_state_r[d] * self.damping;
 
-                // Write feedback into delay lines
-                self.delays_l[d][self.indices_l[d]] = in_l + self.damp_state_l[d] * self.feedback;
-                self.delays_r[d][self.indices_r[d]] = in_r + self.damp_state_r[d] * self.feedback;
+                // Write feedback into delay lines with cross-channel diffusion
+                self.delays_l[d][self.indices_l[d]] = in_l
+                    + (self.damp_state_l[d] * 0.7 + self.damp_state_r[d] * 0.3) * self.feedback;
+                self.delays_r[d][self.indices_r[d]] = in_r
+                    + (self.damp_state_r[d] * 0.7 + self.damp_state_l[d] * 0.3) * self.feedback;
 
-                self.indices_l[d] = (self.indices_l[d] + 1) % len_l;
-                self.indices_r[d] = (self.indices_r[d] + 1) % len_r;
+                if self.damp_state_l[d].abs() < 1e-15 {
+                    self.damp_state_l[d] = 0.0;
+                }
+                if self.damp_state_r[d].abs() < 1e-15 {
+                    self.damp_state_r[d] = 0.0;
+                }
+
+                self.indices_l[d] += 1;
+                if self.indices_l[d] >= len_l {
+                    self.indices_l[d] = 0;
+                }
+                self.indices_r[d] += 1;
+                if self.indices_r[d] >= len_r {
+                    self.indices_r[d] = 0;
+                }
             }
 
             wet_l *= 0.25;

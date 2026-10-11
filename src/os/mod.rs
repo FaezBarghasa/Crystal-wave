@@ -85,4 +85,28 @@ impl ThreadPriorityManager {
             ThreadPriorityStatus::Unsupported
         }
     }
+
+    /// Enables Flush-To-Zero (FTZ) and Denormals-Are-Zero (DAZ) mode for the current thread.
+    /// Prevents microcode traps on subnormal floating point numbers in real-time DSP loops.
+    pub fn enable_ftz_daz() {
+        #[cfg(target_arch = "x86_64")]
+        {
+            unsafe {
+                let mut mxcsr: u32 = 0;
+                std::arch::asm!("stmxcsr [{}]", in(reg) &mut mxcsr);
+                // Bit 15: FTZ (Flush-To-Zero), Bit 6: DAZ (Denormals-Are-Zero)
+                mxcsr |= (1 << 15) | (1 << 6);
+                std::arch::asm!("ldmxcsr [{}]", in(reg) &mxcsr);
+            }
+        }
+        #[cfg(target_arch = "aarch64")]
+        {
+            unsafe {
+                let mut fpcr: u64;
+                std::arch::asm!("mrs {}, fpcr", out(reg) fpcr);
+                fpcr |= 1 << 24; // FZ bit
+                std::arch::asm!("msr fpcr, {}", in(reg) fpcr);
+            }
+        }
+    }
 }

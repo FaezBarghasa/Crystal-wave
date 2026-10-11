@@ -1,6 +1,6 @@
 use crate::ui::app::CrystalWaveApp;
 use crate::ui::message::{MenuCommand, UiMessage};
-use iced::widget::{button, column, container, row, text};
+use iced::widget::{button, column, container, row, slider, text};
 use iced::{Element, Length};
 
 impl CrystalWaveApp {
@@ -190,22 +190,31 @@ impl CrystalWaveApp {
                 let solo_btn = button(text(if ch.solo { "S" } else { "s" }))
                     .on_press(UiMessage::ToggleTrackSolo(idx));
 
-                let fader_up = button(text("+")).on_press(UiMessage::SetTrackFader {
-                    track_id: idx,
-                    volume_db: (ch.volume_fader_db + 1.0).min(6.0),
-                });
+                let fader_slider = slider(-60.0..=6.0, ch.volume_fader_db, move |vol| {
+                    UiMessage::SetTrackFader {
+                        track_id: idx,
+                        volume_db: vol,
+                    }
+                })
+                .step(0.5_f32)
+                .width(Length::Fixed(80.0));
 
-                let fader_down = button(text("-")).on_press(UiMessage::SetTrackFader {
-                    track_id: idx,
-                    volume_db: (ch.volume_fader_db - 1.0).max(-120.0),
-                });
+                let pan_slider = slider(-1.0..=1.0, ch.pan.balance, move |p| {
+                    UiMessage::SetTrackPan {
+                        track_id: idx,
+                        pan: p,
+                    }
+                })
+                .step(0.05_f32)
+                .width(Length::Fixed(80.0));
 
                 let strip = container(
                     column![
                         text(&ch.name),
                         text(format!("{:.1} dB", ch.volume_fader_db)),
-                        row![fader_down, fader_up].spacing(2),
+                        fader_slider,
                         text(format!("Pan: {:.2}", ch.pan.balance)),
+                        pan_slider,
                         row![mute_btn, solo_btn].spacing(4),
                     ]
                     .spacing(4),

@@ -95,6 +95,14 @@ impl Compressor {
 
         let makeup_linear = 10.0f32.powf(self.config.makeup_gain_db / 20.0);
         let dry_wet = self.config.mix.clamp(0.0, 1.0);
+        let alpha_rms = (-1.0 / (0.010 * self.sample_rate)).exp();
+        let alpha_att = (-1.0 / (self.effective_attack_ms() * 0.001 * self.sample_rate)).exp();
+        let is_opto = self.config.model == CompressorModel::OptoLa2a;
+        let mut alpha_rel = if !is_opto {
+            (-1.0 / (self.effective_release_ms(1.0) * 0.001 * self.sample_rate)).exp()
+        } else {
+            0.0
+        };
 
         for i in 0..left.len() {
             let in_l = left[i];
@@ -105,9 +113,11 @@ impl Compressor {
                 CompressorModel::Dbx160 => {
                     // True RMS detector: Exponential moving average of squared input
                     let inst_power = 0.5 * (in_l * in_l + in_r * in_r);
-                    let alpha_rms = (-1.0 / (0.010 * self.sample_rate)).exp();
                     self.rms_accumulator =
                         alpha_rms * self.rms_accumulator + (1.0 - alpha_rms) * inst_power;
+                    if self.rms_accumulator < 1e-15 {
+                        self.rms_accumulator = 0.0;
+                    }
                     self.rms_accumulator.sqrt().max(1e-6)
                 }
                 _ => (0.5 * (in_l.abs() + in_r.abs())).max(1e-6),
@@ -119,10 +129,11 @@ impl Compressor {
             let gr_target_db = self.compute_static_curve(detector_db);
 
             // 3. Ballistics & Envelope Smoothing
-            let alpha_att = (-1.0 / (self.effective_attack_ms() * 0.001 * self.sample_rate)).exp();
-            let alpha_rel = (-1.0
-                / (self.effective_release_ms(detector_input) * 0.001 * self.sample_rate))
-                .exp();
+            if is_opto {
+                alpha_rel = (-1.0
+                    / (self.effective_release_ms(detector_input) * 0.001 * self.sample_rate))
+                    .exp();
+            }
 
             if gr_target_db < self.envelope {
                 // Attacking (gain reduction increasing)
@@ -130,6 +141,10 @@ impl Compressor {
             } else {
                 // Releasing (gain recovery)
                 self.envelope = alpha_rel * self.envelope + (1.0 - alpha_rel) * gr_target_db;
+            }
+
+            if self.envelope.abs() < 1e-15 {
+                self.envelope = 0.0;
             }
 
             self.current_gain_reduction_db = self.envelope;
