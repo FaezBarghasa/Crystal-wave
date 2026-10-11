@@ -103,6 +103,16 @@ impl AudioHardwareDriver {
         Ok(())
     }
 
+    pub fn resume(&mut self) -> Result<(), String> {
+        if let Some(ref stream) = self.stream {
+            stream
+                .play()
+                .map_err(|e| format!("Failed to resume stream: {}", e))?;
+            self.is_running.store(true, Ordering::SeqCst);
+        }
+        Ok(())
+    }
+
     pub fn is_active(&self) -> bool {
         self.is_running.load(Ordering::SeqCst)
     }

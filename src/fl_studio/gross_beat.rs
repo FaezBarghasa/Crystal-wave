@@ -57,7 +57,8 @@ impl GrossBeatEngine {
         }
 
         let cap = self.capacity;
-        let samples_per_beat = ((self.sample_rate * 60.0) / self.tempo_bpm.max(10.0)).round() as usize;
+        let samples_per_beat =
+            ((self.sample_rate * 60.0) / self.tempo_bpm.max(10.0)).round() as usize;
         let quarter_window = samples_per_beat.max(1);
         let sixteenth_window = (samples_per_beat / 4).max(1);
         let eighth_window = (samples_per_beat / 2).max(1);
@@ -87,7 +88,8 @@ impl GrossBeatEngine {
                 }
                 GrossBeatTimePreset::TapeStop => {
                     // Exponential deceleration pitch drop
-                    let decel = ((self.write_pos % stop_window) as f32 / stop_window as f32).powi(2);
+                    let decel =
+                        ((self.write_pos % stop_window) as f32 / stop_window as f32).powi(2);
                     let read_idx = ((self.write_pos as f32 * (1.0 - decel)) as usize) % cap;
                     (self.buffer_l[read_idx], self.buffer_r[read_idx])
                 }
@@ -105,7 +107,8 @@ impl GrossBeatEngine {
                     (phase * std::f32::consts::FRAC_PI_2).sin()
                 }
                 GrossBeatVolumePreset::Gate16th => {
-                    let phase = (self.write_pos % sixteenth_window) as f32 / sixteenth_window as f32; // 1/16 note
+                    let phase =
+                        (self.write_pos % sixteenth_window) as f32 / sixteenth_window as f32; // 1/16 note
                     if phase < 0.5 { 1.0 } else { 0.0 }
                 }
                 GrossBeatVolumePreset::SawDecay => {
@@ -152,4 +155,3 @@ impl crate::plugins::plugin_host::AudioPlugin for GrossBeatEngine {
         &[]
     }
 }
-

@@ -95,7 +95,8 @@ impl FlexPitchEngine {
         let source_copy = buffer[start..end].to_vec();
 
         for (local_idx, s) in buffer[start..end].iter_mut().enumerate() {
-            let pitch_offset_semitones = self.calculate_instantaneous_pitch_offset(hotspot, local_idx);
+            let pitch_offset_semitones =
+                self.calculate_instantaneous_pitch_offset(hotspot, local_idx);
             let speed_ratio = 2.0f32.powf(pitch_offset_semitones / 12.0);
             let src_f = local_idx as f32 * speed_ratio;
             let src_i0 = src_f.floor() as usize;

@@ -166,7 +166,47 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
             tick += 960;
         }
 
-        // 4. Loop Cycle Range Highlight
+        // 4. Track Audio/MIDI Clips & Waveform Contours
+        for clip in &self.clips {
+            if clip.track_index < self.track_count {
+                let y = clip.track_index as f32 * lane_height + 2.0;
+                let h = (lane_height - 5.0).max(10.0);
+                let x_start = self.tick_to_x(clip.start_tick, bounds.width);
+                let x_end = self.tick_to_x(clip.start_tick + clip.length_ticks, bounds.width);
+                let w = (x_end - x_start).max(4.0);
+
+                if x_start < bounds.width && x_end > 0.0 {
+                    // Clip background
+                    frame.fill_rectangle(
+                        Point::new(x_start, y),
+                        Size::new(w, h),
+                        Color::from_rgb8(clip.color_rgb[0], clip.color_rgb[1], clip.color_rgb[2]),
+                    );
+
+                    // Waveform center line
+                    let mid_y = y + h * 0.5;
+                    let center_line =
+                        Path::line(Point::new(x_start, mid_y), Point::new(x_start + w, mid_y));
+                    frame.stroke(
+                        &center_line,
+                        Stroke::default()
+                            .with_color(Color::from_rgba8(255, 255, 255, 0.4))
+                            .with_width(1.0),
+                    );
+
+                    // Clip outline border
+                    let outline_rect = Path::rectangle(Point::new(x_start, y), Size::new(w, h));
+                    frame.stroke(
+                        &outline_rect,
+                        Stroke::default()
+                            .with_color(Color::from_rgba8(255, 255, 255, 0.6))
+                            .with_width(1.0),
+                    );
+                }
+            }
+        }
+
+        // 5. Loop Cycle Range Highlight
         if let Some((start_tick, end_tick)) = self.loop_range {
             let start_x = self.tick_to_x(start_tick, bounds.width);
             let end_x = self.tick_to_x(end_tick, bounds.width);

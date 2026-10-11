@@ -295,4 +295,3 @@ impl crate::plugins::plugin_host::AudioPlugin for ChannelEq {
         &[]
     }
 }
-
