@@ -14,9 +14,11 @@ pub mod mixing;
 pub mod plugins;
 pub mod smart_controls;
 pub mod timeline;
+pub mod ui;
 pub mod ui_state;
 
 // Re-exports for convenience and backwards-compatibility
+pub use ui::{CrystalWaveApp, UiMessage, UiSessionDriver};
 pub use dsp::compressor::{Compressor, CompressorConfig, CompressorModel, MultibandCompressor};
 pub use dsp::equalizer::{BiquadCoeffs, ChannelEq, EqBand, FilterType};
 pub use dsp::flex::{FlexMode, FlexPitchNote, FlexProcessor};

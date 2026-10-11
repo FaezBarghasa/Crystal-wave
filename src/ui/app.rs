@@ -20,7 +20,9 @@ impl CrystalWaveApp {
     pub fn new(sample_rate: f32) -> Self {
         let timeline = Timeline::new();
         let arrangement = ArrangementView::new(timeline);
-        let mixer = MixingEngine::new(sample_rate).expect("Mixer init");
+        let mut mixer = MixingEngine::new(sample_rate).expect("Mixer init");
+        let _ = mixer.add_channel("Audio 1");
+        let _ = mixer.add_channel("Inst 1");
         Self {
             workspace: WorkspaceState::default(),
             inspector: DualChannelInspector::new(0, 0),
@@ -144,7 +146,7 @@ impl CrystalWaveApp {
                 } else {
                     -120.0
                 };
-                if let Some(strip) = self.mixer.channel_strips.get_mut(track_id) {
+                if let Some(strip) = self.mixer.channels.get_mut(track_id) {
                     strip.volume_fader_db = safe_db;
                 }
             }
@@ -154,23 +156,23 @@ impl CrystalWaveApp {
                 } else {
                     0.0
                 };
-                if let Some(strip) = self.mixer.channel_strips.get_mut(track_id) {
+                if let Some(strip) = self.mixer.channels.get_mut(track_id) {
                     strip.pan.balance = safe_pan;
                 }
             }
             UiMessage::ToggleTrackMute(track_id) => {
-                if let Some(strip) = self.mixer.channel_strips.get_mut(track_id) {
+                if let Some(strip) = self.mixer.channels.get_mut(track_id) {
                     strip.muted = !strip.muted;
                 }
             }
             UiMessage::ToggleTrackSolo(track_id) => {
-                if let Some(strip) = self.mixer.channel_strips.get_mut(track_id) {
+                if let Some(strip) = self.mixer.channels.get_mut(track_id) {
                     strip.solo = !strip.solo;
                 }
             }
             UiMessage::ResetAutoMute(track_id) => {
-                if let Some(strip) = self.mixer.channel_strips.get_mut(track_id) {
-                    strip.reset_auto_mute();
+                if let Some(strip) = self.mixer.channels.get_mut(track_id) {
+                    strip.meter.reset_auto_mute();
                 }
             }
 
@@ -179,8 +181,8 @@ impl CrystalWaveApp {
                 self.workspace.lcd_diagnostic.cpu_load_percent = batch.cpu_load_percent;
                 for meter in batch.meters {
                     if meter.auto_mute_tripped {
-                        if let Some(strip) = self.mixer.channel_strips.get_mut(meter.channel_id) {
-                            strip.auto_mute_tripped = true;
+                        if let Some(strip) = self.mixer.channels.get_mut(meter.channel_id) {
+                            strip.meter.auto_mute_tripped = true;
                         }
                     }
                 }
