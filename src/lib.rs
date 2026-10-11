@@ -1,16 +1,22 @@
 pub mod audio;
 pub mod audio_edit;
+pub mod bouncing;
 pub mod dsp;
 pub mod elastic;
 pub mod error;
+pub mod format;
 pub mod generative;
 pub mod harmony;
+pub mod instruments;
 pub mod midi;
 pub mod mixer;
+pub mod mixing;
+pub mod plugins;
 pub mod smart_controls;
 pub mod timeline;
 pub mod ui_state;
 
+// Re-exports for convenience and backwards-compatibility
 pub use dsp::compressor::{Compressor, CompressorConfig, CompressorModel, MultibandCompressor};
 pub use dsp::equalizer::{BiquadCoeffs, ChannelEq, EqBand, FilterType};
 pub use dsp::flex::{FlexMode, FlexPitchNote, FlexProcessor};
