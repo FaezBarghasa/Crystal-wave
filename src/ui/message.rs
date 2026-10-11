@@ -51,6 +51,11 @@ pub enum UiMessage {
     NewProject,
     SaveProject,
     MenuAction(MenuCommand),
+
+    // Plugin Lifecycle Management
+    RemovePlugin(u32),
+    EnablePlugin(u32),
+    DisablePlugin(u32),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -85,3 +85,130 @@ impl AudioPlugin for NativeTapeDelay {
         &self.parameters
     }
 }
+
+/// Native Studio Compressor effect plugin
+pub struct NativeCompressor {
+    descriptor: PluginDescriptor,
+    parameters: Vec<PluginParameter>,
+    compressor: crate::dsp::compressor::Compressor,
+}
+
+impl NativeCompressor {
+    pub fn new(sample_rate: f32) -> Self {
+        let config = crate::dsp::compressor::CompressorConfig::default();
+        let compressor = crate::dsp::compressor::Compressor::new(config, sample_rate)
+            .expect("Valid compressor config");
+        Self {
+            descriptor: PluginDescriptor::new(1002, "Studio Compressor", PluginCategory::Dynamics),
+            parameters: vec![
+                PluginParameter::new(1, "Threshold (dB)", -60.0, 0.0, -20.0, "dB"),
+                PluginParameter::new(2, "Ratio", 1.0, 20.0, 4.0, ":1"),
+                PluginParameter::new(3, "Attack (ms)", 0.1, 200.0, 20.0, "ms"),
+                PluginParameter::new(4, "Release (ms)", 1.0, 1000.0, 100.0, "ms"),
+                PluginParameter::new(5, "Makeup Gain (dB)", 0.0, 24.0, 0.0, "dB"),
+            ],
+            compressor,
+        }
+    }
+}
+
+impl AudioPlugin for NativeCompressor {
+    fn descriptor(&self) -> &PluginDescriptor {
+        &self.descriptor
+    }
+
+    fn process(&mut self, left: &mut [f32], right: &mut [f32], _sidechain: Option<&[f32]>) {
+        let _ = self.compressor.process(left, right);
+    }
+
+    fn reset(&mut self) {
+        self.compressor.reset();
+    }
+
+    fn parameters(&self) -> &[PluginParameter] {
+        &self.parameters
+    }
+}
+
+/// Native 8-Band Parametric Channel EQ effect plugin
+pub struct NativeChannelEq {
+    descriptor: PluginDescriptor,
+    parameters: Vec<PluginParameter>,
+    eq: crate::dsp::equalizer::ChannelEq,
+}
+
+impl NativeChannelEq {
+    pub fn new(sample_rate: f32) -> Self {
+        let eq = crate::dsp::equalizer::ChannelEq::new(sample_rate).expect("Valid sample rate");
+        Self {
+            descriptor: PluginDescriptor::new(
+                1003,
+                "Channel EQ (8-Band)",
+                PluginCategory::Equalizer,
+            ),
+            parameters: vec![
+                PluginParameter::new(1, "Low Cut (Hz)", 20.0, 500.0, 30.0, "Hz"),
+                PluginParameter::new(2, "High Cut (Hz)", 5000.0, 20000.0, 18000.0, "Hz"),
+            ],
+            eq,
+        }
+    }
+}
+
+impl AudioPlugin for NativeChannelEq {
+    fn descriptor(&self) -> &PluginDescriptor {
+        &self.descriptor
+    }
+
+    fn process(&mut self, left: &mut [f32], right: &mut [f32], _sidechain: Option<&[f32]>) {
+        let _ = self.eq.process(left, right);
+    }
+
+    fn reset(&mut self) {
+        // State clears automatically
+    }
+
+    fn parameters(&self) -> &[PluginParameter] {
+        &self.parameters
+    }
+}
+
+/// Native ChromaVerb algorithmic stereo reverb plugin
+pub struct NativeChromaVerb {
+    descriptor: PluginDescriptor,
+    parameters: Vec<PluginParameter>,
+    reverb: crate::dsp::reverb::ChromaVerbEngine,
+}
+
+impl NativeChromaVerb {
+    pub fn new(sample_rate: f32) -> Self {
+        let reverb =
+            crate::dsp::reverb::ChromaVerbEngine::new(2.5, sample_rate).expect("Valid sample rate");
+        Self {
+            descriptor: PluginDescriptor::new(1005, "ChromaVerb", PluginCategory::Reverb),
+            parameters: vec![
+                PluginParameter::new(1, "Decay Time (s)", 0.2, 10.0, 2.5, "s"),
+                PluginParameter::new(2, "Mix", 0.0, 1.0, 0.35, "%"),
+            ],
+            reverb,
+        }
+    }
+}
+
+impl AudioPlugin for NativeChromaVerb {
+    fn descriptor(&self) -> &PluginDescriptor {
+        &self.descriptor
+    }
+
+    fn process(&mut self, left: &mut [f32], right: &mut [f32], _sidechain: Option<&[f32]>) {
+        let _ = self.reverb.process(left, right);
+    }
+
+    fn reset(&mut self) {
+        // Cleared on next block
+    }
+
+    fn parameters(&self) -> &[PluginParameter] {
+        &self.parameters
+    }
+}

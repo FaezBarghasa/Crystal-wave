@@ -1,6 +1,6 @@
 use crate::ui::app::CrystalWaveApp;
 use crate::ui::message::{MenuCommand, UiMessage};
-use iced::widget::{button, column, container, row, slider, text};
+use iced::widget::{button, column, container, row, scrollable, slider, text};
 use iced::{Element, Length};
 
 impl CrystalWaveApp {
@@ -38,6 +38,7 @@ impl CrystalWaveApp {
             .on_press(UiMessage::MenuAction(MenuCommand::TogglePianoRoll));
         let win_inspector = button(text("Inspector (I)"))
             .on_press(UiMessage::MenuAction(MenuCommand::ToggleInspector));
+        let win_plugins = button(text("Plugins (L)")).on_press(UiMessage::ToggleLibraryBrowser);
 
         row![
             container(text("CrystalWave")).padding(4),
@@ -50,7 +51,8 @@ impl CrystalWaveApp {
             track_add_midi,
             win_mixer,
             win_piano_roll,
-            win_inspector
+            win_inspector,
+            win_plugins
         ]
         .spacing(6)
         .padding(4)
@@ -171,6 +173,52 @@ impl CrystalWaveApp {
 
         let arrangement_canvas = crate::ui::canvas_timeline::view_canvas_timeline(canvas_program);
         content = content.push(arrangement_canvas);
+
+        if self.workspace.library_browser_open {
+            let mut plugins_list = column![
+                text("Plugin Manager").size(14),
+                text(format!("Installed: {}", self.plugin_registry.len())).size(11),
+            ]
+            .spacing(6);
+
+            for entry in self.plugin_registry.list_entries() {
+                let meta_id = entry.descriptor.unique_id;
+                let is_enabled = entry.is_enabled;
+                let toggle_btn = if is_enabled {
+                    button(text("Disable")).on_press(UiMessage::DisablePlugin(meta_id))
+                } else {
+                    button(text("Enable")).on_press(UiMessage::EnablePlugin(meta_id))
+                };
+                let remove_btn =
+                    button(text("Uninstall")).on_press(UiMessage::RemovePlugin(meta_id));
+
+                let plugin_card = container(
+                    column![
+                        text(format!(
+                            "{} v{}",
+                            entry.descriptor.name, entry.descriptor.version
+                        ))
+                        .size(12),
+                        text(format!(
+                            "{:?} | {}",
+                            entry.descriptor.category, entry.descriptor.vendor
+                        ))
+                        .size(10),
+                        row![toggle_btn, remove_btn].spacing(4),
+                    ]
+                    .spacing(2),
+                )
+                .padding(4);
+
+                plugins_list = plugins_list.push(plugin_card);
+            }
+
+            let plugin_panel = container(scrollable(plugins_list))
+                .width(Length::Fixed(240.0))
+                .padding(6);
+
+            content = content.push(plugin_panel);
+        }
 
         content.into()
     }

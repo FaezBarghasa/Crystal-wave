@@ -20,6 +20,7 @@ pub struct CrystalWaveApp {
     pub is_looping: bool,
     pub playhead_tick: u64,
     pub dirty: bool,
+    pub plugin_registry: crate::plugins::PluginRegistry,
 }
 
 impl CrystalWaveApp {
@@ -89,6 +90,7 @@ impl CrystalWaveApp {
             is_looping: false,
             playhead_tick: 0,
             dirty: false,
+            plugin_registry: crate::plugins::PluginRegistry::new(),
         }
     }
 
@@ -402,6 +404,51 @@ impl CrystalWaveApp {
                     self.dirty = true;
                 }
             },
+
+            UiMessage::RemovePlugin(id) => {
+                self.plugin_registry.remove_plugin(id);
+                self.dirty = true;
+            }
+            UiMessage::EnablePlugin(id) => {
+                self.plugin_registry.enable_plugin(id);
+            }
+            UiMessage::DisablePlugin(id) => {
+                self.plugin_registry.disable_plugin(id);
+            }
         }
+    }
+
+    /// Event subscription listening for hardware keyboard shortcuts
+    pub fn subscription(&self) -> iced::Subscription<UiMessage> {
+        iced::event::listen().map(|event| {
+            if let iced::Event::Keyboard(iced::keyboard::Event::KeyPressed { key, .. }) = event {
+                match key {
+                    iced::keyboard::Key::Named(iced::keyboard::key::Named::Space) => {
+                        UiMessage::TransportPlay
+                    }
+                    iced::keyboard::Key::Named(iced::keyboard::key::Named::Enter) => {
+                        UiMessage::SetPlayhead(0)
+                    }
+                    iced::keyboard::Key::Named(iced::keyboard::key::Named::F9) => {
+                        UiMessage::ToggleMixerDrawer
+                    }
+                    iced::keyboard::Key::Named(iced::keyboard::key::Named::F7) => {
+                        UiMessage::ToggleEditorDrawer
+                    }
+                    iced::keyboard::Key::Character(ref c) if c.eq_ignore_ascii_case("i") => {
+                        UiMessage::ToggleInspector
+                    }
+                    iced::keyboard::Key::Character(ref c) if c.eq_ignore_ascii_case("l") => {
+                        UiMessage::ToggleLibraryBrowser
+                    }
+                    iced::keyboard::Key::Character(ref c) if c.eq_ignore_ascii_case("r") => {
+                        UiMessage::TransportRecord
+                    }
+                    _ => UiMessage::Tick,
+                }
+            } else {
+                UiMessage::Tick
+            }
+        })
     }
 }

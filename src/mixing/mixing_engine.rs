@@ -119,18 +119,33 @@ impl MixingEngine {
         }
     }
 
-    /// Process mixer graph summing: channels accumulate to assigned bus, buses accumulate to Stereo Out (Bus 0)
+    /// Process mixer graph summing: buses 1..256 accumulate into Stereo Out (Bus 0), then Bus 0 accumulates to Master
     pub fn sum_buses(&mut self, master_left: &mut [f32], master_right: &mut [f32]) {
         let len = master_left.len().min(master_right.len());
         let master_gain = self.master_linear_gain();
 
+        if self.buses.is_empty() {
+            return;
+        }
+
+        // Prepare Bus 0 buffer size
+        self.buses[0].prepare_buffer(len);
+
+        // Hierarchical summing: Buses 1..256 accumulate into Bus 0 using zero-alloc split_at_mut
+        let (bus0_slice, other_buses) = self.buses.split_at_mut(1);
+        let bus0 = &mut bus0_slice[0];
+        for bus in other_buses {
+            let gain = bus.linear_gain();
+            if gain > 0.0 && !bus.left_accumulator.is_empty() {
+                bus0.accumulate(&bus.left_accumulator, &bus.right_accumulator, gain);
+            }
+        }
+
         // Accumulate Bus 0 (Stereo Out) into master output
-        if let Some(bus0) = self.buses.first() {
-            for i in 0..len {
-                if i < bus0.left_accumulator.len() {
-                    master_left[i] = bus0.left_accumulator[i] * master_gain;
-                    master_right[i] = bus0.right_accumulator[i] * master_gain;
-                }
+        for i in 0..len {
+            if i < bus0.left_accumulator.len() {
+                master_left[i] = bus0.left_accumulator[i] * master_gain;
+                master_right[i] = bus0.right_accumulator[i] * master_gain;
             }
         }
     }

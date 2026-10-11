@@ -50,6 +50,10 @@ pub use mixing::{
     AutomationPreviewManager, ChannelCueSend, CueMatrix, CueMix, FloatingAutomationObject,
 };
 pub use os::{ThreadPriorityManager, ThreadPriorityStatus};
+pub use plugins::{
+    AudioPlugin, NativeChannelEq, NativeChromaVerb, NativeCompressor, NativeTapeDelay,
+    PluginDescriptor, PluginRegistry, RegisteredPlugin,
+};
 pub use pro_tools::{
     ClipGeometry, GroupedTake, HardwareInsert, IoMatrix, KeyboardFocusCommand, MemoryLocation,
     MemoryLocationBank, MultiTrackPlaylistGroup, PhysicalPort, PortDirection, ProToolsClip,

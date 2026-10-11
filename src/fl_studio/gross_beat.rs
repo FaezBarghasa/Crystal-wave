@@ -47,6 +47,18 @@ impl GrossBeatEngine {
         }
     }
 
+    #[inline(always)]
+    fn read_interpolated(&self, read_pos: f32) -> (f32, f32) {
+        let cap = self.capacity;
+        let pos = read_pos.rem_euclid(cap as f32);
+        let i0 = pos.floor() as usize % cap;
+        let i1 = (i0 + 1) % cap;
+        let frac = pos - pos.floor();
+        let l = self.buffer_l[i0] * (1.0 - frac) + self.buffer_l[i1] * frac;
+        let r = self.buffer_r[i0] * (1.0 - frac) + self.buffer_r[i1] * frac;
+        (l, r)
+    }
+
     pub fn process(&mut self, left: &mut [f32], right: &mut [f32]) {
         let len = left.len().min(right.len());
         if len == 0
@@ -72,44 +84,51 @@ impl GrossBeatEngine {
             self.buffer_l[self.write_pos] = in_l;
             self.buffer_r[self.write_pos] = in_r;
 
-            // 1. Time manipulation playback index
+            // 1. Time manipulation with interpolated playback
             let out_sample = match self.time_preset {
                 GrossBeatTimePreset::Off => (in_l, in_r),
                 GrossBeatTimePreset::HalfSpeed => {
-                    // Half speed: read at half rate from previous half-bar
-                    let read_offset = (self.write_pos / 2) % (cap / 2);
-                    (self.buffer_l[read_offset], self.buffer_r[read_offset])
+                    let read_offset = ((self.write_pos / 2) % (cap / 2)) as f32;
+                    self.read_interpolated(read_offset)
                 }
                 GrossBeatTimePreset::Reverse1Bar => {
                     let bar_len = (cap / 2).max(1);
                     let phase = self.write_pos % bar_len;
-                    let read_idx = (self.write_pos + bar_len - phase) % cap;
-                    (self.buffer_l[read_idx], self.buffer_r[read_idx])
+                    let read_idx = ((self.write_pos + bar_len - phase) % cap) as f32;
+                    self.read_interpolated(read_idx)
                 }
                 GrossBeatTimePreset::TapeStop => {
-                    // Exponential deceleration pitch drop
                     let decel =
                         ((self.write_pos % stop_window) as f32 / stop_window as f32).powi(2);
-                    let read_idx = ((self.write_pos as f32 * (1.0 - decel)) as usize) % cap;
-                    (self.buffer_l[read_idx], self.buffer_r[read_idx])
+                    let read_idx = (self.write_pos as f32 * (1.0 - decel)).rem_euclid(cap as f32);
+                    self.read_interpolated(read_idx)
                 }
                 GrossBeatTimePreset::TripletStutter => {
-                    let read_idx = (self.write_pos / triplet_window * triplet_window) % cap;
-                    (self.buffer_l[read_idx], self.buffer_r[read_idx])
+                    let read_idx =
+                        ((self.write_pos / triplet_window * triplet_window) % cap) as f32;
+                    self.read_interpolated(read_idx)
                 }
             };
 
-            // 2. Volume Gating curve
+            // 2. Volume Gating curve with de-clicking edge smoothing
             let vol_gain = match self.volume_preset {
                 GrossBeatVolumePreset::Off => 1.0,
                 GrossBeatVolumePreset::SidechainPump => {
-                    let phase = (self.write_pos % quarter_window) as f32 / quarter_window as f32; // 1/4 note pump
+                    let phase = (self.write_pos % quarter_window) as f32 / quarter_window as f32;
                     (phase * std::f32::consts::FRAC_PI_2).sin()
                 }
                 GrossBeatVolumePreset::Gate16th => {
                     let phase =
-                        (self.write_pos % sixteenth_window) as f32 / sixteenth_window as f32; // 1/16 note
-                    if phase < 0.5 { 1.0 } else { 0.0 }
+                        (self.write_pos % sixteenth_window) as f32 / sixteenth_window as f32;
+                    if phase < 0.05 {
+                        phase / 0.05
+                    } else if phase < 0.45 {
+                        1.0
+                    } else if phase < 0.50 {
+                        1.0 - (phase - 0.45) / 0.05
+                    } else {
+                        0.0
+                    }
                 }
                 GrossBeatVolumePreset::SawDecay => {
                     let phase = (self.write_pos % eighth_window) as f32 / eighth_window as f32;

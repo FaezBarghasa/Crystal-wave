@@ -38,6 +38,7 @@ fn main() -> iced::Result {
         CrystalWaveApp::update,
         CrystalWaveApp::view,
     )
+    .subscription(CrystalWaveApp::subscription)
     .title("CrystalWave Studio - Professional Digital Audio Workstation")
     .run()
 }
