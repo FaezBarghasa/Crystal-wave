@@ -1,6 +1,6 @@
 use Crystal_wave::midi::{GhostNote, GhostPolyphonyView};
 use Crystal_wave::mixing::{AutomationShape, FloatingAutomationObject};
-use Crystal_wave::timeline::{HybridTimelineManager, PatternNote};
+use Crystal_wave::timeline::HybridTimelineManager;
 
 #[test]
 fn test_ghost_polyphony_and_microtonal_notes() {
@@ -52,7 +52,7 @@ fn test_hybrid_pattern_timeline_and_linear_explode() {
 
     // 2. Stamp pattern at measure 1, measure 5, measure 9
     let inst1 = hybrid.stamp_pattern(pat_id, 0, 0).expect("Stamp 1");
-    let inst2 = hybrid.stamp_pattern(pat_id, 0, 960 * 4).expect("Stamp 2");
+    let _inst2 = hybrid.stamp_pattern(pat_id, 0, 960 * 4).expect("Stamp 2");
     let inst3 = hybrid.stamp_pattern(pat_id, 0, 960 * 8).expect("Stamp 3");
 
     assert_eq!(hybrid.linked_instance_count(pat_id), 3);

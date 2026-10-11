@@ -20,7 +20,7 @@ fn test_angry_user_fader_slamming_chaos() {
 
     // Fader must be clamped within [-120.0, 6.0]
     let fader = driver.app.mixer.channels[0].volume_fader_db;
-    assert!(fader >= -120.0 && fader <= 6.0);
+    assert!((-120.0..=6.0).contains(&fader));
 }
 
 #[test]

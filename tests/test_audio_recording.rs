@@ -73,12 +73,12 @@ fn test_audio_file_editor_strip_silence_and_dc() {
     // Buffer with small DC offset of 0.05 during silence, and loud alternating tone
     let mut buf = vec![0.05; 4000]; // DC offset 0.05 in silence
     // Section 1: 500..1500 (alternating loud square tone centered around 0.05)
-    for i in 500..1500 {
-        buf[i] = if i % 2 == 0 { 0.85 } else { -0.75 };
+    for (i, sample) in buf[500..1500].iter_mut().enumerate() {
+        *sample = if (i + 500) % 2 == 0 { 0.85 } else { -0.75 };
     }
     // Section 2: 2500..3500 (alternating loud square tone centered around 0.05)
-    for i in 2500..3500 {
-        buf[i] = if i % 2 == 0 { 0.85 } else { -0.75 };
+    for (i, sample) in buf[2500..3500].iter_mut().enumerate() {
+        *sample = if (i + 2500) % 2 == 0 { 0.85 } else { -0.75 };
     }
 
     let mut editor = AudioFileEditor::new(buf, 1000.0);
@@ -100,13 +100,9 @@ fn test_audio_file_editor_strip_silence_and_dc() {
 fn test_pencil_edit_repair_pop_click() {
     let mut buf = vec![0.0f32; 100];
     // Baseline signal at 0.5
-    for s in &mut buf {
-        *s = 0.5;
-    }
+    buf.fill(0.5);
     // Discontinuous loud spike / click at index 48..52
-    for i in 48..52 {
-        buf[i] = 1.0;
-    }
+    buf[48..52].fill(1.0);
 
     PencilEdit::repair_pop_click(&mut buf, 48, 52);
     // Spike at 50 should be smoothed back down near 0.5
