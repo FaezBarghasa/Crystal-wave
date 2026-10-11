@@ -119,7 +119,7 @@ impl PolyphonicSynth {
         }
     }
 
-    fn midi_to_freq(&self, note: u8, bend_semitones: f32) -> f32 {
+    pub fn midi_to_freq(note: u8, bend_semitones: f32) -> f32 {
         let semitones = note as f32 + bend_semitones;
         440.0 * 2.0f32.powf((semitones - 69.0) / 12.0)
     }
@@ -181,7 +181,7 @@ impl VirtualInstrument for PolyphonicSynth {
                 continue;
             }
 
-            let freq = self.midi_to_freq(voice.note, bend);
+            let freq = Self::midi_to_freq(voice.note, bend);
             let phase_inc = (2.0 * PI * freq) / sr;
 
             for i in 0..len {

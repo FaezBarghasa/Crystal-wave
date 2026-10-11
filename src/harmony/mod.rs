@@ -93,6 +93,10 @@ impl ChordTrack {
         }
         None
     }
+
+    pub fn get_chord_at(&self, tick: u64) -> Chord {
+        self.chord_at_tick(tick).unwrap_or(Chord::new(self.key_root, ChordQuality::Major))
+    }
 }
 
 /// Variable-Length Markov Model (VLMM) for harmonic progressions (Logic MAHarmony engine)

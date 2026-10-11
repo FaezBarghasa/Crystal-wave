@@ -169,6 +169,7 @@ fn test_session_player_voice_leading() {
             intensity: 0.8,
             swing: 0.0,
             fill_frequency: 0.0,
+            push_pull_ticks: 0,
         },
     );
 

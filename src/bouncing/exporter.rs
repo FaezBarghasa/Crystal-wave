@@ -29,19 +29,22 @@ impl Exporter {
     /// Exports stereo audio stream to formatted byte buffer
     pub fn export_stereo_buffer(
         &self,
-        left: &mut [f32],
-        right: &mut [f32],
+        left: &[f32],
+        right: &[f32],
         source_rate: f32,
     ) -> Vec<u8> {
+        let mut work_l = left.to_vec();
+        let mut work_r = right.to_vec();
+
         // 1. Normalization
-        self.bounce_engine.apply_normalization(left, right);
+        self.bounce_engine.apply_normalization(&mut work_l, &mut work_r);
 
         // 2. Sample Rate Conversion if required
         let (resampled_l, resampled_r) = if (source_rate - self.config.sample_rate).abs() > 1e-3 {
             let src = SampleRateConverter::new(source_rate, self.config.sample_rate);
-            (src.resample(left), src.resample(right))
+            (src.resample(&work_l), src.resample(&work_r))
         } else {
-            (left.to_vec(), right.to_vec())
+            (work_l, work_r)
         };
 
         // 3. Interleave stereo channels: [L0, R0, L1, R1, ...]
@@ -58,10 +61,10 @@ impl Exporter {
     }
 
     /// Multi-track stems export
-    pub fn export_stems(&self, stems: &[(&str, &mut [f32], &mut [f32])], source_rate: f32) -> Vec<RenderedStem> {
+    pub fn export_stems(&self, stems: &[(&str, &[f32], &[f32])], source_rate: f32) -> Vec<RenderedStem> {
         let mut out = Vec::with_capacity(stems.len());
-        for (name, l, r) in stems {
-            let bytes = self.export_stereo_buffer(*l, *r, source_rate);
+        for &(name, l, r) in stems {
+            let bytes = self.export_stereo_buffer(l, r, source_rate);
             out.push(RenderedStem {
                 name: name.to_string(),
                 raw_bytes: bytes,
