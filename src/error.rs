@@ -22,6 +22,15 @@ pub enum LogicError {
 
     #[error("DSP processing error: {0}")]
     DspError(String),
+
+    #[error("UI state error: {0}")]
+    UiStateError(String),
+
+    #[error("Plugin FFI boundary panic intercepted in slot {slot_id}: {reason}")]
+    PluginFfiPanic { slot_id: usize, reason: String },
+
+    #[error("Telemetry SPSC buffer overflow")]
+    TelemetryBufferOverflow,
 }
 
 pub type Result<T> = std::result::Result<T, LogicError>;

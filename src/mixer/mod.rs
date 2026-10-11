@@ -87,6 +87,10 @@ impl ChannelStrip {
         }
     }
 
+    pub fn reset_auto_mute(&mut self) {
+        self.auto_mute_tripped = false;
+    }
+
     /// Linear gain calculated from fader dB
     pub fn linear_gain(&self) -> f32 {
         if self.volume_fader_db <= -96.0 || self.muted || self.auto_mute_tripped {
