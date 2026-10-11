@@ -4,6 +4,7 @@ pub mod bouncing;
 pub mod dsp;
 pub mod elastic;
 pub mod error;
+pub mod fl_studio;
 pub mod format;
 pub mod generative;
 pub mod harmony;
@@ -19,6 +20,11 @@ pub mod ui;
 pub mod ui_state;
 
 // Re-exports for convenience and backwards-compatibility
+pub use fl_studio::{
+    AutomationClip, ChannelRack, FlBrowser, FlHistoryManager, FlPatcher, FlPattern,
+    FlPianoRollNote, FlPianoRollTools, FlPlaylist, FlWindowManager, FruitySoftClipper,
+    GrossBeatEngine, GrossBeatTimePreset, GrossBeatVolumePreset, PlaylistItem, SplineNode,
+};
 pub use os::{ThreadPriorityManager, ThreadPriorityStatus};
 pub use ui::{CrystalWaveApp, UiMessage, UiSessionDriver};
 pub use dsp::compressor::{Compressor, CompressorConfig, CompressorModel, MultibandCompressor};
