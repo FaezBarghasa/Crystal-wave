@@ -6,18 +6,15 @@ pub enum BounceMode {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Default)]
 pub enum NormalizeOption {
+    #[default]
     Off,
     PeakNormalize { target_peak_db: f32 },
     LoudnessTargetLUFS { target_lufs: f32 },
     OverloadProtectionOnly, // Attenuates only if clipping occurs (> 0 dBFS)
 }
 
-impl Default for NormalizeOption {
-    fn default() -> Self {
-        NormalizeOption::Off
-    }
-}
 
 pub struct BounceEngine {
     pub mode: BounceMode,

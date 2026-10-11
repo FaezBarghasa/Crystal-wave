@@ -74,8 +74,8 @@ impl AudioPlugin for NativeTapeDelay {
     }
 
     fn reset(&mut self) {
-        for s in &mut self.delay_buffer_l { *s = 0.0; }
-        for s in &mut self.delay_buffer_r { *s = 0.0; }
+        &mut self.delay_buffer_l.fill(0.0);
+        &mut self.delay_buffer_r.fill(0.0);
         self.write_pos = 0;
     }
 

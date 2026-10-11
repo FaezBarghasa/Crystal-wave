@@ -17,17 +17,11 @@ pub struct TabularMidiEvent {
     pub length_ticks: Option<u32>,
 }
 
+#[derive(Default)]
 pub struct MidiEditor {
     pub draw_events: Vec<MidiDrawEvent>,
 }
 
-impl Default for MidiEditor {
-    fn default() -> Self {
-        Self {
-            draw_events: Vec::new(),
-        }
-    }
-}
 
 impl MidiEditor {
     pub fn new() -> Self {

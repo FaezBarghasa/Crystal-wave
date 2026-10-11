@@ -105,6 +105,12 @@ pub struct MarkovProgressionEngine {
     transitions: HashMap<(Chord, Chord), f32>,
 }
 
+impl Default for MarkovProgressionEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MarkovProgressionEngine {
     pub fn new() -> Self {
         let mut engine = Self {

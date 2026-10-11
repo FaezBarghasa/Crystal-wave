@@ -139,7 +139,7 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
         while tick <= self.visible_end_tick {
             let x = self.tick_to_x(tick, bounds.width);
             if x <= bounds.width {
-                let stroke_color = if tick % bar_ticks == 0 {
+                let stroke_color = if tick.is_multiple_of(bar_ticks) {
                     Color::from_rgba8(0x60, 0x65, 0x70, 0.5)
                 } else {
                     Color::from_rgba8(0x40, 0x45, 0x50, 0.25)

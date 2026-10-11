@@ -49,6 +49,12 @@ pub struct SynthVoice {
     pub age: u64,
 }
 
+impl Default for SynthVoice {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SynthVoice {
     pub fn new() -> Self {
         Self {

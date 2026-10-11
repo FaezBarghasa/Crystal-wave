@@ -22,15 +22,11 @@ impl Default for LyricMeterPattern {
     }
 }
 
+#[derive(Default)]
 pub struct AiLyricGeneration {
     pub pattern: LyricMeterPattern,
 }
 
-impl Default for AiLyricGeneration {
-    fn default() -> Self {
-        Self { pattern: LyricMeterPattern::default() }
-    }
-}
 
 impl AiLyricGeneration {
     pub fn new(pattern: LyricMeterPattern) -> Self {

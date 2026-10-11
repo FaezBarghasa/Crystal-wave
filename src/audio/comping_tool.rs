@@ -55,9 +55,9 @@ impl CompingTool {
                 } else {
                     false
                 }
-            }) {
-                if let Ok(t_guard) = take_arc.lock() {
-                    if let Ok(buf) = t_guard.buffer.lock() {
+            })
+                && let Ok(t_guard) = take_arc.lock()
+                    && let Ok(buf) = t_guard.buffer.lock() {
                         let start = sel.start_sample.min(total_samples);
                         let end = sel.end_sample.min(total_samples).min(buf.len());
                         for i in start..end {
@@ -75,8 +75,6 @@ impl CompingTool {
                             out[i] += sample;
                         }
                     }
-                }
-            }
         }
         out
     }

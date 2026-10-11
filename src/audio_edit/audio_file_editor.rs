@@ -228,12 +228,11 @@ impl AudioFileEditor {
             let exp_start = st.saturating_sub(pre_samples);
             let exp_end = (en + post_samples).min(self.buffer.len());
 
-            if let Some(last) = expanded_ranges.last_mut() {
-                if exp_start <= last.1 {
+            if let Some(last) = expanded_ranges.last_mut()
+                && exp_start <= last.1 {
                     last.1 = last.1.max(exp_end);
                     continue;
                 }
-            }
             expanded_ranges.push((exp_start, exp_end));
         }
 
