@@ -62,7 +62,7 @@ impl RealtimeMidiParser {
                 MidiMessage::NoteOn(ch, note, vel) => {
                     let vel_u8: u8 = vel.into();
                     let note_u8: u8 = note.into();
-                    let ch_u8: u8 = ch.into();
+                    let ch_u8 = ch.index();
                     // In MIDI spec, NoteOn with velocity 0 is treated as NoteOff
                     if vel_u8 == 0 {
                         Some(ParsedMidiEvent::NoteOff {
@@ -81,7 +81,7 @@ impl RealtimeMidiParser {
                     }
                 }
                 MidiMessage::NoteOff(ch, note, vel) => Some(ParsedMidiEvent::NoteOff {
-                    channel: ch.into(),
+                    channel: ch.index(),
                     note: note.into(),
                     velocity: vel.into(),
                     timestamp_samples,
@@ -90,18 +90,18 @@ impl RealtimeMidiParser {
                     let cc_u8: u8 = cc.into();
                     let val_u8: u8 = val.into();
                     Some(ParsedMidiEvent::ControlChange {
-                        channel: ch.into(),
+                        channel: ch.index(),
                         controller: cc_u8,
                         value: val_u8,
                         timestamp_samples,
                     })
                 }
-                MidiMessage::PitchBend(ch, bend) => {
+                MidiMessage::PitchBendChange(ch, bend) => {
                     let raw: u16 = bend.into();
                     // MIDI pitch bend is 14-bit (0..16383), center is 8192
                     let norm = (raw as f32 - 8192.0) / 8192.0;
                     Some(ParsedMidiEvent::PitchBend {
-                        channel: ch.into(),
+                        channel: ch.index(),
                         bend_raw: raw,
                         bend_norm: norm.clamp(-1.0, 1.0),
                         timestamp_samples,
@@ -109,7 +109,7 @@ impl RealtimeMidiParser {
                 }
                 MidiMessage::PolyphonicKeyPressure(ch, note, pressure) => {
                     Some(ParsedMidiEvent::PolyphonicAftertouch {
-                        channel: ch.into(),
+                        channel: ch.index(),
                         note: note.into(),
                         pressure: pressure.into(),
                         timestamp_samples,
@@ -117,7 +117,7 @@ impl RealtimeMidiParser {
                 }
                 MidiMessage::ChannelPressure(ch, pressure) => {
                     Some(ParsedMidiEvent::ChannelAftertouch {
-                        channel: ch.into(),
+                        channel: ch.index(),
                         pressure: pressure.into(),
                         timestamp_samples,
                     })
@@ -185,9 +185,7 @@ impl HardwareMidiHost {
                 move |timestamp_micros, data, _| {
                     // Approximate sample timestamp at 44.1kHz (44100 / 1_000_000 = 0.0441 samples/us)
                     let sample_timestamp = (timestamp_micros as f64 * 0.0441) as u64;
-                    if let Some(event) =
-                        RealtimeMidiParser::parse_slice(data, sample_timestamp)
-                    {
+                    if let Some(event) = RealtimeMidiParser::parse_slice(data, sample_timestamp) {
                         callback(event);
                     }
                 },
