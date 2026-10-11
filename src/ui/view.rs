@@ -146,11 +146,29 @@ impl CrystalWaveApp {
             content = content.push(inspector_box);
         }
 
-        let canvas_program = crate::ui::canvas_timeline::ArrangementCanvasProgram::new(
+        let mut canvas_program = crate::ui::canvas_timeline::ArrangementCanvasProgram::new(
             self.playhead_tick,
             self.arrangement.horizontal_zoom,
-            self.mixer.channels.len(),
+            self.mixer
+                .channels
+                .len()
+                .max(self.arrangement.timeline.tracks.len()),
         );
+
+        for (trk_idx, track) in self.arrangement.timeline.tracks.iter().enumerate() {
+            for region in &track.regions {
+                canvas_program
+                    .clips
+                    .push(crate::ui::canvas_timeline::TimelineClipDisplay {
+                        track_index: trk_idx,
+                        start_tick: region.start_tick,
+                        length_ticks: region.length_ticks,
+                        name: region.name.clone(),
+                        color_rgb: [track.color.r, track.color.g, track.color.b],
+                    });
+            }
+        }
+
         let arrangement_canvas = crate::ui::canvas_timeline::view_canvas_timeline(canvas_program);
         content = content.push(arrangement_canvas);
 
@@ -202,6 +220,107 @@ impl CrystalWaveApp {
                 .height(Length::Fixed(180.0))
                 .width(Length::Fill)
                 .into();
+        }
+
+        if self.workspace.editor_drawer_open {
+            match self.workspace.active_editor {
+                crate::ui_state::EditorDrawerTab::PianoRoll => {
+                    let roll_header = row![
+                        text("Piano Roll (Ghost Polyphony: Active)").size(13),
+                        text(" | Scale: Chromatic | Grid: 1/16 | Snap: Relative").size(11),
+                    ]
+                    .spacing(8);
+
+                    let keys_col = column![
+                        text("C5 - [ Lead ]").size(10),
+                        text("B4 - [ Ghost ]").size(10),
+                        text("A4 - [ Bass ]").size(10),
+                        text("G4 - [ Chord ]").size(10),
+                        text("F4 - [ Ghost ]").size(10),
+                        text("E4 - [ Pad ]").size(10),
+                        text("D4 - [ Note ]").size(10),
+                        text("C4 - [ Root ]").size(10),
+                    ]
+                    .spacing(2)
+                    .width(Length::Fixed(120.0));
+
+                    let grid_content = container(
+                        column![
+                            text("[--- Note 60: C4 (0..480) Vel: 100 ---]").size(11),
+                            text("     [--- Note 64: E4 (480..960) Vel: 95 ---]").size(11),
+                            text("          [--- Note 67: G4 (960..1440) Vel: 110 ---]").size(11),
+                            text("               [--- Note 72: C5 Slide to D5 (1440..1920) ---]")
+                                .size(11),
+                        ]
+                        .spacing(4),
+                    )
+                    .padding(4);
+
+                    let roll_body = row![keys_col, grid_content].spacing(8);
+
+                    return container(column![roll_header, roll_body].spacing(6))
+                        .height(Length::Fixed(180.0))
+                        .width(Length::Fill)
+                        .padding(6)
+                        .into();
+                }
+                crate::ui_state::EditorDrawerTab::AudioTrackEditor
+                | crate::ui_state::EditorDrawerTab::AudioFileEditor => {
+                    return container(
+                        column![
+                            text("Audio Editor: FlexPitch (6-Parameter) & FlexTime Active").size(13),
+                            text("Sample Waveform View | Transient Detection: Peak-Hold | Speed Ratio: 1.000").size(11),
+                        ]
+                        .spacing(6),
+                    )
+                    .height(Length::Fixed(180.0))
+                    .width(Length::Fill)
+                    .padding(6)
+                    .into();
+                }
+                crate::ui_state::EditorDrawerTab::ScoreEditor => {
+                    return container(
+                        column![
+                            text("Score Editor: SMPTE Timecode & Notation View").size(13),
+                            text("Treble Clef | Bass Clef | 4/4 Standard | Frame Rate: 24.0 fps")
+                                .size(11),
+                        ]
+                        .spacing(6),
+                    )
+                    .height(Length::Fixed(180.0))
+                    .width(Length::Fill)
+                    .padding(6)
+                    .into();
+                }
+                crate::ui_state::EditorDrawerTab::StepSequencer => {
+                    return container(
+                        column![
+                            text("Step Sequencer: 16-Step Polyrhythmic Matrix").size(13),
+                            text("Lane 1: Kick  [X . . . X . . . X . . . X . . .]").size(11),
+                            text("Lane 2: Snare [. . . . X . . . . . . . X . . .]").size(11),
+                            text("Lane 3: HiHat [X X X X X X X X X X X X X X X X]").size(11),
+                        ]
+                        .spacing(4),
+                    )
+                    .height(Length::Fixed(180.0))
+                    .width(Length::Fill)
+                    .padding(6)
+                    .into();
+                }
+                crate::ui_state::EditorDrawerTab::LiveLoopsGrid => {
+                    return container(
+                        column![
+                            text("Live Loops Grid: Cell Performance Matrix").size(13),
+                            text("Sync: 1 Bar | Quantize: 1/16 | Status: Ready").size(11),
+                        ]
+                        .spacing(4),
+                    )
+                    .height(Length::Fixed(180.0))
+                    .width(Length::Fill)
+                    .padding(6)
+                    .into();
+                }
+            }
         }
 
         container(text(format!("Editor: {:?}", self.workspace.active_editor)))

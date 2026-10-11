@@ -73,7 +73,9 @@ impl CrystalWaveApp {
         let _ = mixer.add_channel("Inst 1");
 
         let mut audio_driver = AudioHardwareDriver::new().ok();
-        let audio_producer = audio_driver.as_mut().and_then(|d| d.start_stream(4096).ok());
+        let audio_producer = audio_driver
+            .as_mut()
+            .and_then(|d| d.start_stream(4096).ok());
 
         Self {
             workspace: WorkspaceState::default(),
@@ -260,15 +262,17 @@ impl CrystalWaveApp {
                 let trk_id = self.workspace.selected_track_id;
                 if let Some(track) = self.arrangement.timeline.tracks.get_mut(trk_id) {
                     let mut new_region = None;
+                    let current_regions_len = track.regions.len();
                     for r in track.regions.iter_mut() {
-                        if cursor_tick > r.start_tick && cursor_tick < r.start_tick + r.length_ticks {
+                        if cursor_tick > r.start_tick && cursor_tick < r.start_tick + r.length_ticks
+                        {
                             match cmd {
                                 crate::pro_tools::KeyboardFocusCommand::SplitAtCursor => {
                                     let first_len = cursor_tick - r.start_tick;
                                     let second_len = r.length_ticks - first_len;
                                     r.length_ticks = first_len;
                                     let mut split_r = r.clone();
-                                    split_r.id = track.regions.len() + 1000;
+                                    split_r.id = current_regions_len + 1000;
                                     split_r.name = format!("{}_split", r.name);
                                     split_r.start_tick = cursor_tick;
                                     split_r.length_ticks = second_len;
@@ -371,20 +375,22 @@ impl CrystalWaveApp {
                     let name = format!("Audio {}", self.mixer.channels.len() + 1);
                     let _ = self.mixer.add_channel(name.clone());
                     let trk_id = self.arrangement.timeline.tracks.len();
-                    let _ = self
-                        .arrangement
-                        .timeline
-                        .add_track(Track::new(trk_id, name, TrackType::Audio));
+                    let _ = self.arrangement.timeline.add_track(Track::new(
+                        trk_id,
+                        name,
+                        TrackType::Audio,
+                    ));
                     self.dirty = true;
                 }
                 crate::ui::message::MenuCommand::AddMidiTrack => {
                     let name = format!("Inst {}", self.mixer.channels.len() + 1);
                     let _ = self.mixer.add_channel(name.clone());
                     let trk_id = self.arrangement.timeline.tracks.len();
-                    let _ = self
-                        .arrangement
-                        .timeline
-                        .add_track(Track::new(trk_id, name, TrackType::Software));
+                    let _ = self.arrangement.timeline.add_track(Track::new(
+                        trk_id,
+                        name,
+                        TrackType::Software,
+                    ));
                     self.dirty = true;
                 }
                 crate::ui::message::MenuCommand::SplitAtCursor => {
