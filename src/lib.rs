@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 pub mod audio;
 pub mod audio_edit;
 pub mod bouncing;
