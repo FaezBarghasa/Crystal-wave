@@ -56,7 +56,12 @@ impl IoMatrix {
         }
     }
 
-    pub fn add_port(&mut self, name: &str, direction: PortDirection, hardware_channel: usize) -> usize {
+    pub fn add_port(
+        &mut self,
+        name: &str,
+        direction: PortDirection,
+        hardware_channel: usize,
+    ) -> usize {
         let id = self.physical_ports.len();
         self.physical_ports.push(PhysicalPort {
             id,
@@ -73,15 +78,29 @@ impl IoMatrix {
         send_port_id: usize,
         return_port_id: usize,
     ) -> Result<usize, &'static str> {
-        let has_send = self.physical_ports.iter().any(|p| p.id == send_port_id && p.direction == PortDirection::Output);
-        let has_return = self.physical_ports.iter().any(|p| p.id == return_port_id && p.direction == PortDirection::Input);
+        let has_send = self
+            .physical_ports
+            .iter()
+            .any(|p| p.id == send_port_id && p.direction == PortDirection::Output);
+        let has_return = self
+            .physical_ports
+            .iter()
+            .any(|p| p.id == return_port_id && p.direction == PortDirection::Input);
 
         if !has_send || !has_return {
-            return Err("InvalidPorts: Send port must be an Output and Return port must be an Input");
+            return Err(
+                "InvalidPorts: Send port must be an Output and Return port must be an Input",
+            );
         }
 
         let id = self.hardware_inserts.len();
-        self.hardware_inserts.push(HardwareInsert::new(id, name, send_port_id, return_port_id, 0));
+        self.hardware_inserts.push(HardwareInsert::new(
+            id,
+            name,
+            send_port_id,
+            return_port_id,
+            0,
+        ));
         Ok(id)
     }
 
@@ -100,7 +119,11 @@ impl IoMatrix {
         let send_peak_idx = send_impulse
             .iter()
             .enumerate()
-            .max_by(|a, b| a.1.abs().partial_cmp(&b.1.abs()).unwrap_or(std::cmp::Ordering::Equal))
+            .max_by(|a, b| {
+                a.1.abs()
+                    .partial_cmp(&b.1.abs())
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
             .map(|(idx, _)| idx)?;
 
         // Find the first index in the received signal that crosses the detection threshold

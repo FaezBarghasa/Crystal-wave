@@ -17,8 +17,7 @@ fn test_protools_memory_location_storage_and_recall() {
         .with_pre_post_roll(0, 0);
 
     // 3. Create Location 5: "Mastering Limiter Check"
-    let loc5 = MemoryLocation::new(5, "Chorus 2 Climax", 960 * 48)
-        .with_zoom(1.0);
+    let loc5 = MemoryLocation::new(5, "Chorus 2 Climax", 960 * 48).with_zoom(1.0);
 
     bank.store(loc1).expect("Store loc 1");
     bank.store(loc2).expect("Store loc 2");
@@ -35,14 +34,20 @@ fn test_protools_memory_location_storage_and_recall() {
     assert_eq!(recalled_1.name, "Verse 1 Vocal");
     assert_eq!(recalled_1.tick, 960 * 8);
     assert_eq!(recalled_1.zoom_factor, 2.5);
-    assert_eq!(recalled_1.track_visibility_mask, vec![true, true, false, false, true]);
+    assert_eq!(
+        recalled_1.track_visibility_mask,
+        vec![true, true, false, false, true]
+    );
     assert_eq!(recalled_1.pre_roll_ticks, 960 * 2);
 
     // 5. Recall Location 2
     let recalled_2 = bank.recall(2).expect("Recall 2");
     assert_eq!(recalled_2.name, "Bridge Drum Edit");
     assert_eq!(recalled_2.zoom_factor, 8.0);
-    assert_eq!(recalled_2.track_visibility_mask, vec![false, false, true, true, false]);
+    assert_eq!(
+        recalled_2.track_visibility_mask,
+        vec![false, false, true, true, false]
+    );
 
     // 6. Non-existent recall
     assert!(bank.recall(3).is_none());

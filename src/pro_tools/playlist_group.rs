@@ -47,7 +47,11 @@ impl MultiTrackPlaylistGroup {
         self.track_ids.len()
     }
 
-    pub fn add_take(&mut self, name: &str, data_per_track: Vec<Vec<f32>>) -> Result<usize, &'static str> {
+    pub fn add_take(
+        &mut self,
+        name: &str,
+        data_per_track: Vec<Vec<f32>>,
+    ) -> Result<usize, &'static str> {
         if data_per_track.len() != self.num_tracks() {
             return Err("GroupMismatch: Buffer count does not match grouped track count");
         }

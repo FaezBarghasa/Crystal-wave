@@ -52,7 +52,11 @@ impl VcaManager {
         id
     }
 
-    pub fn assign_track_to_vca(&mut self, vca_id: usize, track_id: usize) -> Result<(), &'static str> {
+    pub fn assign_track_to_vca(
+        &mut self,
+        vca_id: usize,
+        track_id: usize,
+    ) -> Result<(), &'static str> {
         if let Some(vca) = self.masters.get_mut(vca_id) {
             vca.assign_track(track_id);
             Ok(())

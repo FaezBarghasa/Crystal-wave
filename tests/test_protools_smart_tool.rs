@@ -1,6 +1,6 @@
 use Crystal_wave::pro_tools::{
-    handle_keyboard_focus_key, ClipGeometry, KeyboardFocusCommand, ProToolsClip, SmartToolAction,
-    SmartToolContext,
+    ClipGeometry, KeyboardFocusCommand, ProToolsClip, SmartToolAction, SmartToolContext,
+    handle_keyboard_focus_key,
 };
 
 #[test]
@@ -39,13 +39,34 @@ fn test_smart_tool_hotspot_resolution() {
 
 #[test]
 fn test_keyboard_focus_single_key_shortcuts() {
-    assert_eq!(handle_keyboard_focus_key('b'), Some(KeyboardFocusCommand::SplitAtCursor));
-    assert_eq!(handle_keyboard_focus_key('B'), Some(KeyboardFocusCommand::SplitAtCursor));
-    assert_eq!(handle_keyboard_focus_key('a'), Some(KeyboardFocusCommand::TrimStartToCursor));
-    assert_eq!(handle_keyboard_focus_key('s'), Some(KeyboardFocusCommand::TrimEndToCursor));
-    assert_eq!(handle_keyboard_focus_key('d'), Some(KeyboardFocusCommand::FadeInToCursor));
-    assert_eq!(handle_keyboard_focus_key('g'), Some(KeyboardFocusCommand::FadeOutFromCursor));
-    assert_eq!(handle_keyboard_focus_key('f'), Some(KeyboardFocusCommand::CrossfadeSelection));
+    assert_eq!(
+        handle_keyboard_focus_key('b'),
+        Some(KeyboardFocusCommand::SplitAtCursor)
+    );
+    assert_eq!(
+        handle_keyboard_focus_key('B'),
+        Some(KeyboardFocusCommand::SplitAtCursor)
+    );
+    assert_eq!(
+        handle_keyboard_focus_key('a'),
+        Some(KeyboardFocusCommand::TrimStartToCursor)
+    );
+    assert_eq!(
+        handle_keyboard_focus_key('s'),
+        Some(KeyboardFocusCommand::TrimEndToCursor)
+    );
+    assert_eq!(
+        handle_keyboard_focus_key('d'),
+        Some(KeyboardFocusCommand::FadeInToCursor)
+    );
+    assert_eq!(
+        handle_keyboard_focus_key('g'),
+        Some(KeyboardFocusCommand::FadeOutFromCursor)
+    );
+    assert_eq!(
+        handle_keyboard_focus_key('f'),
+        Some(KeyboardFocusCommand::CrossfadeSelection)
+    );
     assert_eq!(handle_keyboard_focus_key('z'), None);
 }
 

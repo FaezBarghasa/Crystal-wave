@@ -11,27 +11,21 @@ fn test_multi_track_drum_group_playlist_comping() {
     assert_eq!(drum_group.num_tracks(), 10);
 
     // Record Take 1 (1000 samples per channel, populated with channel-specific test values)
-    let take1_buffers: Vec<Vec<f32>> = (0..10)
-        .map(|ch| vec![(ch as f32) + 0.1; 1000])
-        .collect();
+    let take1_buffers: Vec<Vec<f32>> = (0..10).map(|ch| vec![(ch as f32) + 0.1; 1000]).collect();
     let t1_id = drum_group
         .add_take("Take 01 (Groovy)", take1_buffers)
         .expect("Take 1 added");
     assert_eq!(t1_id, 0);
 
     // Record Take 2 (1000 samples per channel)
-    let take2_buffers: Vec<Vec<f32>> = (0..10)
-        .map(|ch| vec![(ch as f32) + 0.2; 1000])
-        .collect();
+    let take2_buffers: Vec<Vec<f32>> = (0..10).map(|ch| vec![(ch as f32) + 0.2; 1000]).collect();
     let t2_id = drum_group
         .add_take("Take 02 (High Energy)", take2_buffers)
         .expect("Take 2 added");
     assert_eq!(t2_id, 1);
 
     // Record Take 3 (1000 samples per channel)
-    let take3_buffers: Vec<Vec<f32>> = (0..10)
-        .map(|ch| vec![(ch as f32) + 0.3; 1000])
-        .collect();
+    let take3_buffers: Vec<Vec<f32>> = (0..10).map(|ch| vec![(ch as f32) + 0.3; 1000]).collect();
     let t3_id = drum_group
         .add_take("Take 03 (Tight Fill)", take3_buffers)
         .expect("Take 3 added");
