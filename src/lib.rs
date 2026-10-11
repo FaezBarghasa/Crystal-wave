@@ -1,4 +1,7 @@
+pub mod audio;
+pub mod audio_edit;
 pub mod dsp;
+pub mod elastic;
 pub mod error;
 pub mod generative;
 pub mod harmony;

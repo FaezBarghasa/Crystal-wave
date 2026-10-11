@@ -1,6 +1,13 @@
 use crate::timeline::PPQN;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SnapStyle {
+    #[default]
+    Absolute,
+    Relative,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SnappingMode {
     #[default]
     Smart,
@@ -32,11 +39,36 @@ impl SnappingMode {
     }
 
     pub fn snap(&self, tick: u64, numerator: u8, denominator: u8, fps: f32, bpm: f32) -> u64 {
+        self.snap_with_style(tick, numerator, denominator, fps, bpm, SnapStyle::Absolute, 0)
+    }
+
+    pub fn snap_with_style(
+        &self,
+        tick: u64,
+        numerator: u8,
+        denominator: u8,
+        fps: f32,
+        bpm: f32,
+        style: SnapStyle,
+        relative_offset: u64,
+    ) -> u64 {
         let grid = self.grid_ticks(numerator, denominator, fps, bpm);
         if grid <= 1 {
             return tick;
         }
-        let half = grid / 2;
-        ((tick + half) / grid) * grid
+
+        match style {
+            SnapStyle::Absolute => {
+                let half = grid / 2;
+                ((tick + half) / grid) * grid
+            }
+            SnapStyle::Relative => {
+                let offset_rem = relative_offset % grid;
+                let adjusted = tick.saturating_sub(offset_rem);
+                let half = grid / 2;
+                let snapped = ((adjusted + half) / grid) * grid;
+                snapped + offset_rem
+            }
+        }
     }
 }

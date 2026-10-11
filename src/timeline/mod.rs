@@ -8,14 +8,17 @@ pub mod swing;
 pub mod track;
 pub mod track_group;
 
-pub use arrangement_view::ArrangementView;
-pub use loop_region::LoopRegion;
-pub use marker::Marker;
-pub use quantize_mode::QuantizeMode;
-pub use region::{Region, RegionKind};
-pub use snapping_mode::SnappingMode;
+pub use arrangement_view::{ArrangementView, BeatMappingPoint, CatchPlayheadMode, MovieTrackInfo};
+pub use loop_region::{LoopRegion, RecordingOverdubMode};
+pub use marker::{Marker, MarkerType};
+pub use quantize_mode::{MusicalScale, QuantizeMode};
+pub use region::{FadeCurve, Region, RegionFade, RegionKind};
+pub use snapping_mode::{SnapStyle, SnappingMode};
 pub use swing::SwingAmount;
-pub use track::{Color, ReturnNode, SendNode, Track, TrackType};
+pub use track::{
+    Color, FreezeMode, ReturnNode, SendNode, Track, TrackAlternative, TrackType,
+    VarispeedMode, VarispeedUnits,
+};
 pub use track_group::{GroupType, TrackGroup};
 
 use crate::error::{LogicError, Result};

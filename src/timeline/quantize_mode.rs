@@ -1,5 +1,65 @@
 use crate::timeline::PPQN;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MusicalScale {
+    Major,
+    NaturalMinor,
+    HarmonicMinor,
+    MelodicMinor,
+    PentatonicMajor,
+    PentatonicMinor,
+    Blues,
+    Dorian,
+    Phrygian,
+    Lydian,
+    Mixolydian,
+    Locrian,
+    Chromatic,
+}
+
+impl MusicalScale {
+    pub fn intervals(&self) -> &'static [u8] {
+        match self {
+            MusicalScale::Major => &[0, 2, 4, 5, 7, 9, 11],
+            MusicalScale::NaturalMinor => &[0, 2, 3, 5, 7, 8, 10],
+            MusicalScale::HarmonicMinor => &[0, 2, 3, 5, 7, 8, 11],
+            MusicalScale::MelodicMinor => &[0, 2, 3, 5, 7, 9, 11],
+            MusicalScale::PentatonicMajor => &[0, 2, 4, 7, 9],
+            MusicalScale::PentatonicMinor => &[0, 3, 5, 7, 10],
+            MusicalScale::Blues => &[0, 3, 5, 6, 7, 10],
+            MusicalScale::Dorian => &[0, 2, 3, 5, 7, 9, 10],
+            MusicalScale::Phrygian => &[0, 1, 3, 5, 7, 8, 10],
+            MusicalScale::Lydian => &[0, 2, 4, 6, 7, 9, 11],
+            MusicalScale::Mixolydian => &[0, 2, 4, 5, 7, 9, 10],
+            MusicalScale::Locrian => &[0, 1, 3, 5, 6, 8, 10],
+            MusicalScale::Chromatic => &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+        }
+    }
+
+    /// Quantize a MIDI note (0..127) to the nearest scale pitch given root note (0..11)
+    pub fn quantize_pitch(&self, note: u8, root: u8) -> u8 {
+        let octave = note / 12;
+        let chroma = note % 12;
+        let root_chroma = root % 12;
+        let relative = (chroma + 12 - root_chroma) % 12;
+
+        let intervals = self.intervals();
+        let mut closest_interval = intervals[0];
+        let mut min_dist = 100i16;
+
+        for &iv in intervals {
+            let dist = (iv as i16 - relative as i16).abs();
+            if dist < min_dist {
+                min_dist = dist;
+                closest_interval = iv;
+            }
+        }
+
+        let new_chroma = (root_chroma + closest_interval) % 12;
+        (octave * 12 + new_chroma).min(127)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum QuantizeMode {
     #[default]
