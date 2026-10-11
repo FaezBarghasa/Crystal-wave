@@ -1,17 +1,17 @@
 {
   "app": "oxide-embed",
   "kind": "project-memory",
-  "project_id": "01a12983-3a55-7575-bcd1-9ad5dfb5a64b",
+  "project_id": "01a12987-2667-77d5-9bf1-583ed6d7109b",
   "project_name": "Crystal-wave",
   "schema_version": 1,
   "min_supported_schema_version": 1,
   "created_by": {
     "oxide_embed_version": "0.4.0",
-    "timestamp": "2026-10-11T05:50:28.437439798Z"
+    "timestamp": "2026-10-11T05:54:45.479444610Z"
   },
   "updated_by": {
     "oxide_embed_version": "0.4.0",
-    "timestamp": "2026-10-11T05:50:28.437582275Z"
+    "timestamp": "2026-10-11T05:54:45.479461232Z"
   },
   "storage": {
     "engine": "surrealdb",
