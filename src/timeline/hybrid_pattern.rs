@@ -74,11 +74,17 @@ impl HybridTimelineManager {
     pub fn create_pattern(&mut self, name: &str, length_ticks: u64) -> usize {
         let id = self.next_pattern_id;
         self.next_pattern_id += 1;
-        self.patterns.insert(id, Pattern::new(id, name, length_ticks));
+        self.patterns
+            .insert(id, Pattern::new(id, name, length_ticks));
         id
     }
 
-    pub fn stamp_pattern(&mut self, pattern_id: usize, track_id: usize, start_tick: u64) -> Result<usize, &'static str> {
+    pub fn stamp_pattern(
+        &mut self,
+        pattern_id: usize,
+        track_id: usize,
+        start_tick: u64,
+    ) -> Result<usize, &'static str> {
         if !self.patterns.contains_key(&pattern_id) {
             return Err("PatternNotFound");
         }
@@ -120,7 +126,11 @@ impl HybridTimelineManager {
 
         self.patterns.insert(new_pattern_id, cloned_pattern);
 
-        if let Some(inst) = self.instances.iter_mut().find(|i| i.instance_id == instance_id) {
+        if let Some(inst) = self
+            .instances
+            .iter_mut()
+            .find(|i| i.instance_id == instance_id)
+        {
             inst.pattern_id = new_pattern_id;
             inst.is_detached = true;
         }

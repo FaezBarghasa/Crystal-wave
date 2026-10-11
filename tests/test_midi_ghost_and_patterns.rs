@@ -9,8 +9,8 @@ fn test_ghost_polyphony_and_microtonal_notes() {
 
     // Notes from all tracks: (track_id, pitch, start_tick, len_ticks, vel, color)
     let all_notes = vec![
-        (0, 36, 0, 960, 100, [50, 100, 200]),  // Track 0 (Bass): C2
-        (1, 60, 0, 480, 110, [255, 100, 50]),  // Track 1 (Active Synth): C4
+        (0, 36, 0, 960, 100, [50, 100, 200]),   // Track 0 (Bass): C2
+        (1, 60, 0, 480, 110, [255, 100, 50]),   // Track 1 (Active Synth): C4
         (2, 64, 480, 480, 90, [100, 255, 100]), // Track 2 (Pad): E4
     ];
 
@@ -44,8 +44,8 @@ fn test_hybrid_pattern_timeline_and_linear_explode() {
     let pat_id = hybrid.create_pattern("Trap 808 & Snare Loop", 960 * 4);
 
     if let Some(pat) = hybrid.patterns.get_mut(&pat_id) {
-        pat.add_note(36, 0, 240, 120);     // Kick
-        pat.add_note(38, 960, 240, 110);    // Snare
+        pat.add_note(36, 0, 240, 120); // Kick
+        pat.add_note(38, 960, 240, 110); // Snare
         pat.add_note(36, 960 * 2, 240, 115); // Kick
         pat.add_note(38, 960 * 3, 240, 110); // Snare
     }
@@ -58,9 +58,7 @@ fn test_hybrid_pattern_timeline_and_linear_explode() {
     assert_eq!(hybrid.linked_instance_count(pat_id), 3);
 
     // 3. Explode / detach instance 3 to create an independent drum fill
-    let exploded_pat_id = hybrid
-        .explode_instance(inst3)
-        .expect("Explode instance 3");
+    let exploded_pat_id = hybrid.explode_instance(inst3).expect("Explode instance 3");
 
     assert_eq!(hybrid.linked_instance_count(pat_id), 2);
     assert_eq!(hybrid.linked_instance_count(exploded_pat_id), 0); // Detached
@@ -73,13 +71,28 @@ fn test_hybrid_pattern_timeline_and_linear_explode() {
 
     // Original pattern still has only 4 notes
     assert_eq!(hybrid.patterns.get(&pat_id).unwrap().notes.len(), 4);
-    assert!(!hybrid.instances.iter().find(|i| i.instance_id == inst1).unwrap().is_detached);
-    assert!(hybrid.instances.iter().find(|i| i.instance_id == inst3).unwrap().is_detached);
+    assert!(
+        !hybrid
+            .instances
+            .iter()
+            .find(|i| i.instance_id == inst1)
+            .unwrap()
+            .is_detached
+    );
+    assert!(
+        hybrid
+            .instances
+            .iter()
+            .find(|i| i.instance_id == inst3)
+            .unwrap()
+            .is_detached
+    );
 }
 
 #[test]
 fn test_free_form_floating_automation_objects() {
-    let mut auto_obj = FloatingAutomationObject::new(1, "Filter Sweep", 960 * 4, AutomationShape::Spline);
+    let mut auto_obj =
+        FloatingAutomationObject::new(1, "Filter Sweep", 960 * 4, AutomationShape::Spline);
     auto_obj.add_node(960 * 2, 0.25, 0.5); // Midpoint curve with tension
 
     // Initial evaluation

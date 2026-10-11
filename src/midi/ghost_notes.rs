@@ -71,9 +71,8 @@ impl GhostPolyphonyView {
         self.ghost_notes.clear();
         for &(track_id, pitch, start, len, vel, color) in all_track_notes {
             if track_id != self.active_track_id {
-                self.ghost_notes.push(GhostNote::new(
-                    track_id, pitch, start, len, vel, color,
-                ));
+                self.ghost_notes
+                    .push(GhostNote::new(track_id, pitch, start, len, vel, color));
             }
         }
     }

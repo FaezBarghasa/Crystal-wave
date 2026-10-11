@@ -35,7 +35,10 @@ fn test_decoupled_playhead_and_selection_loop() {
 
     // 5. Restore arrangement playhead
     decoupled.restore_parked_playhead();
-    assert_eq!(decoupled.playback_target, PlaybackTarget::ArrangementTimeline);
+    assert_eq!(
+        decoupled.playback_target,
+        PlaybackTarget::ArrangementTimeline
+    );
     assert_eq!(decoupled.current_playhead_tick, 960 * 4);
 }
 
@@ -53,9 +56,7 @@ fn test_tape_style_audio_scrubbing() {
     assert!((speed_rev - (-2.0)).abs() < 1e-3);
 
     // 3. Render scrub block across a sine waveform
-    let test_audio: Vec<f32> = (0..1000)
-        .map(|i| ((i as f32) / 100.0).sin())
-        .collect();
+    let test_audio: Vec<f32> = (0..1000).map(|i| ((i as f32) / 100.0).sin()).collect();
     let mut out_block = vec![0.0f32; 128];
 
     scrub_engine.current_sample_pos = 100.0;
@@ -100,8 +101,10 @@ fn test_native_4_stem_separation_and_phase_reconstruction() {
     // Crucial Phase Invariant:
     // The sum of all 4 stems must perfectly reconstruct the original input
     for i in 0..num_samples {
-        let reconstructed_l = stems.bass_l[i] + stems.drums_l[i] + stems.vocals_l[i] + stems.other_l[i];
-        let reconstructed_r = stems.bass_r[i] + stems.drums_r[i] + stems.vocals_r[i] + stems.other_r[i];
+        let reconstructed_l =
+            stems.bass_l[i] + stems.drums_l[i] + stems.vocals_l[i] + stems.other_l[i];
+        let reconstructed_r =
+            stems.bass_r[i] + stems.drums_r[i] + stems.vocals_r[i] + stems.other_r[i];
 
         assert!(
             (reconstructed_l - input_l[i]).abs() < 1e-4,

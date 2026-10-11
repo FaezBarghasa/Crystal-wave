@@ -77,7 +77,9 @@ impl FloatingAutomationObject {
         let mut next = &self.nodes[self.nodes.len() - 1];
 
         for i in 0..self.nodes.len() - 1 {
-            if clamped_tick >= self.nodes[i].tick_offset && clamped_tick <= self.nodes[i + 1].tick_offset {
+            if clamped_tick >= self.nodes[i].tick_offset
+                && clamped_tick <= self.nodes[i + 1].tick_offset
+            {
                 prev = &self.nodes[i];
                 next = &self.nodes[i + 1];
                 break;

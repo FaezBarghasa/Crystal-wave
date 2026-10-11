@@ -1,5 +1,5 @@
-use crystal_wave::mixing::automation_preview::AutomationPreviewManager;
-use crystal_wave::mixing::spatial_audio_processor::{BED_CHANNELS_7_1_4, SpatialObjectPanner};
+use Crystal_wave::mixing::automation_preview::AutomationPreviewManager;
+use Crystal_wave::mixing::spatial_audio_processor::{BED_CHANNELS_7_1_4, SpatialObjectPanner};
 
 #[test]
 fn test_automation_preview_audition_and_commit() {

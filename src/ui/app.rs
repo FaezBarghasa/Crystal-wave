@@ -199,7 +199,10 @@ impl CrystalWaveApp {
             UiMessage::ToggleVcaSpill(_vca_id) => {
                 self.dirty = true;
             }
-            UiMessage::SetTrackColorCascade { track_id, color_rgb } => {
+            UiMessage::SetTrackColorCascade {
+                track_id,
+                color_rgb,
+            } => {
                 if let Some(track) = self.arrangement.timeline.tracks.get_mut(track_id) {
                     track.color = crate::timeline::track::Color {
                         r: color_rgb[0],

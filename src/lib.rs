@@ -23,8 +23,8 @@ pub mod ui;
 pub mod ui_state;
 
 pub use audio::{
-    AudioHardwareDriver, OnTheFlyPunchEngine, PunchState, StemSeparationResult, StemSeparatorEngine,
-    StemType,
+    AudioHardwareDriver, OnTheFlyPunchEngine, PunchState, StemSeparationResult,
+    StemSeparatorEngine, StemType,
 };
 pub use audio_edit::{DecoupledPlayheadSelection, PlaybackTarget, TapeScrubEngine};
 pub use dsp::compressor::{Compressor, CompressorConfig, CompressorModel, MultibandCompressor};
@@ -55,6 +55,8 @@ pub use pro_tools::{
     SmartToolAction, SmartToolContext, TrackSpillState, VcaManager, VcaMaster,
 };
 pub use smart_controls::{ParameterMapping, SmartControlsLayout, SmartKnob};
-pub use timeline::{HybridTimelineManager, Pattern, PatternInstance, PatternNote, PPQN, TakeFolder, Timeline};
+pub use timeline::{
+    HybridTimelineManager, PPQN, Pattern, PatternInstance, PatternNote, TakeFolder, Timeline,
+};
 pub use ui::{CrystalWaveApp, UiMessage, UiSessionDriver};
 pub use ui_state::{DualChannelInspector, EditorDrawerTab, LcdDisplayMode, WorkspaceState};

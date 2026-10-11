@@ -45,7 +45,9 @@ impl AutomationPreviewManager {
         current_automated_val: f32,
     ) -> f32 {
         if self.is_preview_active
-            && let Some(&audition_val) = self.staged_parameters.get(&(track_id, param_name.to_string()))
+            && let Some(&audition_val) = self
+                .staged_parameters
+                .get(&(track_id, param_name.to_string()))
         {
             return audition_val;
         }

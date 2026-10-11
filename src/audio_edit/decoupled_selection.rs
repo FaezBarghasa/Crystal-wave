@@ -79,7 +79,8 @@ impl DecoupledPlayheadSelection {
                 if sel_len == 0 {
                     return self.selection_start_tick;
                 }
-                let offset = (self.current_playhead_tick - self.selection_start_tick + delta_ticks) % sel_len;
+                let offset = (self.current_playhead_tick - self.selection_start_tick + delta_ticks)
+                    % sel_len;
                 self.current_playhead_tick = self.selection_start_tick + offset;
                 self.current_playhead_tick
             }

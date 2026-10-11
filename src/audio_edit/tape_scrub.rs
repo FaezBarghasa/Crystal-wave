@@ -62,7 +62,8 @@ impl TapeScrubEngine {
                 *sample = source_audio[idx0] * (1.0 - frac) + source_audio[idx1] * frac;
             }
 
-            self.current_sample_pos = (self.current_sample_pos + step).clamp(0.0, (source_len - 1) as f64);
+            self.current_sample_pos =
+                (self.current_sample_pos + step).clamp(0.0, (source_len - 1) as f64);
         }
 
         speed
