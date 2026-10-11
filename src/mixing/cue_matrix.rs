@@ -53,9 +53,10 @@ pub struct CueMatrix {
 
 impl CueMatrix {
     pub fn new(num_channels: usize) -> Self {
-        let mut cue_mixes = Vec::new();
-        cue_mixes.push(CueMix::new(0, "Cue A (Drummer - Click Heavy)"));
-        cue_mixes.push(CueMix::new(1, "Cue B (Vocalist - Reverb Lush)"));
+        let mut cue_mixes = vec![
+            CueMix::new(0, "Cue A (Drummer - Click Heavy)"),
+            CueMix::new(1, "Cue B (Vocalist - Reverb Lush)"),
+        ];
         cue_mixes[0].click_enabled = true;
 
         let channel_sends = vec![vec![ChannelCueSend::default(); MAX_CUE_MIXES]; num_channels];

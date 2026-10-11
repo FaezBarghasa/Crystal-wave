@@ -70,7 +70,7 @@ impl StemSeparatorEngine {
 
             // 2. Center/Side decomposition for Vocals vs Stereo instruments
             let mid = (high_l + high_r) * 0.5;
-            let side = (high_l - high_r) * 0.5;
+            let _side = (high_l - high_r) * 0.5;
 
             // Transient detection for drums
             let transient = (high_l - mid).abs().max((high_r - mid).abs());

@@ -44,10 +44,10 @@ impl AutomationPreviewManager {
         param_name: &str,
         current_automated_val: f32,
     ) -> f32 {
-        if self.is_preview_active {
-            if let Some(&audition_val) = self.staged_parameters.get(&(track_id, param_name.to_string())) {
-                return audition_val;
-            }
+        if self.is_preview_active
+            && let Some(&audition_val) = self.staged_parameters.get(&(track_id, param_name.to_string()))
+        {
+            return audition_val;
         }
         current_automated_val
     }

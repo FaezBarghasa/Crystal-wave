@@ -1,6 +1,6 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{Device, Host, OutputCallbackInfo, SampleFormat, Stream, StreamConfig};
-use rtrb::{Consumer, Producer, RingBuffer};
+use cpal::{OutputCallbackInfo, Stream, StreamConfig};
+use rtrb::{Producer, RingBuffer};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -23,13 +23,13 @@ impl AudioHardwareDriver {
         let device = host
             .default_output_device()
             .ok_or_else(|| "No default audio output device available".to_string())?;
-        let device_name = device.name().unwrap_or_else(|_| "Default Device".to_string());
+        let device_name = device.to_string();
 
         let default_config = device
             .default_output_config()
             .map_err(|e| format!("Failed to query default output config: {}", e))?;
 
-        let sample_rate = default_config.sample_rate().0;
+        let sample_rate = default_config.sample_rate();
         let channels = default_config.channels();
 
         Ok(Self {
@@ -67,25 +67,23 @@ impl AudioHardwareDriver {
             eprintln!("Audio DAC Stream Error: {}", err);
         };
 
-        let stream = match config.sample_rate.0 {
-            _ => device
-                .build_output_stream(
-                    &config,
-                    move |data: &mut [f32], _: &OutputCallbackInfo| {
-                        for sample in data.iter_mut() {
-                            if let Ok(val) = consumer.pop() {
-                                *sample = val;
-                            } else {
-                                *sample = 0.0;
-                                underrun_counter.fetch_add(1, Ordering::Relaxed);
-                            }
+        let stream = device
+            .build_output_stream(
+                config,
+                move |data: &mut [f32], _: &OutputCallbackInfo| {
+                    for sample in data.iter_mut() {
+                        if let Ok(val) = consumer.pop() {
+                            *sample = val;
+                        } else {
+                            *sample = 0.0;
+                            underrun_counter.fetch_add(1, Ordering::Relaxed);
                         }
-                    },
-                    err_fn,
-                    None,
-                )
-                .map_err(|e| format!("Failed to build audio output stream: {}", e))?,
-        };
+                    }
+                },
+                err_fn,
+                None,
+            )
+            .map_err(|e| format!("Failed to build audio output stream: {}", e))?;
 
         stream
             .play()

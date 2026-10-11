@@ -210,6 +210,8 @@ impl CrystalWaveApp {
                 self.dirty = true;
             }
 
+            UiMessage::Tick => {}
+
             UiMessage::NewProject => {
                 self.playhead_tick = 0;
                 self.is_playing = false;

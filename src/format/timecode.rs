@@ -46,7 +46,7 @@ impl SmpteTimecode {
 
     /// Parses a standard timecode string "01:04:22:14"
     pub fn parse(s: &str, rate: SmpteFrameRate) -> Result<Self, &'static str> {
-        let parts: Vec<&str> = s.split(|c| c == ':' || c == ';').collect();
+        let parts: Vec<&str> = s.split([':', ';']).collect();
         if parts.len() < 4 {
             return Err("InvalidTimecodeFormat: Must be HH:MM:SS:FF");
         }
@@ -62,11 +62,10 @@ impl SmpteTimecode {
     /// Converts timecode into absolute seconds
     pub fn to_seconds(&self) -> f64 {
         let fps = self.frame_rate.as_f32() as f64;
-        let total_secs = (self.hours as f64) * 3600.0
+        (self.hours as f64) * 3600.0
             + (self.minutes as f64) * 60.0
             + (self.seconds as f64)
-            + ((self.frames as f64) + (self.subframes as f64) / 100.0) / fps;
-        total_secs
+            + ((self.frames as f64) + (self.subframes as f64) / 100.0) / fps
     }
 
     /// Converts timecode into musical arrangement ticks at a given tempo (BPM)

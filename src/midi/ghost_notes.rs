@@ -55,6 +55,8 @@ pub struct GhostPolyphonyView {
     pub ghost_opacity: f32, // 0.0 to 1.0 (default 0.35)
 }
 
+pub type RawGhostNoteTuple = (usize, u8, u64, u64, u8, [u8; 3]);
+
 impl GhostPolyphonyView {
     pub fn new(active_track_id: usize) -> Self {
         Self {
@@ -65,7 +67,7 @@ impl GhostPolyphonyView {
     }
 
     /// Clears and repopulates ghost notes from all non-active tracks in the arrangement.
-    pub fn update_ghosts(&mut self, all_track_notes: &[(usize, u8, u64, u64, u8, [u8; 3])]) {
+    pub fn update_ghosts(&mut self, all_track_notes: &[RawGhostNoteTuple]) {
         self.ghost_notes.clear();
         for &(track_id, pitch, start, len, vel, color) in all_track_notes {
             if track_id != self.active_track_id {
