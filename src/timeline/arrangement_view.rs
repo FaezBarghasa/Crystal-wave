@@ -1,7 +1,7 @@
+use crate::timeline::Timeline;
 use crate::timeline::marker::Marker;
 use crate::timeline::track::Track;
 use crate::timeline::track_group::TrackGroup;
-use crate::timeline::Timeline;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CatchPlayheadMode {
@@ -76,11 +76,14 @@ impl ArrangementView {
     }
 
     pub fn update_playhead_view(&mut self, playhead_tick: u64) {
-        let view_width = self.visible_end_tick.saturating_sub(self.visible_start_tick);
+        let view_width = self
+            .visible_end_tick
+            .saturating_sub(self.visible_start_tick);
         match self.catch_playhead {
             CatchPlayheadMode::Off => {}
             CatchPlayheadMode::ContinuousScroll => {
-                if playhead_tick > self.visible_end_tick || playhead_tick < self.visible_start_tick {
+                if playhead_tick > self.visible_end_tick || playhead_tick < self.visible_start_tick
+                {
                     let half = view_width / 2;
                     self.visible_start_tick = playhead_tick.saturating_sub(half);
                     self.visible_end_tick = self.visible_start_tick + view_width;

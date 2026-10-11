@@ -1,5 +1,5 @@
-use std::sync::{Arc, Mutex};
 use crate::audio::take::Take;
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CompSelection {
@@ -35,7 +35,8 @@ impl CompingTool {
 
     pub fn add_selection(&mut self, take_id: usize, start_sample: usize, end_sample: usize) {
         // Quick swipe replace overlapping parts of existing selections
-        self.selections.retain(|s| s.end_sample <= start_sample || s.start_sample >= end_sample);
+        self.selections
+            .retain(|s| s.end_sample <= start_sample || s.start_sample >= end_sample);
         self.selections.push(CompSelection {
             take_id,
             start_sample,
@@ -55,26 +56,26 @@ impl CompingTool {
                 } else {
                     false
                 }
-            })
-                && let Ok(t_guard) = take_arc.lock()
-                    && let Ok(buf) = t_guard.buffer.lock() {
-                        let start = sel.start_sample.min(total_samples);
-                        let end = sel.end_sample.min(total_samples).min(buf.len());
-                        for i in start..end {
-                            let mut sample = buf[i];
-                            // Equal-power sinusoidal crossfade in
-                            if i < start + xfade && start > 0 {
-                                let phase = (i - start) as f32 / xfade as f32;
-                                sample *= (phase * std::f32::consts::FRAC_PI_2).sin();
-                            }
-                            // Equal-power sinusoidal crossfade out
-                            if i + xfade > end && end < total_samples {
-                                let phase = (end - i) as f32 / xfade as f32;
-                                sample *= (phase * std::f32::consts::FRAC_PI_2).sin();
-                            }
-                            out[i] += sample;
-                        }
+            }) && let Ok(t_guard) = take_arc.lock()
+                && let Ok(buf) = t_guard.buffer.lock()
+            {
+                let start = sel.start_sample.min(total_samples);
+                let end = sel.end_sample.min(total_samples).min(buf.len());
+                for i in start..end {
+                    let mut sample = buf[i];
+                    // Equal-power sinusoidal crossfade in
+                    if i < start + xfade && start > 0 {
+                        let phase = (i - start) as f32 / xfade as f32;
+                        sample *= (phase * std::f32::consts::FRAC_PI_2).sin();
                     }
+                    // Equal-power sinusoidal crossfade out
+                    if i + xfade > end && end < total_samples {
+                        let phase = (end - i) as f32 / xfade as f32;
+                        sample *= (phase * std::f32::consts::FRAC_PI_2).sin();
+                    }
+                    out[i] += sample;
+                }
+            }
         }
         out
     }

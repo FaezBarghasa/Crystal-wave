@@ -19,7 +19,12 @@ impl AiPiano {
         Self { style }
     }
 
-    pub fn generate_comping(&self, chord_track: &ChordTrack, bars: usize, ppqn: u64) -> Vec<GeneratedMidiNote> {
+    pub fn generate_comping(
+        &self,
+        chord_track: &ChordTrack,
+        bars: usize,
+        ppqn: u64,
+    ) -> Vec<GeneratedMidiNote> {
         let mut notes = Vec::new();
         let bar_ticks = ppqn * 4;
 

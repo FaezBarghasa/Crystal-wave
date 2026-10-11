@@ -26,7 +26,10 @@ impl AudioRegion {
         if start >= end || end > self.buffer.len() {
             return None;
         }
-        Some(AudioRegion::new(self.buffer[start..end].to_vec(), self.sample_rate))
+        Some(AudioRegion::new(
+            self.buffer[start..end].to_vec(),
+            self.sample_rate,
+        ))
     }
 
     pub fn split(&self, split_point: usize) -> Option<(AudioRegion, AudioRegion)> {
@@ -122,10 +125,10 @@ impl AudioRegion {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StripSilenceConfig {
-    pub threshold_db: f32,       // e.g. -40.0 dB
+    pub threshold_db: f32,          // e.g. -40.0 dB
     pub min_section_length_ms: f32, // e.g. 50.0 ms
-    pub pre_attack_ms: f32,      // e.g. 10.0 ms
-    pub post_release_ms: f32,    // e.g. 20.0 ms
+    pub pre_attack_ms: f32,         // e.g. 10.0 ms
+    pub post_release_ms: f32,       // e.g. 20.0 ms
 }
 
 impl Default for StripSilenceConfig {
@@ -155,7 +158,9 @@ impl AudioFileEditor {
     }
 
     pub fn remove_dc_offset(&mut self) {
-        if self.buffer.is_empty() { return; }
+        if self.buffer.is_empty() {
+            return;
+        }
         let sum: f32 = self.buffer.iter().sum();
         let dc = sum / self.buffer.len() as f32;
         for s in &mut self.buffer {
@@ -202,7 +207,8 @@ impl AudioFileEditor {
         let threshold_amp = 10.0f32.powf(config.threshold_db / 20.0);
         let pre_samples = ((config.pre_attack_ms / 1000.0) * self.sample_rate).round() as usize;
         let post_samples = ((config.post_release_ms / 1000.0) * self.sample_rate).round() as usize;
-        let min_samples = ((config.min_section_length_ms / 1000.0) * self.sample_rate).round() as usize;
+        let min_samples =
+            ((config.min_section_length_ms / 1000.0) * self.sample_rate).round() as usize;
 
         let mut in_active = false;
         let mut current_start = 0;
@@ -229,10 +235,11 @@ impl AudioFileEditor {
             let exp_end = (en + post_samples).min(self.buffer.len());
 
             if let Some(last) = expanded_ranges.last_mut()
-                && exp_start <= last.1 {
-                    last.1 = last.1.max(exp_end);
-                    continue;
-                }
+                && exp_start <= last.1
+            {
+                last.1 = last.1.max(exp_end);
+                continue;
+            }
             expanded_ranges.push((exp_start, exp_end));
         }
 

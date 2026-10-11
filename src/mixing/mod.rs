@@ -15,8 +15,8 @@ pub use automation_map::{
 pub use aux_bus::{AuxBus, MAX_BUSES};
 pub use channel_strip::{ChannelPan, ChannelStrip, ChannelStripState, PanMode};
 pub use meter::LevelMeter;
-pub use mixing_engine::{MixingEngine, VcaFader, MAX_CHANNELS};
+pub use mixing_engine::{MAX_CHANNELS, MixingEngine, VcaFader};
 pub use return_node::ReturnNode;
 pub use routing_mode::{ChannelRoutingMode, SidechainRouting};
 pub use send_node::{SendNode, SendPosition};
-pub use spatial_audio_processor::{SpatialObjectPanner, BED_CHANNELS_7_1_4};
+pub use spatial_audio_processor::{BED_CHANNELS_7_1_4, SpatialObjectPanner};

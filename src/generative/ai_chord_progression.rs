@@ -21,11 +21,11 @@ impl HarmonicTensionSolver {
                 ChordQuality::Dominant7 => 0.95, // Dominant 7: high tension
                 _ => 0.75,                       // V Major: strong tension
             },
-            5 => 0.40, // Subdominant (IV): mild tension
-            2 => 0.60, // Supertonic (ii): intermediate tension
-            9 => 0.20, // Submediant (vi): tonic substitute
+            5 => 0.40,  // Subdominant (IV): mild tension
+            2 => 0.60,  // Supertonic (ii): intermediate tension
+            9 => 0.20,  // Submediant (vi): tonic substitute
             11 => 0.98, // Leading tone (vii dim): maximum tension
-            _ => 0.85, // Chromatic / borrowed chord: high tension
+            _ => 0.85,  // Chromatic / borrowed chord: high tension
         }
     }
 

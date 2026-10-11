@@ -1,7 +1,7 @@
-use std::time::Instant;
 use Crystal_wave::ui::message::UiMessage;
 use Crystal_wave::ui::session_driver::UiSessionDriver;
 use Crystal_wave::ui::telemetry::{ChannelMeterFrame, TelemetryBatch, TelemetryChannel};
+use std::time::Instant;
 
 fn main() {
     println!("=== CrystalWave UI Performance & Profiling Benchmarks ===");

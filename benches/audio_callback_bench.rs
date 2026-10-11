@@ -1,5 +1,5 @@
-use std::time::Instant;
 use Crystal_wave::mixing::MixingEngine;
+use std::time::Instant;
 
 fn main() {
     println!("=== CrystalWave Real-Time Audio Callback Cycle Budget Benchmark ===");
@@ -8,7 +8,9 @@ fn main() {
 
     // Add 64 active channels
     for i in 0..64 {
-        let id = mixer.add_channel(format!("Track {i}")).expect("add channel");
+        let id = mixer
+            .add_channel(format!("Track {i}"))
+            .expect("add channel");
         mixer.set_channel_latency(id, i % 16);
     }
 
@@ -41,8 +43,7 @@ fn main() {
     );
     println!(
         "✓ Real-time budget: {:.2} µs (CPU Load: {:.2}%)",
-        budget_us,
-        cpu_load_pct
+        budget_us, cpu_load_pct
     );
     println!("=== Audio Callback Benchmark Passed Successfully ===");
 }

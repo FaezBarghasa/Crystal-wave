@@ -62,7 +62,14 @@ pub struct Region {
 }
 
 impl Region {
-    pub fn new(id: usize, track_id: usize, name: impl Into<String>, start_tick: u64, length_ticks: u64, kind: RegionKind) -> Self {
+    pub fn new(
+        id: usize,
+        track_id: usize,
+        name: impl Into<String>,
+        start_tick: u64,
+        length_ticks: u64,
+        kind: RegionKind,
+    ) -> Self {
         Self {
             id,
             track_id,
@@ -83,7 +90,8 @@ impl Region {
 
     pub fn effective_start_tick(&self) -> u64 {
         if self.anchor_offset_ticks < 0 {
-            self.start_tick.saturating_sub((-self.anchor_offset_ticks) as u64)
+            self.start_tick
+                .saturating_sub((-self.anchor_offset_ticks) as u64)
         } else {
             self.start_tick + self.anchor_offset_ticks as u64
         }
@@ -93,7 +101,13 @@ impl Region {
         self.anchor_offset_ticks = offset_ticks;
     }
 
-    pub fn set_fades(&mut self, in_ticks: u64, in_curve: FadeCurve, out_ticks: u64, out_curve: FadeCurve) {
+    pub fn set_fades(
+        &mut self,
+        in_ticks: u64,
+        in_curve: FadeCurve,
+        out_ticks: u64,
+        out_curve: FadeCurve,
+    ) {
         self.fade = RegionFade {
             in_ticks,
             in_curve,

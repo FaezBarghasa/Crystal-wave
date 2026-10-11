@@ -7,7 +7,7 @@ pub enum VocalRange {
     Alto,    // F3 to D5 (53..74)
     Tenor,   // C3 to A4 (48..69)
     #[default]
-    Baritone,// G2 to E4 (43..64)
+    Baritone, // G2 to E4 (43..64)
 }
 
 pub struct AiVocals {
@@ -19,7 +19,12 @@ impl AiVocals {
         Self { range }
     }
 
-    pub fn generate_lead_melody(&self, chord_track: &ChordTrack, bars: usize, ppqn: u64) -> Vec<GeneratedMidiNote> {
+    pub fn generate_lead_melody(
+        &self,
+        chord_track: &ChordTrack,
+        bars: usize,
+        ppqn: u64,
+    ) -> Vec<GeneratedMidiNote> {
         let mut notes = Vec::new();
         let (min_pitch, max_pitch) = match self.range {
             VocalRange::Soprano => (60, 81),

@@ -19,7 +19,11 @@ pub struct AiHarmony {
 
 impl AiHarmony {
     pub fn new(interval: HarmonyInterval, scale: MusicalScale, root_pitch: u8) -> Self {
-        Self { interval, scale, root_pitch }
+        Self {
+            interval,
+            scale,
+            root_pitch,
+        }
     }
 
     pub fn harmonize_melody(&self, lead_notes: &[GeneratedMidiNote]) -> Vec<GeneratedMidiNote> {

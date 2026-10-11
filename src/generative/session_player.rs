@@ -10,8 +10,8 @@ pub enum SessionPlayerType {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GenerativePerformanceParams {
-    pub complexity: f32, // 0.0 to 1.0 (X axis: simple -> complex)
-    pub intensity: f32,  // 0.0 to 1.0 (Y axis: soft -> loud/aggressive)
+    pub complexity: f32,      // 0.0 to 1.0 (X axis: simple -> complex)
+    pub intensity: f32,       // 0.0 to 1.0 (Y axis: soft -> loud/aggressive)
     pub push_pull_ticks: i16, // Timing feel offset relative to beat grid (-120 to +120 ticks)
     pub fill_frequency: f32,  // 0.0 to 1.0
     pub swing: f32,           // 0.0 to 1.0
@@ -44,10 +44,17 @@ pub struct SessionPlayer {
 
 impl SessionPlayer {
     pub fn new(player_type: SessionPlayerType, params: GenerativePerformanceParams) -> Self {
-        Self { player_type, params }
+        Self {
+            player_type,
+            params,
+        }
     }
 
-    pub fn generate_track(&self, chord_track: &ChordTrack, total_ticks: u64) -> Vec<GeneratedMidiNote> {
+    pub fn generate_track(
+        &self,
+        chord_track: &ChordTrack,
+        total_ticks: u64,
+    ) -> Vec<GeneratedMidiNote> {
         let mut notes = Vec::new();
         let ppqn = 960u64;
         let step_ticks = ppqn / 2; // 8th note subdivisions
@@ -61,7 +68,11 @@ impl SessionPlayer {
                 SessionPlayerType::Drummer => {
                     // Kick on 1 and 3, Snare on 2 and 4
                     let beat_in_bar = (tick / ppqn) % 4;
-                    if beat_in_bar == 0 || beat_in_bar == 2 { 36 } else { 38 }
+                    if beat_in_bar == 0 || beat_in_bar == 2 {
+                        36
+                    } else {
+                        38
+                    }
                 }
                 SessionPlayerType::Keyboardist => 60 + (chord.root % 12),
             };

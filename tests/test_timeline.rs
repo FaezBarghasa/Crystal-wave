@@ -6,11 +6,18 @@ fn test_track_alternatives_and_freeze() {
     assert_eq!(track.track_type, TrackType::Audio);
 
     // Initial region
-    let r1 = Region::new(1, 0, "Take A", 0, 960 * 4, RegionKind::Audio {
-        file_path: Some("take_a.wav".into()),
-        sample_offset: 0,
-        sample_length: 44100,
-    });
+    let r1 = Region::new(
+        1,
+        0,
+        "Take A",
+        0,
+        960 * 4,
+        RegionKind::Audio {
+            file_path: Some("take_a.wav".into()),
+            sample_offset: 0,
+            sample_length: 44100,
+        },
+    );
     track.add_region(r1.clone());
 
     // Create a new alternative slot "Alt 2"
@@ -19,11 +26,18 @@ fn test_track_alternatives_and_freeze() {
     assert_eq!(track.regions.len(), 0);
 
     // Modify active track regions in Alt 2
-    let r2 = Region::new(2, 0, "Take B", 960, 960 * 2, RegionKind::Audio {
-        file_path: Some("take_b.wav".into()),
-        sample_offset: 0,
-        sample_length: 22050,
-    });
+    let r2 = Region::new(
+        2,
+        0,
+        "Take B",
+        960,
+        960 * 2,
+        RegionKind::Audio {
+            file_path: Some("take_b.wav".into()),
+            sample_offset: 0,
+            sample_length: 22050,
+        },
+    );
     track.add_region(r2);
 
     // Switch back to Alternative 0 (Alt 1 / original)
@@ -72,8 +86,8 @@ fn test_loop_region_punch_and_roll() {
 
     assert_eq!(loop_region.length_ticks(), 960 * 4);
     assert!(!loop_region.is_in_punch_range(960 * 4)); // Before punch
-    assert!(loop_region.is_in_punch_range(960 * 5));  // At punch in
-    assert!(loop_region.is_in_punch_range(960 * 6));  // In punch
+    assert!(loop_region.is_in_punch_range(960 * 5)); // At punch in
+    assert!(loop_region.is_in_punch_range(960 * 6)); // In punch
     assert!(!loop_region.is_in_punch_range(960 * 7)); // At punch out
 
     // Test loop wrap
@@ -83,11 +97,18 @@ fn test_loop_region_punch_and_roll() {
 
 #[test]
 fn test_region_anchor_offset_and_fades() {
-    let mut r = Region::new(1, 0, "Vocal Pickup", 960 * 2, 960 * 4, RegionKind::Audio {
-        file_path: None,
-        sample_offset: 0,
-        sample_length: 0,
-    });
+    let mut r = Region::new(
+        1,
+        0,
+        "Vocal Pickup",
+        960 * 2,
+        960 * 4,
+        RegionKind::Audio {
+            file_path: None,
+            sample_offset: 0,
+            sample_length: 0,
+        },
+    );
     r.set_anchor_offset(-240); // 1/16th note pickup before grid
     assert_eq!(r.effective_start_tick(), 960 * 2 - 240);
 

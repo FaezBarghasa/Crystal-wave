@@ -106,7 +106,8 @@ impl Compressor {
                     // True RMS detector: Exponential moving average of squared input
                     let inst_power = 0.5 * (in_l * in_l + in_r * in_r);
                     let alpha_rms = (-1.0 / (0.010 * self.sample_rate)).exp();
-                    self.rms_accumulator = alpha_rms * self.rms_accumulator + (1.0 - alpha_rms) * inst_power;
+                    self.rms_accumulator =
+                        alpha_rms * self.rms_accumulator + (1.0 - alpha_rms) * inst_power;
                     self.rms_accumulator.sqrt().max(1e-6)
                 }
                 _ => (0.5 * (in_l.abs() + in_r.abs())).max(1e-6),
@@ -119,7 +120,9 @@ impl Compressor {
 
             // 3. Ballistics & Envelope Smoothing
             let alpha_att = (-1.0 / (self.effective_attack_ms() * 0.001 * self.sample_rate)).exp();
-            let alpha_rel = (-1.0 / (self.effective_release_ms(detector_input) * 0.001 * self.sample_rate)).exp();
+            let alpha_rel = (-1.0
+                / (self.effective_release_ms(detector_input) * 0.001 * self.sample_rate))
+                .exp();
 
             if gr_target_db < self.envelope {
                 // Attacking (gain reduction increasing)
@@ -217,10 +220,38 @@ pub struct MultibandCompressor {
 
 impl MultibandCompressor {
     pub fn new(sample_rate: f32) -> Result<Self> {
-        let b0 = Compressor::new(CompressorConfig { threshold_db: -24.0, ratio: 3.0, ..Default::default() }, sample_rate)?;
-        let b1 = Compressor::new(CompressorConfig { threshold_db: -20.0, ratio: 2.5, ..Default::default() }, sample_rate)?;
-        let b2 = Compressor::new(CompressorConfig { threshold_db: -18.0, ratio: 2.0, ..Default::default() }, sample_rate)?;
-        let b3 = Compressor::new(CompressorConfig { threshold_db: -16.0, ratio: 2.0, ..Default::default() }, sample_rate)?;
+        let b0 = Compressor::new(
+            CompressorConfig {
+                threshold_db: -24.0,
+                ratio: 3.0,
+                ..Default::default()
+            },
+            sample_rate,
+        )?;
+        let b1 = Compressor::new(
+            CompressorConfig {
+                threshold_db: -20.0,
+                ratio: 2.5,
+                ..Default::default()
+            },
+            sample_rate,
+        )?;
+        let b2 = Compressor::new(
+            CompressorConfig {
+                threshold_db: -18.0,
+                ratio: 2.0,
+                ..Default::default()
+            },
+            sample_rate,
+        )?;
+        let b3 = Compressor::new(
+            CompressorConfig {
+                threshold_db: -16.0,
+                ratio: 2.0,
+                ..Default::default()
+            },
+            sample_rate,
+        )?;
 
         Ok(Self {
             bands: [b0, b1, b2, b3],

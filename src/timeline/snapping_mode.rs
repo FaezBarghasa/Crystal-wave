@@ -39,9 +39,18 @@ impl SnappingMode {
     }
 
     pub fn snap(&self, tick: u64, numerator: u8, denominator: u8, fps: f32, bpm: f32) -> u64 {
-        self.snap_with_style(tick, numerator, denominator, fps, bpm, SnapStyle::Absolute, 0)
+        self.snap_with_style(
+            tick,
+            numerator,
+            denominator,
+            fps,
+            bpm,
+            SnapStyle::Absolute,
+            0,
+        )
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn snap_with_style(
         &self,
         tick: u64,

@@ -36,7 +36,9 @@ impl BitDepthConverter {
                 let mut bytes = Vec::with_capacity(input.len() * 3);
                 for &s in input {
                     let dither_noise = self.dither.generate_tpdf();
-                    let scaled = (s * 8388607.0 + dither_noise).round().clamp(-8388608.0, 8388607.0) as i32;
+                    let scaled = (s * 8388607.0 + dither_noise)
+                        .round()
+                        .clamp(-8388608.0, 8388607.0) as i32;
                     let b = scaled.to_le_bytes();
                     bytes.push(b[0]);
                     bytes.push(b[1]);

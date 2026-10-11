@@ -1,9 +1,9 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum RecordingOverdubMode {
     #[default]
-    Replace,  // Destructive / tape-style overdub
-    Merge,    // Merge into existing region
-    NewTrack, // Create a new track for each take
+    Replace, // Destructive / tape-style overdub
+    Merge,      // Merge into existing region
+    NewTrack,   // Create a new track for each take
     TakeFolder, // Quick swipe comping take folder
 }
 

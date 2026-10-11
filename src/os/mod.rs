@@ -53,8 +53,8 @@ impl ThreadPriorityManager {
             unsafe {
                 use mach2::mach_init::mach_thread_self;
                 use mach2::thread_policy::{
-                    thread_policy_set, thread_time_constraint_policy_data_t,
                     THREAD_TIME_CONSTRAINT_POLICY, THREAD_TIME_CONSTRAINT_POLICY_COUNT,
+                    thread_policy_set, thread_time_constraint_policy_data_t,
                 };
 
                 let thread_port = mach_thread_self();

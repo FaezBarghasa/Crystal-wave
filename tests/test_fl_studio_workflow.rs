@@ -1,4 +1,5 @@
 use Crystal_wave::fl_studio::{
+    FlWindowManager,
     automation_clip::AutomationClip,
     browser::{FlBrowser, SampleEntry},
     channel_rack::ChannelRack,
@@ -8,7 +9,6 @@ use Crystal_wave::fl_studio::{
     piano_roll::{FlPianoRollNote, FlPianoRollTools, GhostNote},
     playlist::{FlPlaylist, PlaylistItem},
     soft_clipper::FruitySoftClipper,
-    FlWindowManager,
 };
 
 #[test]
@@ -114,22 +114,31 @@ fn test_playlist_free_form_coexistence() {
     playlist.patterns[pat_id].add_note(FlPianoRollNote::new(1, 0, 36, 0, 96));
 
     // Place Pattern, Audio Clip, and Automation Clip all in the same lane
-    assert!(playlist.stamp_item(lane_idx, PlaylistItem::PatternInstance {
-        pattern_id: pat_id,
-        start_tick: 0,
-        length_ticks: 384,
-    }));
-    assert!(playlist.stamp_item(lane_idx, PlaylistItem::AudioClipInstance {
-        sample_path: "/samples/vocal_drop.wav".to_string(),
-        start_tick: 384,
-        length_ticks: 384,
-        gain_db: 0.0,
-    }));
-    assert!(playlist.stamp_item(lane_idx, PlaylistItem::AutomationClipInstance {
-        clip_id: 201,
-        start_tick: 0,
-        length_ticks: 768,
-    }));
+    assert!(playlist.stamp_item(
+        lane_idx,
+        PlaylistItem::PatternInstance {
+            pattern_id: pat_id,
+            start_tick: 0,
+            length_ticks: 384,
+        }
+    ));
+    assert!(playlist.stamp_item(
+        lane_idx,
+        PlaylistItem::AudioClipInstance {
+            sample_path: "/samples/vocal_drop.wav".to_string(),
+            start_tick: 384,
+            length_ticks: 384,
+            gain_db: 0.0,
+        }
+    ));
+    assert!(playlist.stamp_item(
+        lane_idx,
+        PlaylistItem::AutomationClipInstance {
+            clip_id: 201,
+            start_tick: 0,
+            length_ticks: 768,
+        }
+    ));
 
     assert_eq!(playlist.lanes[lane_idx].items.len(), 3);
     assert_eq!(playlist.lanes[lane_idx].items[0].start_tick(), 0);
@@ -140,7 +149,7 @@ fn test_playlist_free_form_coexistence() {
 fn test_automation_clip_spline_tension() {
     let mut clip = AutomationClip::new(1, "Filter Cutoff");
     clip.nodes.clear();
-    clip.add_node(0, 0.0, 0.5);   // Convex curve
+    clip.add_node(0, 0.0, 0.5); // Convex curve
     clip.add_node(768, 1.0, 0.0);
 
     let mid_val = clip.evaluate(384);
@@ -230,7 +239,10 @@ fn test_browser_smart_search_and_drop() {
     let ch = browser.drop_to_channel_rack(&mut rack, 101);
     assert_eq!(ch, Some(0));
     assert_eq!(rack.channels[0].name, "808_Spinz_Clean.wav");
-    assert_eq!(rack.channels[0].sample_path, Some("/samples/trap/808_Spinz_Clean.wav".to_string()));
+    assert_eq!(
+        rack.channels[0].sample_path,
+        Some("/samples/trap/808_Spinz_Clean.wav".to_string())
+    );
 }
 
 #[test]
@@ -238,10 +250,7 @@ fn test_visual_undo_history() {
     let mut history: FlHistoryManager<String> = FlHistoryManager::new();
 
     for i in 0..10 {
-        history.record_action(
-            format!("Action {}", i),
-            format!("state_v{}", i),
-        );
+        history.record_action(format!("Action {}", i), format!("state_v{}", i));
     }
 
     assert_eq!(history.list_history().len(), 10);

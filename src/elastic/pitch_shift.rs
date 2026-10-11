@@ -39,7 +39,11 @@ impl FlexPitchEngine {
     }
 
     /// Calculate instantaneous pitch shift in semitones across the note duration
-    pub fn calculate_instantaneous_pitch_offset(&self, hotspot: &FlexPitch6Hotspot, sample_idx: usize) -> f32 {
+    pub fn calculate_instantaneous_pitch_offset(
+        &self,
+        hotspot: &FlexPitch6Hotspot,
+        sample_idx: usize,
+    ) -> f32 {
         if hotspot.length_samples == 0 {
             return 0.0;
         }

@@ -1,7 +1,7 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PoeticMeter {
     #[default]
-    Iambic,    // unstressed - STRESSED (da-DUM)
+    Iambic, // unstressed - STRESSED (da-DUM)
     Trochaic,  // STRESSED - unstressed (DUM-da)
     Anapestic, // unstressed - unstressed - STRESSED (da-da-DUM)
     Dactylic,  // STRESSED - unstressed - unstressed (DUM-da-da)
@@ -26,7 +26,6 @@ impl Default for LyricMeterPattern {
 pub struct AiLyricGeneration {
     pub pattern: LyricMeterPattern,
 }
-
 
 impl AiLyricGeneration {
     pub fn new(pattern: LyricMeterPattern) -> Self {

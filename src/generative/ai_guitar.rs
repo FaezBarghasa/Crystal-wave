@@ -14,7 +14,9 @@ pub struct AiGuitar {
 
 impl Default for AiGuitar {
     fn default() -> Self {
-        Self { strum_speed_ticks: 24 }
+        Self {
+            strum_speed_ticks: 24,
+        }
     }
 }
 

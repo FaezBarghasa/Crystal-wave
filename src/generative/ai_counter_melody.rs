@@ -12,7 +12,10 @@ impl AiCounterMelody {
     }
 
     /// Solves 1:1 Species Counterpoint avoiding parallel 5ths and octaves
-    pub fn solve_counterpoint(&self, cantus_firmus: &[GeneratedMidiNote]) -> Vec<GeneratedMidiNote> {
+    pub fn solve_counterpoint(
+        &self,
+        cantus_firmus: &[GeneratedMidiNote],
+    ) -> Vec<GeneratedMidiNote> {
         let mut counterpoint = Vec::new();
         let mut prev_cf_pitch = 60u8;
         let mut prev_cp_pitch = 72u8;
@@ -22,7 +25,8 @@ impl AiCounterMelody {
 
             // Contrary motion target: if CF goes up, CP goes down
             let desired_cp_motion = -cf_motion;
-            let mut candidate_pitch = (prev_cp_pitch as i16 + desired_cp_motion).clamp(50, 84) as u8;
+            let mut candidate_pitch =
+                (prev_cp_pitch as i16 + desired_cp_motion).clamp(50, 84) as u8;
             candidate_pitch = self.scale.quantize_pitch(candidate_pitch, self.root_pitch);
 
             // Avoid parallel 5ths (interval 7) and octaves (interval 0 or 12)

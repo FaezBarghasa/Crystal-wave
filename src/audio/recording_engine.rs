@@ -1,5 +1,5 @@
-use std::sync::{Arc, Mutex};
 use crate::audio::take::Take;
+use std::sync::{Arc, Mutex};
 
 pub type AudioTrackBuffer = Vec<f32>;
 
@@ -159,9 +159,10 @@ impl RecordingEngine {
 
             // Non-blocking try_lock for legacy buffers
             if track_id < self.track_buffers.len()
-                && let Ok(mut buf) = self.track_buffers[track_id].try_lock() {
-                    buf.extend_from_slice(samples);
-                }
+                && let Ok(mut buf) = self.track_buffers[track_id].try_lock()
+            {
+                buf.extend_from_slice(samples);
+            }
         }
 
         self.current_sample_position = chunk_end;
@@ -173,12 +174,13 @@ impl RecordingEngine {
 
     pub fn commit_take(&mut self, track_id: usize, name: impl Into<String>) -> Option<Take> {
         if track_id < self.track_buffers.len()
-            && let Ok(mut buf) = self.track_buffers[track_id].lock() {
-                let samples = std::mem::take(&mut *buf);
-                let take = Take::new(self.takes.len(), name, samples);
-                self.takes.push(take.clone());
-                return Some(take);
-            }
+            && let Ok(mut buf) = self.track_buffers[track_id].lock()
+        {
+            let samples = std::mem::take(&mut *buf);
+            let take = Take::new(self.takes.len(), name, samples);
+            self.takes.push(take.clone());
+            return Some(take);
+        }
         None
     }
 }

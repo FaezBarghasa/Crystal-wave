@@ -16,8 +16,8 @@ pub use region::{FadeCurve, Region, RegionFade, RegionKind};
 pub use snapping_mode::{SnapStyle, SnappingMode};
 pub use swing::SwingAmount;
 pub use track::{
-    Color, FreezeMode, ReturnNode, SendNode, Track, TrackAlternative, TrackType,
-    VarispeedMode, VarispeedUnits,
+    Color, FreezeMode, ReturnNode, SendNode, Track, TrackAlternative, TrackType, VarispeedMode,
+    VarispeedUnits,
 };
 pub use track_group::{GroupType, TrackGroup};
 
@@ -52,8 +52,15 @@ pub struct Timeline {
 impl Default for Timeline {
     fn default() -> Self {
         Self {
-            tempo_map: vec![TempoEvent { tick: 0, bpm: 120.0 }],
-            signature_map: vec![TimeSignatureEvent { tick: 0, numerator: 4, denominator: 4 }],
+            tempo_map: vec![TempoEvent {
+                tick: 0,
+                bpm: 120.0,
+            }],
+            signature_map: vec![TimeSignatureEvent {
+                tick: 0,
+                numerator: 4,
+                denominator: 4,
+            }],
             tracks: Vec::new(),
             loop_region: LoopRegion::default(),
             swing: SwingAmount::default(),
@@ -172,11 +179,20 @@ impl TakeFolder {
 
     pub fn add_take(&mut self, name: String, samples: Vec<f32>) -> usize {
         let id = self.takes.len();
-        self.takes.push(Take { id, name, audio_samples: samples });
+        self.takes.push(Take {
+            id,
+            name,
+            audio_samples: samples,
+        });
         id
     }
 
-    pub fn set_comp_slice(&mut self, take_id: usize, start_sample: usize, end_sample: usize) -> Result<()> {
+    pub fn set_comp_slice(
+        &mut self,
+        take_id: usize,
+        start_sample: usize,
+        end_sample: usize,
+    ) -> Result<()> {
         if take_id >= self.takes.len() {
             return Err(LogicError::IncompatibleTakeBoundary {
                 slice_tick: start_sample as u64,
@@ -184,7 +200,11 @@ impl TakeFolder {
                 end: self.takes.len() as u64,
             });
         }
-        self.comp_slices.push(CompSlice { take_id, start_sample, end_sample });
+        self.comp_slices.push(CompSlice {
+            take_id,
+            start_sample,
+            end_sample,
+        });
         self.comp_slices.sort_by_key(|s| s.start_sample);
         Ok(())
     }
@@ -196,7 +216,10 @@ impl TakeFolder {
         for slice in &self.comp_slices {
             if let Some(take) = self.takes.iter().find(|t| t.id == slice.take_id) {
                 let start = slice.start_sample.min(output.len());
-                let end = slice.end_sample.min(output.len()).min(take.audio_samples.len());
+                let end = slice
+                    .end_sample
+                    .min(output.len())
+                    .min(take.audio_samples.len());
 
                 for i in start..end {
                     let mut sample = take.audio_samples[i];

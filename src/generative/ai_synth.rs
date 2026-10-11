@@ -18,10 +18,18 @@ pub struct AiSynth {
 
 impl AiSynth {
     pub fn new(pattern_type: SynthPatternType, octaves: u8) -> Self {
-        Self { pattern_type, octaves: octaves.clamp(1, 3) }
+        Self {
+            pattern_type,
+            octaves: octaves.clamp(1, 3),
+        }
     }
 
-    pub fn generate_pattern(&self, chord_track: &ChordTrack, bars: usize, ppqn: u64) -> Vec<GeneratedMidiNote> {
+    pub fn generate_pattern(
+        &self,
+        chord_track: &ChordTrack,
+        bars: usize,
+        ppqn: u64,
+    ) -> Vec<GeneratedMidiNote> {
         let mut notes = Vec::new();
         let bar_ticks = ppqn * 4;
 
@@ -47,11 +55,17 @@ impl AiSynth {
                 let t = bar_start + (step as u64 * ppqn / 4);
                 let pitch_idx = match self.pattern_type {
                     SynthPatternType::ArpeggiatorUp => step % full_pitches.len(),
-                    SynthPatternType::ArpeggiatorDown => (full_pitches.len() - 1) - (step % full_pitches.len()),
+                    SynthPatternType::ArpeggiatorDown => {
+                        (full_pitches.len() - 1) - (step % full_pitches.len())
+                    }
                     SynthPatternType::UpAndDown => {
                         let cycle_len = (full_pitches.len() * 2).saturating_sub(2).max(1);
                         let pos = step % cycle_len;
-                        if pos < full_pitches.len() { pos } else { cycle_len - pos }
+                        if pos < full_pitches.len() {
+                            pos
+                        } else {
+                            cycle_len - pos
+                        }
                     }
                     SynthPatternType::TranceGate => 0, // Repeated root with gated envelope
                     SynthPatternType::LeadRiff => (step * 3) % full_pitches.len(),

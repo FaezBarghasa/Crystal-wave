@@ -22,7 +22,6 @@ pub struct MidiEditor {
     pub draw_events: Vec<MidiDrawEvent>,
 }
 
-
 impl MidiEditor {
     pub fn new() -> Self {
         Self::default()
@@ -58,7 +57,8 @@ impl MidiEditor {
             seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
             let r1 = ((seed >> 32) as i32) % (tick_jitter.abs().max(1) * 2 + 1) - tick_jitter.abs();
             seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
-            let r2 = ((seed >> 32) as i32) % (vel_jitter.abs().max(1) as i32 * 2 + 1) - vel_jitter.abs() as i32;
+            let r2 = ((seed >> 32) as i32) % (vel_jitter.abs().max(1) as i32 * 2 + 1)
+                - vel_jitter.abs() as i32;
 
             if r1 < 0 {
                 note.start_tick = note.start_tick.saturating_sub((-r1) as u64);
@@ -72,7 +72,11 @@ impl MidiEditor {
     }
 
     /// Flam function: adds a quick grace note preceding the main note
-    pub fn apply_flam(note: &MidiNote, flam_offset_ticks: u32, flam_id: usize) -> (MidiNote, MidiNote) {
+    pub fn apply_flam(
+        note: &MidiNote,
+        flam_offset_ticks: u32,
+        flam_id: usize,
+    ) -> (MidiNote, MidiNote) {
         let grace_tick = note.start_tick.saturating_sub(flam_offset_ticks as u64);
         let grace_vel = (note.velocity / 2).max(1000);
         let grace_note = MidiNote {

@@ -17,8 +17,14 @@ pub enum LogicError {
     #[error("Invalid Flex Time/Pitch parameter: {0}")]
     InvalidFlexParameter(String),
 
-    #[error("Incompatible take comp boundary: slice at tick {slice_tick} is outside take bounds [{start}, {end}]")]
-    IncompatibleTakeBoundary { slice_tick: u64, start: u64, end: u64 },
+    #[error(
+        "Incompatible take comp boundary: slice at tick {slice_tick} is outside take bounds [{start}, {end}]"
+    )]
+    IncompatibleTakeBoundary {
+        slice_tick: u64,
+        start: u64,
+        end: u64,
+    },
 
     #[error("DSP processing error: {0}")]
     DspError(String),

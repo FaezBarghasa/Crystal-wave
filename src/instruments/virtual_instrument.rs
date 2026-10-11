@@ -1,5 +1,5 @@
-use std::f32::consts::PI;
 use crate::instruments::instrument::{VirtualInstrument, VoiceStealingMode};
+use std::f32::consts::PI;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum OscillatorWaveform {
@@ -21,10 +21,10 @@ pub struct AdsrEnvelope {
 impl Default for AdsrEnvelope {
     fn default() -> Self {
         Self {
-            attack_samples: 441,    // 10ms at 44.1k
-            decay_samples: 4410,    // 100ms
+            attack_samples: 441, // 10ms at 44.1k
+            decay_samples: 4410, // 100ms
             sustain_level: 0.7,
-            release_samples: 8820,  // 200ms
+            release_samples: 8820, // 200ms
         }
     }
 }
@@ -198,7 +198,8 @@ impl VirtualInstrument for PolyphonicSynth {
                     }
                     SynthVoiceState::Attack => {
                         voice.env_stage_sample += 1;
-                        let progress = voice.env_stage_sample as f32 / adsr.attack_samples.max(1) as f32;
+                        let progress =
+                            voice.env_stage_sample as f32 / adsr.attack_samples.max(1) as f32;
                         voice.current_env_level = progress.clamp(0.0, 1.0);
                         if voice.env_stage_sample >= adsr.attack_samples {
                             voice.state = SynthVoiceState::Decay;
@@ -207,8 +208,10 @@ impl VirtualInstrument for PolyphonicSynth {
                     }
                     SynthVoiceState::Decay => {
                         voice.env_stage_sample += 1;
-                        let progress = voice.env_stage_sample as f32 / adsr.decay_samples.max(1) as f32;
-                        voice.current_env_level = (1.0 - progress * (1.0 - adsr.sustain_level)).clamp(adsr.sustain_level, 1.0);
+                        let progress =
+                            voice.env_stage_sample as f32 / adsr.decay_samples.max(1) as f32;
+                        voice.current_env_level = (1.0 - progress * (1.0 - adsr.sustain_level))
+                            .clamp(adsr.sustain_level, 1.0);
                         if voice.env_stage_sample >= adsr.decay_samples {
                             voice.state = SynthVoiceState::Sustain;
                         }
@@ -218,7 +221,8 @@ impl VirtualInstrument for PolyphonicSynth {
                     }
                     SynthVoiceState::Release => {
                         voice.env_stage_sample += 1;
-                        let progress = voice.env_stage_sample as f32 / adsr.release_samples.max(1) as f32;
+                        let progress =
+                            voice.env_stage_sample as f32 / adsr.release_samples.max(1) as f32;
                         voice.current_env_level = (adsr.sustain_level * (1.0 - progress)).max(0.0);
                         if voice.env_stage_sample >= adsr.release_samples {
                             voice.state = SynthVoiceState::Idle;
@@ -231,7 +235,13 @@ impl VirtualInstrument for PolyphonicSynth {
                 let osc_sample = match wave {
                     OscillatorWaveform::Sine => voice.phase.sin(),
                     OscillatorWaveform::Sawtooth => (voice.phase / PI) - 1.0,
-                    OscillatorWaveform::Square => if voice.phase < PI { 1.0 } else { -1.0 },
+                    OscillatorWaveform::Square => {
+                        if voice.phase < PI {
+                            1.0
+                        } else {
+                            -1.0
+                        }
+                    }
                     OscillatorWaveform::Triangle => (voice.phase / PI - 1.0).abs() * 2.0 - 1.0,
                 };
 

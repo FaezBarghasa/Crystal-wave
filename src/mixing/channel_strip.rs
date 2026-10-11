@@ -15,9 +15,9 @@ pub enum PanMode {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ChannelPan {
     pub mode: PanMode,
-    pub balance: f32,       // -1.0 to +1.0
-    pub dual_left: f32,     // -1.0 to +1.0
-    pub dual_right: f32,    // -1.0 to +1.0
+    pub balance: f32,    // -1.0 to +1.0
+    pub dual_left: f32,  // -1.0 to +1.0
+    pub dual_right: f32, // -1.0 to +1.0
     pub object_panner: SpatialObjectPanner,
 }
 

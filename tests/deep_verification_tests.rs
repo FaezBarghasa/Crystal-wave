@@ -31,13 +31,17 @@ fn test_auto_mute_protection_trip() {
     // Normal signal: 0 dBFS (amplitude 1.0) -> must not trip
     let mut left_normal = vec![1.0; 256];
     let mut right_normal = vec![1.0; 256];
-    strip.process_block(&mut left_normal, &mut right_normal, 1.0).unwrap();
+    strip
+        .process_block(&mut left_normal, &mut right_normal, 1.0)
+        .unwrap();
     assert!(!strip.auto_mute_tripped);
 
     // Dangerously hot signal: +15 dBFS (amplitude 10.0, above +12 dBFS / 3.98 limit)
     let mut left_blast = vec![10.0; 256];
     let mut right_blast = vec![10.0; 256];
-    strip.process_block(&mut left_blast, &mut right_blast, 1.0).unwrap();
+    strip
+        .process_block(&mut left_blast, &mut right_blast, 1.0)
+        .unwrap();
 
     // Auto-Mute safety mechanism must trip and mute output to 0.0
     assert!(strip.auto_mute_tripped);
@@ -100,9 +104,15 @@ fn test_timeline_tick_to_seconds_with_tempo_changes() {
     let mut timeline = Timeline::default();
     // Bar 1 (0 to 3840 ticks) at 120 BPM: 4 beats = 2.0 seconds
     timeline.tempo_map = vec![
-        crate::timeline::TempoEvent { tick: 0, bpm: 120.0 },
+        crate::timeline::TempoEvent {
+            tick: 0,
+            bpm: 120.0,
+        },
         // Bar 2 (3840 ticks) jumps to 60 BPM (2x slower)
-        crate::timeline::TempoEvent { tick: 3840, bpm: 60.0 },
+        crate::timeline::TempoEvent {
+            tick: 3840,
+            bpm: 60.0,
+        },
     ];
 
     // Tick 3840 (end of bar 1) should be exactly 2.0 seconds

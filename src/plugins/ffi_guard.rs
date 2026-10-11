@@ -1,6 +1,6 @@
-use std::panic::{catch_unwind, AssertUnwindSafe};
 use crate::error::{LogicError, Result};
 use crate::plugins::plugin_host::AudioPlugin;
+use std::panic::{AssertUnwindSafe, catch_unwind};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PluginStatus {
@@ -31,7 +31,10 @@ impl HardenedPluginSlot {
         right: &mut [f32],
         sidechain: Option<&[f32]>,
     ) -> Result<()> {
-        if matches!(self.status, PluginStatus::Bypassed | PluginStatus::Faulted(_)) {
+        if matches!(
+            self.status,
+            PluginStatus::Bypassed | PluginStatus::Faulted(_)
+        ) {
             return Ok(());
         }
 

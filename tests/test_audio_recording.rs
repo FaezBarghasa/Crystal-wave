@@ -24,7 +24,9 @@ fn test_recording_engine_and_circular_buffer() {
     assert_eq!(engine.track_buffers[0].lock().unwrap().len(), 100);
 
     // Commit take
-    let take = engine.commit_take(0, "Vocal Take 1").expect("Take committed");
+    let take = engine
+        .commit_take(0, "Vocal Take 1")
+        .expect("Take committed");
     assert_eq!(take.name, "Vocal Take 1");
     assert_eq!(take.len(), 100);
 }

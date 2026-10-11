@@ -18,7 +18,7 @@ pub struct PanPosition {
     pub dual_left: f32,
     pub dual_right: f32,
     /// Dolby Atmos 3D Object Panner parameters
-    pub azimuth_deg: f32,   // -180.0 to +180.0 deg
+    pub azimuth_deg: f32, // -180.0 to +180.0 deg
     pub elevation_deg: f32, // 0.0 to 90.0 deg
     pub spread: f32,        // 0.0 (point source) to 1.0 (diffuse)
     pub size: f32,          // 0.0 to 1.0
@@ -101,7 +101,12 @@ impl ChannelStrip {
     }
 
     /// Process audio block and monitor for > +12 dBFS overload (Auto-Mute protection)
-    pub fn process_block(&mut self, left: &mut [f32], right: &mut [f32], vca_gain: f32) -> Result<()> {
+    pub fn process_block(
+        &mut self,
+        left: &mut [f32],
+        right: &mut [f32],
+        vca_gain: f32,
+    ) -> Result<()> {
         if left.len() != right.len() {
             return Err(LogicError::BufferLengthMismatch {
                 expected: left.len(),
@@ -204,7 +209,7 @@ impl DolbyAtmosPanner {
 
         let x = rad_az.sin() * rad_el.cos(); // Right (+) / Left (-)
         let y = rad_az.cos() * rad_el.cos(); // Front (+) / Rear (-)
-        let z = rad_el.sin();                // Top (+) / Floor (0)
+        let z = rad_el.sin(); // Top (+) / Floor (0)
 
         let mut gains = [0.0f32; 12];
 

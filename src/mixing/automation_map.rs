@@ -11,7 +11,7 @@ pub enum AutomationMode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum AutomationScope {
     #[default]
-    TrackBased,  // TBA
+    TrackBased, // TBA
     RegionBased, // RBA
 }
 
@@ -135,14 +135,20 @@ fn rdp_thin(points: &[AutomationPoint], epsilon: f32) -> Vec<AutomationPoint> {
     }
 }
 
-fn perpendicular_distance(pt: &AutomationPoint, line_start: &AutomationPoint, line_end: &AutomationPoint) -> f32 {
+fn perpendicular_distance(
+    pt: &AutomationPoint,
+    line_start: &AutomationPoint,
+    line_end: &AutomationPoint,
+) -> f32 {
     let dx = (line_end.tick as f32) - (line_start.tick as f32);
     let dy = line_end.value - line_start.value;
     let len = (dx * dx + dy * dy).sqrt();
     if len == 0.0 {
         return (pt.value - line_start.value).abs();
     }
-    let nom = (dy * (pt.tick as f32) - dx * pt.value + (line_end.tick as f32) * line_start.value - line_end.value * (line_start.tick as f32)).abs();
+    let nom = (dy * (pt.tick as f32) - dx * pt.value + (line_end.tick as f32) * line_start.value
+        - line_end.value * (line_start.tick as f32))
+        .abs();
     nom / len
 }
 

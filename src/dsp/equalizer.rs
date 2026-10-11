@@ -32,7 +32,13 @@ impl Default for BiquadCoeffs {
 }
 
 impl BiquadCoeffs {
-    pub fn calculate(filter_type: FilterType, freq_hz: f32, gain_db: f32, q: f32, sample_rate: f32) -> Self {
+    pub fn calculate(
+        filter_type: FilterType,
+        freq_hz: f32,
+        gain_db: f32,
+        q: f32,
+        sample_rate: f32,
+    ) -> Self {
         let w0 = 2.0 * PI * (freq_hz / sample_rate).clamp(1e-4, 0.499);
         let cos_w0 = w0.cos();
         let sin_w0 = w0.sin();
@@ -158,7 +164,13 @@ pub struct EqBand {
 }
 
 impl EqBand {
-    pub fn new(filter_type: FilterType, freq_hz: f32, gain_db: f32, q: f32, sample_rate: f32) -> Self {
+    pub fn new(
+        filter_type: FilterType,
+        freq_hz: f32,
+        gain_db: f32,
+        q: f32,
+        sample_rate: f32,
+    ) -> Self {
         let coeffs = BiquadCoeffs::calculate(filter_type, freq_hz, gain_db, q, sample_rate);
         Self {
             filter_type,
@@ -171,7 +183,13 @@ impl EqBand {
     }
 
     pub fn update(&mut self, sample_rate: f32) {
-        self.coeffs = BiquadCoeffs::calculate(self.filter_type, self.freq_hz, self.gain_db, self.q, sample_rate);
+        self.coeffs = BiquadCoeffs::calculate(
+            self.filter_type,
+            self.freq_hz,
+            self.gain_db,
+            self.q,
+            sample_rate,
+        );
     }
 }
 
@@ -220,7 +238,8 @@ impl ChannelEq {
 
             for band_idx in 0..8 {
                 if self.bands[band_idx].enabled {
-                    let (ol, or) = self.states[band_idx].process_stereo(l, r, &self.bands[band_idx].coeffs);
+                    let (ol, or) =
+                        self.states[band_idx].process_stereo(l, r, &self.bands[band_idx].coeffs);
                     l = ol;
                     r = or;
                 }

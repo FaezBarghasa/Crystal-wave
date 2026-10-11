@@ -95,7 +95,8 @@ impl ChordTrack {
     }
 
     pub fn get_chord_at(&self, tick: u64) -> Chord {
-        self.chord_at_tick(tick).unwrap_or(Chord::new(self.key_root, ChordQuality::Major))
+        self.chord_at_tick(tick)
+            .unwrap_or(Chord::new(self.key_root, ChordQuality::Major))
     }
 }
 
@@ -167,10 +168,14 @@ impl MarkovProgressionEngine {
         let mut total_dist = 0;
         for note1 in &n1 {
             // Find closest note in n2
-            let min_dist = n2.iter().map(|note2| {
-                let diff = (*note1 as i32 - *note2 as i32).abs();
-                diff.min(12 - diff)
-            }).min().unwrap_or(0);
+            let min_dist = n2
+                .iter()
+                .map(|note2| {
+                    let diff = (*note1 as i32 - *note2 as i32).abs();
+                    diff.min(12 - diff)
+                })
+                .min()
+                .unwrap_or(0);
             total_dist += min_dist;
         }
         total_dist as f32 / n1.len() as f32

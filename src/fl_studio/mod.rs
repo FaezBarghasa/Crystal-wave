@@ -21,11 +21,11 @@ pub use soft_clipper::FruitySoftClipper;
 /// FL Studio Free Windows Architecture (Detachable, independent windows)
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FlWindowManager {
-    pub channel_rack_visible: bool,  // F6 shortcut in FL Studio
-    pub piano_roll_visible: bool,    // F7 shortcut in FL Studio
-    pub playlist_visible: bool,      // F5 shortcut in FL Studio
-    pub mixer_visible: bool,         // F9 shortcut in FL Studio
-    pub browser_visible: bool,       // Alt+F8 shortcut in FL Studio
+    pub channel_rack_visible: bool, // F6 shortcut in FL Studio
+    pub piano_roll_visible: bool,   // F7 shortcut in FL Studio
+    pub playlist_visible: bool,     // F5 shortcut in FL Studio
+    pub mixer_visible: bool,        // F9 shortcut in FL Studio
+    pub browser_visible: bool,      // Alt+F8 shortcut in FL Studio
     pub patcher_visible: bool,
     pub history_visible: bool,
 }

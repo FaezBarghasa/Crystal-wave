@@ -45,7 +45,10 @@ impl GrossBeatEngine {
 
     pub fn process(&mut self, left: &mut [f32], right: &mut [f32]) {
         let len = left.len().min(right.len());
-        if len == 0 || (self.time_preset == GrossBeatTimePreset::Off && self.volume_preset == GrossBeatVolumePreset::Off) {
+        if len == 0
+            || (self.time_preset == GrossBeatTimePreset::Off
+                && self.volume_preset == GrossBeatVolumePreset::Off)
+        {
             return;
         }
 

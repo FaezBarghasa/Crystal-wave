@@ -111,7 +111,9 @@ impl FlexProcessor {
                 let mut out_pos = 0;
                 output.fill(0.0);
 
-                while in_pos + pitch_period * 2 <= input.len() && out_pos + pitch_period * 2 <= output.len() {
+                while in_pos + pitch_period * 2 <= input.len()
+                    && out_pos + pitch_period * 2 <= output.len()
+                {
                     let window_len = pitch_period * 2;
                     for i in 0..window_len {
                         let w = 0.5 * (1.0 - (2.0 * PI * i as f32 / window_len as f32).cos());

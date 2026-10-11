@@ -3,12 +3,12 @@ use crate::timeline::PPQN;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum MidiQuantizeGrid {
     #[default]
-    Sixteenth,       // 240 ticks
-    Eighth,          // 480 ticks
-    Quarter,         // 960 ticks
-    ThirtySecond,    // 120 ticks
-    TripletEighth,   // 320 ticks
-    TripletSixteenth,// 160 ticks
+    Sixteenth, // 240 ticks
+    Eighth,           // 480 ticks
+    Quarter,          // 960 ticks
+    ThirtySecond,     // 120 ticks
+    TripletEighth,    // 320 ticks
+    TripletSixteenth, // 160 ticks
 }
 
 impl MidiQuantizeGrid {

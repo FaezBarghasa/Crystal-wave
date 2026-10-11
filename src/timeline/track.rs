@@ -29,9 +29,9 @@ pub enum VarispeedMode {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum VarispeedUnits {
-    Percent(f32),      // -50.0 to +50.0%
-    Semitones(f32),    // -7.0 to +7.0 semitones
-    BpmOffset(f32),    // exact BPM difference
+    Percent(f32),   // -50.0 to +50.0%
+    Semitones(f32), // -7.0 to +7.0 semitones
+    BpmOffset(f32), // exact BPM difference
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -74,7 +74,11 @@ pub struct Color {
 
 impl Default for Color {
     fn default() -> Self {
-        Self { r: 60, g: 120, b: 200 }
+        Self {
+            r: 60,
+            g: 120,
+            b: 200,
+        }
     }
 }
 
@@ -223,21 +227,15 @@ impl Track {
 
     pub fn add_alternative(&mut self, name: impl Into<String>) -> usize {
         let alt_id = self.alternatives.len();
-        self.alternatives.push(TrackAlternative::new(
-            alt_id,
-            name,
-            self.regions.clone(),
-        ));
+        self.alternatives
+            .push(TrackAlternative::new(alt_id, name, self.regions.clone()));
         alt_id
     }
 
     pub fn duplicate_alternative(&mut self, name: impl Into<String>) -> usize {
         let new_id = self.alternatives.len();
-        self.alternatives.push(TrackAlternative::new(
-            new_id,
-            name,
-            self.regions.clone(),
-        ));
+        self.alternatives
+            .push(TrackAlternative::new(new_id, name, self.regions.clone()));
         self.active_alternative_index = new_id;
         new_id
     }
@@ -245,12 +243,17 @@ impl Track {
     pub fn new_empty_alternative(&mut self, name: impl Into<String>) -> usize {
         // First ensure current is recorded
         if self.alternatives.is_empty() {
-            self.alternatives.push(TrackAlternative::new(0, "Alternative A", self.regions.clone()));
+            self.alternatives.push(TrackAlternative::new(
+                0,
+                "Alternative A",
+                self.regions.clone(),
+            ));
         } else if self.active_alternative_index < self.alternatives.len() {
             self.alternatives[self.active_alternative_index].regions = self.regions.clone();
         }
         let new_id = self.alternatives.len();
-        self.alternatives.push(TrackAlternative::new(new_id, name, Vec::new()));
+        self.alternatives
+            .push(TrackAlternative::new(new_id, name, Vec::new()));
         self.regions.clear();
         self.active_alternative_index = new_id;
         new_id

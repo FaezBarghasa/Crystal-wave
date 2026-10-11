@@ -4,7 +4,7 @@ use crate::timeline::MusicalScale;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum MelodicContour {
     #[default]
-    Arch,       // Rise then fall
+    Arch, // Rise then fall
     Ascending,  // Climax at the end
     Descending, // Cascading down
     Wave,       // Oscillating
@@ -19,10 +19,19 @@ pub struct AiMelody {
 
 impl AiMelody {
     pub fn new(contour: MelodicContour, scale: MusicalScale, root_pitch: u8) -> Self {
-        Self { contour, scale, root_pitch }
+        Self {
+            contour,
+            scale,
+            root_pitch,
+        }
     }
 
-    pub fn generate_melody(&self, num_notes: usize, start_tick: u64, step_ticks: u32) -> Vec<GeneratedMidiNote> {
+    pub fn generate_melody(
+        &self,
+        num_notes: usize,
+        start_tick: u64,
+        step_ticks: u32,
+    ) -> Vec<GeneratedMidiNote> {
         let mut notes = Vec::new();
         if num_notes == 0 {
             return notes;
@@ -39,7 +48,8 @@ impl AiMelody {
                 MelodicContour::Stationary => 0.5,
             };
 
-            let interval_idx = ((contour_factor * (intervals.len() - 1) as f32).round() as usize).min(intervals.len() - 1);
+            let interval_idx = ((contour_factor * (intervals.len() - 1) as f32).round() as usize)
+                .min(intervals.len() - 1);
             let pitch = 60 + (self.root_pitch % 12) + intervals[interval_idx];
 
             notes.push(GeneratedMidiNote {

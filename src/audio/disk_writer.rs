@@ -1,8 +1,8 @@
-use std::sync::atomic::{AtomicBool, Ordering};
+use rtrb::Consumer;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
-use rtrb::Consumer;
 
 /// Audio chunk message sent from audio thread to disk worker
 #[derive(Debug, Clone)]

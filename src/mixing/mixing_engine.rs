@@ -53,7 +53,11 @@ impl MixingEngine {
 
         let mut buses = Vec::with_capacity(MAX_BUSES);
         for id in 0..MAX_BUSES {
-            let name = if id == 0 { "Stereo Out".to_string() } else { format!("Bus {id}") };
+            let name = if id == 0 {
+                "Stereo Out".to_string()
+            } else {
+                format!("Bus {id}")
+            };
             buses.push(AuxBus::new(id, name));
         }
 
@@ -72,7 +76,9 @@ impl MixingEngine {
 
     pub fn add_channel(&mut self, name: impl Into<String>) -> Result<usize> {
         if self.channels.len() >= MAX_CHANNELS {
-            return Err(LogicError::DspError("Max channel limit reached (1000)".into()));
+            return Err(LogicError::DspError(
+                "Max channel limit reached (1000)".into(),
+            ));
         }
         let id = self.channels.len();
         self.channels.push(ChannelStrip::new(id, name));

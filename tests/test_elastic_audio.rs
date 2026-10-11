@@ -22,7 +22,9 @@ fn test_elastic_audio_time_stretch_modes() {
     // 3. Rhythmic mode
     let elastic_rhythm = ElasticAudio::new(FlexTimeMode::Rhythmic, sample_rate).unwrap();
     let mut out_rhythm = vec![0.0f32; 2000];
-    elastic_rhythm.process(&input, &mut out_rhythm, 2.0).unwrap();
+    elastic_rhythm
+        .process(&input, &mut out_rhythm, 2.0)
+        .unwrap();
     assert!(out_rhythm.iter().any(|&s| s > 0.0));
 }
 
@@ -35,12 +37,12 @@ fn test_flex_pitch_6_hotspot_engine() {
         start_sample: 0,
         length_samples: 44100, // 1 second note
         original_pitch_midi: 60.0,
-        pitch_drift_in_cents: 50.0,    // +50 cents at start
-        fine_pitch_cents: 10.0,        // +10 cents overall
-        pitch_drift_out_cents: -30.0,  // -30 cents at end
-        gain_db: 3.0,                  // +3 dB
-        vibrato_depth_percent: 20.0,   // vibrato
-        formant_shift_semitones: 2.0,  // +2 semitones
+        pitch_drift_in_cents: 50.0,   // +50 cents at start
+        fine_pitch_cents: 10.0,       // +10 cents overall
+        pitch_drift_out_cents: -30.0, // -30 cents at end
+        gain_db: 3.0,                 // +3 dB
+        vibrato_depth_percent: 20.0,  // vibrato
+        formant_shift_semitones: 2.0, // +2 semitones
     };
 
     // At start (sample 0): fine (10) + drift_in (50) = 60 cents = 0.6 semitones

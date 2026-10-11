@@ -1,6 +1,6 @@
 use crate::mixing::MixingEngine;
-use crate::timeline::arrangement_view::ArrangementView;
 use crate::timeline::Timeline;
+use crate::timeline::arrangement_view::ArrangementView;
 use crate::ui::message::UiMessage;
 use crate::ui_state::{DualChannelInspector, WorkspaceState};
 
@@ -140,7 +140,10 @@ impl CrystalWaveApp {
             }
 
             // Hardened Fader & Pan: sanitize NaNs, Infs, and clamp
-            UiMessage::SetTrackFader { track_id, volume_db } => {
+            UiMessage::SetTrackFader {
+                track_id,
+                volume_db,
+            } => {
                 let safe_db = if volume_db.is_finite() {
                     volume_db.clamp(-120.0, 6.0)
                 } else {
@@ -180,7 +183,11 @@ impl CrystalWaveApp {
                 self.playhead_tick = batch.playhead_tick;
                 self.workspace.lcd_diagnostic.cpu_load_percent = batch.cpu_load_percent;
                 for meter in batch.meters {
-                    if let Some(strip) = meter.auto_mute_tripped.then(|| self.mixer.channels.get_mut(meter.channel_id)).flatten() {
+                    if let Some(strip) = meter
+                        .auto_mute_tripped
+                        .then(|| self.mixer.channels.get_mut(meter.channel_id))
+                        .flatten()
+                    {
                         strip.meter.auto_mute_tripped = true;
                     }
                 }

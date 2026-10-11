@@ -9,8 +9,8 @@ pub fn psola_stretch(input: &[f32], output: &mut [f32], stretch_factor: f32, pit
     let p = pitch_period.max(16);
     let hanning_len = 2 * p;
     let mut hanning = vec![0.0f32; hanning_len];
-    for i in 0..hanning_len {
-        hanning[i] = 0.5 * (1.0 - (2.0 * PI * i as f32 / (hanning_len - 1) as f32).cos());
+    for (i, val) in hanning.iter_mut().enumerate() {
+        *val = 0.5 * (1.0 - (2.0 * PI * i as f32 / (hanning_len - 1) as f32).cos());
     }
 
     let mut out_pos = 0usize;
@@ -42,8 +42,8 @@ pub fn granular_stretch(
 
     let grain_len = grain_size.min(input.len());
     let mut window = vec![0.0f32; grain_len];
-    for i in 0..grain_len {
-        window[i] = 0.5 * (1.0 - (2.0 * PI * i as f32 / (grain_len - 1) as f32).cos());
+    for (i, val) in window.iter_mut().enumerate() {
+        *val = 0.5 * (1.0 - (2.0 * PI * i as f32 / (grain_len - 1) as f32).cos());
     }
 
     let mut out_idx = 0usize;
@@ -88,16 +88,22 @@ pub fn slicing_stretch(
         // Copy transient attack head as-is (first 512 samples or half slice)
         let attack_len = 512.min(slice_len / 2).max(1);
         let copy_len = attack_len.min(output.len().saturating_sub(out_write));
-        for i in 0..copy_len {
-            output[out_write + i] = input[start + i];
-        }
+        output[out_write..out_write + copy_len].copy_from_slice(&input[start..start + copy_len]);
         out_write += copy_len;
 
         // Granular fill / stretch tail of the slice
         if slice_len > attack_len && out_write < output.len() {
             let tail_in = &input[start + attack_len..end];
-            let remaining_out = target_len.saturating_sub(attack_len).min(output.len() - out_write);
-            granular_stretch(tail_in, &mut output[out_write..out_write + remaining_out], stretch_factor, 256, 128);
+            let remaining_out = target_len
+                .saturating_sub(attack_len)
+                .min(output.len() - out_write);
+            granular_stretch(
+                tail_in,
+                &mut output[out_write..out_write + remaining_out],
+                stretch_factor,
+                256,
+                128,
+            );
             out_write += remaining_out;
         }
     }

@@ -15,10 +15,12 @@ impl FourPartHarmonizer {
     /// Harmonize soprano note to full SATB choral voicing given chord harmony
     pub fn harmonize_satb(soprano_note: &GeneratedMidiNote, chord: &Chord) -> SatbVoicing {
         let root = chord.root;
-        let third = (root + match chord.quality {
-            crate::harmony::ChordQuality::Minor | crate::harmony::ChordQuality::Minor7 => 3,
-            _ => 4,
-        }) % 12;
+        let third = (root
+            + match chord.quality {
+                crate::harmony::ChordQuality::Minor | crate::harmony::ChordQuality::Minor7 => 3,
+                _ => 4,
+            })
+            % 12;
         let fifth = (root + 7) % 12;
 
         let tick = soprano_note.tick;
@@ -33,9 +35,24 @@ impl FourPartHarmonizer {
 
         SatbVoicing {
             soprano: soprano_note.clone(),
-            alto: GeneratedMidiNote { tick, note_number: alto_pitch, velocity: 80, duration_ticks: dur },
-            tenor: GeneratedMidiNote { tick, note_number: tenor_pitch, velocity: 80, duration_ticks: dur },
-            bass: GeneratedMidiNote { tick, note_number: bass_pitch, velocity: 90, duration_ticks: dur },
+            alto: GeneratedMidiNote {
+                tick,
+                note_number: alto_pitch,
+                velocity: 80,
+                duration_ticks: dur,
+            },
+            tenor: GeneratedMidiNote {
+                tick,
+                note_number: tenor_pitch,
+                velocity: 80,
+                duration_ticks: dur,
+            },
+            bass: GeneratedMidiNote {
+                tick,
+                note_number: bass_pitch,
+                velocity: 90,
+                duration_ticks: dur,
+            },
         }
     }
 }

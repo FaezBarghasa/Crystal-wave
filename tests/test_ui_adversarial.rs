@@ -49,16 +49,10 @@ fn test_poison_values_injection() {
 
     // 3. Inject negative and non-finite tempo
     driver.dispatch(UiMessage::SetTempoBpm(-500.0));
-    assert_eq!(
-        driver.app.workspace.lcd_diagnostic.project_tempo_bpm,
-        10.0
-    );
+    assert_eq!(driver.app.workspace.lcd_diagnostic.project_tempo_bpm, 10.0);
 
     driver.dispatch(UiMessage::SetTempoBpm(f32::NAN));
-    assert_eq!(
-        driver.app.workspace.lcd_diagnostic.project_tempo_bpm,
-        120.0
-    );
+    assert_eq!(driver.app.workspace.lcd_diagnostic.project_tempo_bpm, 120.0);
 
     // 4. Inject extreme zoom
     driver.dispatch(UiMessage::SetHorizontalZoom(-100.0));

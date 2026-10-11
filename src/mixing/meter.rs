@@ -64,17 +64,33 @@ impl LevelMeter {
         // +12 dBFS overload threshold: 10^(12/20) ~= 3.981
         if true_peak_linear > 3.981 {
             self.auto_mute_tripped = true;
-            for s in left.iter_mut() { *s = 0.0; }
-            for s in right.iter_mut() { *s = 0.0; }
+            for s in left.iter_mut() {
+                *s = 0.0;
+            }
+            for s in right.iter_mut() {
+                *s = 0.0;
+            }
             self.peak_db = 12.0;
             self.true_peak_db = 12.0;
             return;
         }
 
-        self.peak_db = if max_abs > 1e-5 { 20.0 * max_abs.log10() } else { -96.0 };
-        self.true_peak_db = if true_peak_linear > 1e-5 { 20.0 * true_peak_linear.log10() } else { -96.0 };
+        self.peak_db = if max_abs > 1e-5 {
+            20.0 * max_abs.log10()
+        } else {
+            -96.0
+        };
+        self.true_peak_db = if true_peak_linear > 1e-5 {
+            20.0 * true_peak_linear.log10()
+        } else {
+            -96.0
+        };
         let mean_sq = sum_sq / (len * 2) as f32;
-        self.rms_db = if mean_sq > 1e-9 { 10.0 * mean_sq.log10() } else { -96.0 };
+        self.rms_db = if mean_sq > 1e-9 {
+            10.0 * mean_sq.log10()
+        } else {
+            -96.0
+        };
 
         if self.peak_db > self.peak_hold_db {
             self.peak_hold_db = self.peak_db;

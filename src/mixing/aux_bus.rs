@@ -38,8 +38,12 @@ impl AuxBus {
     }
 
     pub fn clear(&mut self) {
-        for s in self.left_accumulator.iter_mut() { *s = 0.0; }
-        for s in self.right_accumulator.iter_mut() { *s = 0.0; }
+        for s in self.left_accumulator.iter_mut() {
+            *s = 0.0;
+        }
+        for s in self.right_accumulator.iter_mut() {
+            *s = 0.0;
+        }
     }
 
     pub fn accumulate(&mut self, left: &[f32], right: &[f32], gain: f32) {

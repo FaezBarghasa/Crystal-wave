@@ -38,12 +38,12 @@ pub struct LcdDiagnosticState {
 /// Workspace Window Management (Logic Pro Single-Window Architecture)
 #[derive(Debug, Clone)]
 pub struct WorkspaceState {
-    pub inspector_open: bool,      // Toggle shortcut 'I'
-    pub editor_drawer_open: bool,  // Toggle shortcut 'E'
-    pub mixer_drawer_open: bool,   // Toggle shortcut 'X'
-    pub loop_browser_open: bool,   // Toggle shortcut 'O'
-    pub file_browser_open: bool,   // Toggle shortcut 'F'
-    pub library_browser_open: bool,// Toggle shortcut 'Y'
+    pub inspector_open: bool,       // Toggle shortcut 'I'
+    pub editor_drawer_open: bool,   // Toggle shortcut 'E'
+    pub mixer_drawer_open: bool,    // Toggle shortcut 'X'
+    pub loop_browser_open: bool,    // Toggle shortcut 'O'
+    pub file_browser_open: bool,    // Toggle shortcut 'F'
+    pub library_browser_open: bool, // Toggle shortcut 'Y'
     pub active_editor: EditorDrawerTab,
     pub active_list_tab: ListAreaTab,
     pub lcd_mode: LcdDisplayMode,

@@ -7,7 +7,10 @@ pub struct SampleRateConverter {
 
 impl SampleRateConverter {
     pub fn new(source_rate: f32, target_rate: f32) -> Self {
-        Self { source_rate, target_rate }
+        Self {
+            source_rate,
+            target_rate,
+        }
     }
 
     /// Sinc function: sin(pi * x) / (pi * x)
@@ -47,7 +50,8 @@ impl SampleRateConverter {
                 if tap >= 0 && (tap as usize) < input.len() {
                     let diff = in_pos - (tap as f32);
                     // Blackman window
-                    let w_arg = 2.0 * PI * (diff + filter_radius as f32) / (2.0 * filter_radius as f32);
+                    let w_arg =
+                        2.0 * PI * (diff + filter_radius as f32) / (2.0 * filter_radius as f32);
                     let window = 0.42 - 0.5 * w_arg.cos() + 0.08 * (2.0 * w_arg).cos();
                     let weight = Self::sinc(diff * cutoff) * window;
 

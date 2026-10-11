@@ -2,8 +2,8 @@
 #[derive(Debug, Clone)]
 pub struct FruitySoftClipper {
     pub threshold_db: f32, // -12.0 to 0.0 dB
-    pub post_gain_db: f32,  // 0.0 to +12.0 dB
-    pub soft_knee: f32,     // 0.0 (hard) to 1.0 (smooth tanh)
+    pub post_gain_db: f32, // 0.0 to +12.0 dB
+    pub soft_knee: f32,    // 0.0 (hard) to 1.0 (smooth tanh)
 }
 
 impl Default for FruitySoftClipper {

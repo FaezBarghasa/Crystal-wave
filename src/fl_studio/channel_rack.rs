@@ -80,7 +80,8 @@ impl ChannelRack {
 
     pub fn add_channel(&mut self, name: impl Into<String>) -> usize {
         let id = self.channels.len();
-        self.channels.push(RackChannel::new(id, name, self.step_count));
+        self.channels
+            .push(RackChannel::new(id, name, self.step_count));
         id
     }
 

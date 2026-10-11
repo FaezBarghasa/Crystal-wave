@@ -66,10 +66,10 @@ pub enum QuantizeMode {
     Off,
     Bar,
     Beat,
-    Division,      // 1/16th note
-    Eighth,        // 1/8th note
-    Sixteenth,     // 1/16th note
-    ThirtySecond,  // 1/32nd note
+    Division,     // 1/16th note
+    Eighth,       // 1/8th note
+    Sixteenth,    // 1/16th note
+    ThirtySecond, // 1/32nd note
     TripletEighth,
     TripletSixteenth,
     DottedEighth,
@@ -84,12 +84,16 @@ impl QuantizeMode {
             QuantizeMode::Off => tick,
             QuantizeMode::Bar => {
                 let bar_ticks = (PPQN * 4 * numerator as u64) / (denominator as u64);
-                if bar_ticks == 0 { return tick; }
+                if bar_ticks == 0 {
+                    return tick;
+                }
                 ((tick + bar_ticks / 2) / bar_ticks) * bar_ticks
             }
             QuantizeMode::Beat => {
                 let beat_ticks = (PPQN * 4) / (denominator as u64);
-                if beat_ticks == 0 { return tick; }
+                if beat_ticks == 0 {
+                    return tick;
+                }
                 ((tick + beat_ticks / 2) / beat_ticks) * beat_ticks
             }
             QuantizeMode::Division | QuantizeMode::Sixteenth => {

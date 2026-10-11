@@ -1,10 +1,10 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum PatcherNodeKind {
-    FromFL,           // Master audio/MIDI input from host
-    ToFL,             // Master audio/MIDI output to host
-    GeneratorPlugin,  // Synth
-    EffectPlugin,     // Reverb/Delay/Distortion
-    Splitter,         // Signal splitter
+    FromFL,          // Master audio/MIDI input from host
+    ToFL,            // Master audio/MIDI output to host
+    GeneratorPlugin, // Synth
+    EffectPlugin,    // Reverb/Delay/Distortion
+    Splitter,        // Signal splitter
 }
 
 #[derive(Debug, Clone)]
@@ -79,7 +79,13 @@ impl FlPatcher {
         Self::default()
     }
 
-    pub fn add_node(&mut self, name: impl Into<String>, kind: PatcherNodeKind, x: f32, y: f32) -> usize {
+    pub fn add_node(
+        &mut self,
+        name: impl Into<String>,
+        kind: PatcherNodeKind,
+        x: f32,
+        y: f32,
+    ) -> usize {
         let id = self.nodes.len();
         self.nodes.push(PatcherNode {
             id,

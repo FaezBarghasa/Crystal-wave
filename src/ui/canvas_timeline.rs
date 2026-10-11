@@ -1,7 +1,7 @@
+use crate::ui::message::UiMessage;
 use iced::mouse;
 use iced::widget::canvas::{self, Action, Canvas, Frame, Geometry, Path, Stroke};
 use iced::{Color, Element, Length, Point, Rectangle, Size};
-use crate::ui::message::UiMessage;
 
 #[derive(Debug, Clone, Default)]
 pub struct CanvasInteractionState {
@@ -26,11 +26,7 @@ pub struct ArrangementCanvasProgram {
 }
 
 impl ArrangementCanvasProgram {
-    pub fn new(
-        playhead_tick: u64,
-        horizontal_zoom: f32,
-        track_count: usize,
-    ) -> Self {
+    pub fn new(playhead_tick: u64, horizontal_zoom: f32, track_count: usize) -> Self {
         Self {
             playhead_tick,
             visible_start_tick: 0,
@@ -43,7 +39,10 @@ impl ArrangementCanvasProgram {
     }
 
     pub fn tick_to_x(&self, tick: u64, bounds_width: f32) -> f32 {
-        let total_ticks = self.visible_end_tick.saturating_sub(self.visible_start_tick).max(1);
+        let total_ticks = self
+            .visible_end_tick
+            .saturating_sub(self.visible_start_tick)
+            .max(1);
         let progress = (tick.saturating_sub(self.visible_start_tick) as f32) / (total_ticks as f32);
         (progress * bounds_width * self.horizontal_zoom).clamp(0.0, bounds_width * 100.0)
     }
@@ -52,7 +51,10 @@ impl ArrangementCanvasProgram {
         if bounds_width <= 0.0 || self.horizontal_zoom <= 0.0 {
             return 0;
         }
-        let total_ticks = self.visible_end_tick.saturating_sub(self.visible_start_tick).max(1);
+        let total_ticks = self
+            .visible_end_tick
+            .saturating_sub(self.visible_start_tick)
+            .max(1);
         let progress = (x / (bounds_width * self.horizontal_zoom)).clamp(0.0, 1.0);
         self.visible_start_tick + (progress * total_ticks as f32) as u64
     }
@@ -145,7 +147,10 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                     Color::from_rgba8(0x40, 0x45, 0x50, 0.25)
                 };
                 let line = Path::line(Point::new(x, 0.0), Point::new(x, bounds.height));
-                frame.stroke(&line, Stroke::default().with_color(stroke_color).with_width(1.0));
+                frame.stroke(
+                    &line,
+                    Stroke::default().with_color(stroke_color).with_width(1.0),
+                );
             }
             tick += 960;
         }
@@ -178,9 +183,7 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
     }
 }
 
-pub fn view_canvas_timeline<'a>(
-    program: ArrangementCanvasProgram,
-) -> Element<'a, UiMessage> {
+pub fn view_canvas_timeline<'a>(program: ArrangementCanvasProgram) -> Element<'a, UiMessage> {
     Canvas::new(program)
         .width(Length::Fill)
         .height(Length::Fill)

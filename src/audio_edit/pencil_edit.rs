@@ -15,7 +15,10 @@ impl PencilEdit {
     }
 
     pub fn add_point(&mut self, position: usize, sample: f32) {
-        self.points.push(PencilEditPoint { position, sample: sample.clamp(-1.0, 1.0) });
+        self.points.push(PencilEditPoint {
+            position,
+            sample: sample.clamp(-1.0, 1.0),
+        });
         self.points.sort_by_key(|p| p.position);
     }
 
@@ -33,8 +36,16 @@ impl PencilEdit {
             return;
         }
 
-        let left_val = if click_start > 0 { buffer[click_start - 1] } else { 0.0 };
-        let right_val = if click_end < buffer.len() { buffer[click_end] } else { 0.0 };
+        let left_val = if click_start > 0 {
+            buffer[click_start - 1]
+        } else {
+            0.0
+        };
+        let right_val = if click_end < buffer.len() {
+            buffer[click_end]
+        } else {
+            0.0
+        };
         let span = (click_end - click_start + 1) as f32;
 
         for (step, i) in (click_start..click_end).enumerate() {

@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use crate::midi::midi_note::MidiNote;
 use crate::timeline::MusicalScale;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MidiTrackContainer {

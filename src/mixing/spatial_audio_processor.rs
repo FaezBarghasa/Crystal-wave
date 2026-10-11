@@ -103,8 +103,20 @@ impl SpatialObjectPanner {
     /// Downmix 7.1.4 bed to binaural stereo for headphone preview
     pub fn binaural_downmix(&self, bed: &[f32; BED_CHANNELS_7_1_4]) -> (f32, f32) {
         // Binaural HRTF ITD (Interaural Time Difference) and ILD (Interaural Level Difference)
-        let left = bed[0] * 1.0 + bed[2] * 0.707 + bed[4] * 0.8 + bed[6] * 0.6 + bed[8] * 0.7 + bed[10] * 0.5 + bed[1] * 0.2;
-        let right = bed[1] * 1.0 + bed[2] * 0.707 + bed[5] * 0.8 + bed[7] * 0.6 + bed[9] * 0.7 + bed[11] * 0.5 + bed[0] * 0.2;
+        let left = bed[0] * 1.0
+            + bed[2] * 0.707
+            + bed[4] * 0.8
+            + bed[6] * 0.6
+            + bed[8] * 0.7
+            + bed[10] * 0.5
+            + bed[1] * 0.2;
+        let right = bed[1] * 1.0
+            + bed[2] * 0.707
+            + bed[5] * 0.8
+            + bed[7] * 0.6
+            + bed[9] * 0.7
+            + bed[11] * 0.5
+            + bed[0] * 0.2;
         (left * 0.6, right * 0.6)
     }
 }

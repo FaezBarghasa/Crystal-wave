@@ -21,7 +21,9 @@ pub struct AiLyrics {
 
 impl Default for AiLyrics {
     fn default() -> Self {
-        Self { rhyme_scheme: RhymeScheme::ABAB }
+        Self {
+            rhyme_scheme: RhymeScheme::ABAB,
+        }
     }
 }
 

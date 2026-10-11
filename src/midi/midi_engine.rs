@@ -13,12 +13,12 @@ pub enum MidiDirection {
 pub struct SequencerStep {
     pub active: bool,
     pub note_number: u8,
-    pub velocity: u16,        // 16-bit high-resolution velocity (MIDI 2.0)
-    pub gate_percent: u8,     // 1% to 100%
-    pub ratchet: u8,          // Sub-step ratcheting: 1x, 2x, 3x, 4x, ..., 16x
-    pub probability: u8,      // 0% to 100% chance
-    pub octave_offset: i8,    // -3 to +3
-    pub articulation_id: u8,  // Logic Pro Articulation ID (1 to 255)
+    pub velocity: u16,       // 16-bit high-resolution velocity (MIDI 2.0)
+    pub gate_percent: u8,    // 1% to 100%
+    pub ratchet: u8,         // Sub-step ratcheting: 1x, 2x, 3x, 4x, ..., 16x
+    pub probability: u8,     // 0% to 100% chance
+    pub octave_offset: i8,   // -3 to +3
+    pub articulation_id: u8, // Logic Pro Articulation ID (1 to 255)
 }
 
 impl Default for SequencerStep {

@@ -20,7 +20,12 @@ impl ChromaVerbEngine {
 
         // Delay line lengths tuned for prime number sample lengths to prevent metallic ringing
         let base = (sample_rate * 0.030) as usize; // ~30ms base delay
-        let lengths = [base, (base as f32 * 1.37) as usize, (base as f32 * 1.63) as usize, (base as f32 * 1.91) as usize];
+        let lengths = [
+            base,
+            (base as f32 * 1.37) as usize,
+            (base as f32 * 1.63) as usize,
+            (base as f32 * 1.91) as usize,
+        ];
 
         let delays_l = [
             vec![0.0; lengths[0]],
@@ -36,7 +41,9 @@ impl ChromaVerbEngine {
             vec![0.0; lengths[3] + 53],
         ];
 
-        let feedback = (-3.0 / (decay_seconds.max(0.1) * (sample_rate / base as f32))).exp().clamp(0.0, 0.98);
+        let feedback = (-3.0 / (decay_seconds.max(0.1) * (sample_rate / base as f32)))
+            .exp()
+            .clamp(0.0, 0.98);
 
         Ok(Self {
             delays_l,
@@ -82,8 +89,10 @@ impl ChromaVerbEngine {
                 wet_r += out_d_r;
 
                 // High-frequency damping filter (1-pole lowpass in feedback path)
-                self.damp_state_l[d] = out_d_l * (1.0 - self.damping) + self.damp_state_l[d] * self.damping;
-                self.damp_state_r[d] = out_d_r * (1.0 - self.damping) + self.damp_state_r[d] * self.damping;
+                self.damp_state_l[d] =
+                    out_d_l * (1.0 - self.damping) + self.damp_state_l[d] * self.damping;
+                self.damp_state_r[d] =
+                    out_d_r * (1.0 - self.damping) + self.damp_state_r[d] * self.damping;
 
                 // Write feedback into delay lines
                 self.delays_l[d][self.indices_l[d]] = in_l + self.damp_state_l[d] * self.feedback;

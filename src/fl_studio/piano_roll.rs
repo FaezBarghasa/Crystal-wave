@@ -3,14 +3,14 @@
 pub struct FlPianoRollNote {
     pub id: usize,
     pub channel_id: usize,
-    pub key: u8,          // MIDI key 0-127
+    pub key: u8, // MIDI key 0-127
     pub start_tick: u64,
     pub length_ticks: u64,
-    pub velocity: f32,     // 0.0 to 1.0
-    pub pan: f32,          // -1.0 to +1.0
-    pub is_slide: bool,    // FL Studio slide triangle note: glides pitch of previous voice
+    pub velocity: f32,  // 0.0 to 1.0
+    pub pan: f32,       // -1.0 to +1.0
+    pub is_slide: bool, // FL Studio slide triangle note: glides pitch of previous voice
     pub fine_pitch_cents: f32,
-    pub color_group: u8,   // 16 color channels in FL
+    pub color_group: u8, // 16 color channels in FL
 }
 
 impl FlPianoRollNote {
@@ -51,7 +51,11 @@ pub struct FlPianoRollTools;
 
 impl FlPianoRollTools {
     /// Quick Strum: Staggers note start times in a chord to simulate realistic guitar/keyboard strumming
-    pub fn quick_strum(notes: &mut [FlPianoRollNote], time_offset_ticks: u64, alternate_direction: bool) {
+    pub fn quick_strum(
+        notes: &mut [FlPianoRollNote],
+        time_offset_ticks: u64,
+        alternate_direction: bool,
+    ) {
         notes.sort_by_key(|n| n.key);
         let len = notes.len();
         for (i, note) in notes.iter_mut().enumerate() {

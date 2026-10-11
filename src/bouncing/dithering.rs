@@ -2,11 +2,11 @@
 pub enum DitherType {
     None,
     #[default]
-    TPDF,       // Flat Triangular Probability Density Function
-    Powr1,      // POW-r #1: Flat TPDF noise shaping for spoken word
-    Powr2,      // POW-r #2: Low-noise psychoacoustic shaping for acoustic / pop
-    Powr3,      // POW-r #3: High-order 9th-degree psychoacoustic noise shaping (2-4 kHz ear curve)
-    UV22HR,     // Apogee UV22HR high-frequency Nyquist energy injection
+    TPDF, // Flat Triangular Probability Density Function
+    Powr1,  // POW-r #1: Flat TPDF noise shaping for spoken word
+    Powr2,  // POW-r #2: Low-noise psychoacoustic shaping for acoustic / pop
+    Powr3,  // POW-r #3: High-order 9th-degree psychoacoustic noise shaping (2-4 kHz ear curve)
+    UV22HR, // Apogee UV22HR high-frequency Nyquist energy injection
 }
 
 pub struct DitherEngine {
@@ -32,7 +32,10 @@ impl DitherEngine {
     }
 
     fn next_uniform(&mut self) -> f32 {
-        self.prng_state = self.prng_state.wrapping_mul(6364136223846793005).wrapping_add(1);
+        self.prng_state = self
+            .prng_state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1);
         let val = (self.prng_state >> 32) as u32;
         (val as f32 / u32::MAX as f32) * 2.0 - 1.0
     }
@@ -60,11 +63,11 @@ impl DitherEngine {
             DitherType::Powr3 => {
                 // 9th-order FIR noise shaping filter coefficients minimizing 2-4 kHz
                 static POWR3_COEFFS: [f32; 9] = [
-                    2.412, -3.371, 3.937, -3.424, 2.391, -1.258, 0.499, -0.134, 0.019
+                    2.412, -3.371, 3.937, -3.424, 2.391, -1.258, 0.499, -0.134, 0.019,
                 ];
                 let mut shaped_err = 0.0f32;
-                for i in 0..9 {
-                    shaped_err += POWR3_COEFFS[i] * self.error_history[i];
+                for (i, &coeff) in POWR3_COEFFS.iter().enumerate() {
+                    shaped_err += coeff * self.error_history[i];
                 }
                 self.generate_tpdf() + shaped_err
             }

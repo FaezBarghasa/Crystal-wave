@@ -9,7 +9,7 @@ pub enum ArticulationType {
 pub struct ArticulationMapEntry {
     pub articulation_id: u8, // 1..255
     pub name: String,
-    pub trigger_note: Option<u8>,        // Keyswitch note trigger
+    pub trigger_note: Option<u8>, // Keyswitch note trigger
     pub program_change: Option<u8>,
     pub control_change: Option<(u8, u8)>, // (CC#, Value)
     pub articulation_type: ArticulationType,
@@ -37,17 +37,23 @@ pub struct MidiNote {
     pub id: usize,
     pub start_tick: u64,
     pub duration_ticks: u32,
-    pub pitch: u8,               // 0..127 MIDI note number
-    pub velocity: u16,           // 16-bit high-resolution velocity (MIDI 2.0, 0..65535)
+    pub pitch: u8,     // 0..127 MIDI note number
+    pub velocity: u16, // 16-bit high-resolution velocity (MIDI 2.0, 0..65535)
     pub release_velocity: u16,
-    pub articulation_id: u8,     // Logic Pro Articulation ID (1..255, 0 = default)
+    pub articulation_id: u8, // Logic Pro Articulation ID (1..255, 0 = default)
     pub mpe: MpeExpression,
-    pub channel: u8,             // 1..16
+    pub channel: u8, // 1..16
     pub muted: bool,
 }
 
 impl MidiNote {
-    pub fn new(id: usize, start_tick: u64, duration_ticks: u32, pitch: u8, velocity_7bit: u8) -> Self {
+    pub fn new(
+        id: usize,
+        start_tick: u64,
+        duration_ticks: u32,
+        pitch: u8,
+        velocity_7bit: u8,
+    ) -> Self {
         Self {
             id,
             start_tick,

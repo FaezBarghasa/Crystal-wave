@@ -19,7 +19,8 @@ fn test_fet1176_fast_attack_and_saturation() {
     let mut left = vec![1.0; 1000]; // 0 dBFS signal (well above -12 dB threshold)
     let mut right = vec![1.0; 1000];
 
-    comp.process(&mut left, &mut right).expect("Process success");
+    comp.process(&mut left, &mut right)
+        .expect("Process success");
 
     // FET 1176 should attack within < 1 ms (< 44 samples) and heavily compress
     assert!(comp.current_gain_reduction_db() < -5.0);
@@ -74,11 +75,19 @@ fn test_channel_eq_8band_magnitude() {
 
     // Test Low Cut: At 20 Hz, magnitude should be significantly attenuated (< -10 dB)
     let mag_20hz = eq.total_magnitude_db(20.0);
-    assert!(mag_20hz < -10.0, "20 Hz attenuation expected, got {}", mag_20hz);
+    assert!(
+        mag_20hz < -10.0,
+        "20 Hz attenuation expected, got {}",
+        mag_20hz
+    );
 
     // Test Peak Boost: At 1000 Hz, magnitude should be approximately +6 dB
     let mag_1khz = eq.total_magnitude_db(1000.0);
-    assert!((mag_1khz - 6.0).abs() < 0.5, "1000 Hz boost expected ~6 dB, got {}", mag_1khz);
+    assert!(
+        (mag_1khz - 6.0).abs() < 0.5,
+        "1000 Hz boost expected ~6 dB, got {}",
+        mag_1khz
+    );
 }
 
 #[test]
@@ -93,7 +102,8 @@ fn test_flex_time_speed_and_pitch() {
     }
 
     let mut output = vec![0.0; 2000];
-    flex.process_stretch(&input, &mut output).expect("Stretch success");
+    flex.process_stretch(&input, &mut output)
+        .expect("Stretch success");
 
     assert_eq!(output.len(), 2000);
     assert!(!output.iter().any(|s| s.is_nan() || s.is_infinite()));
@@ -137,7 +147,10 @@ fn test_chromaverb_delay_network() {
 
     // Verify impulse spread and non-explosive tail
     assert!(!l.iter().any(|s| s.is_nan() || s.abs() > 2.0));
-    assert!(l[1320..].iter().any(|&s| s.abs() > 1e-4), "Reverb reflections must appear after base delay");
+    assert!(
+        l[1320..].iter().any(|&s| s.abs() > 1e-4),
+        "Reverb reflections must appear after base delay"
+    );
 }
 
 #[test]
@@ -152,7 +165,9 @@ fn test_markov_harmonic_progression() {
     let g_dom7 = Chord::new(7, ChordQuality::Dominant7);
     let f_major = Chord::new(5, ChordQuality::Major);
 
-    let has_dominant_or_subdominant = next_predictions.iter().any(|(c, _)| *c == g_dom7 || *c == f_major);
+    let has_dominant_or_subdominant = next_predictions
+        .iter()
+        .any(|(c, _)| *c == g_dom7 || *c == f_major);
     assert!(has_dominant_or_subdominant);
 }
 

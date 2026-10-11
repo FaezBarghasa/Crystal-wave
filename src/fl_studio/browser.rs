@@ -74,8 +74,7 @@ impl FlBrowser {
         self.samples
             .iter()
             .filter(|s| {
-                s.name.to_lowercase().contains(&q)
-                    || s.category.to_lowercase().contains(&q)
+                s.name.to_lowercase().contains(&q) || s.category.to_lowercase().contains(&q)
             })
             .collect()
     }
