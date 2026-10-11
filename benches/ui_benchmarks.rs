@@ -34,7 +34,7 @@ fn main() {
     );
 
     // Benchmark 2: SPSC rtrb telemetry throughput (100,000 batches)
-    let (mut producer, mut consumer) = TelemetryChannel::new(1024);
+    let (mut producer, mut consumer) = TelemetryChannel::pair(1024);
     let batch = TelemetryBatch {
         playhead_tick: 1920,
         cpu_load_percent: 18.4,

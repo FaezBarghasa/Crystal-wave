@@ -116,7 +116,7 @@ fn test_render_element_tree_headless() {
 
 #[test]
 fn test_telemetry_ring_buffer_channel() {
-    let (mut producer, mut consumer) = TelemetryChannel::new(16);
+    let (mut producer, mut consumer) = TelemetryChannel::pair(16);
 
     let batch = Crystal_wave::ui::telemetry::TelemetryBatch {
         playhead_tick: 960,

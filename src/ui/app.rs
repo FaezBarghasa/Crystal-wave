@@ -180,10 +180,8 @@ impl CrystalWaveApp {
                 self.playhead_tick = batch.playhead_tick;
                 self.workspace.lcd_diagnostic.cpu_load_percent = batch.cpu_load_percent;
                 for meter in batch.meters {
-                    if meter.auto_mute_tripped {
-                        if let Some(strip) = self.mixer.channels.get_mut(meter.channel_id) {
-                            strip.meter.auto_mute_tripped = true;
-                        }
+                    if let Some(strip) = meter.auto_mute_tripped.then(|| self.mixer.channels.get_mut(meter.channel_id)).flatten() {
+                        strip.meter.auto_mute_tripped = true;
                     }
                 }
             }

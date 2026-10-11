@@ -18,7 +18,7 @@ pub struct TelemetryBatch {
 pub struct TelemetryChannel;
 
 impl TelemetryChannel {
-    pub fn new(capacity: usize) -> (Producer<TelemetryBatch>, Consumer<TelemetryBatch>) {
+    pub fn pair(capacity: usize) -> (Producer<TelemetryBatch>, Consumer<TelemetryBatch>) {
         RingBuffer::new(capacity)
     }
 }
