@@ -3,7 +3,8 @@ use Crystal_wave::plugins::rust_sdk::CrystalPlugin;
 use Crystal_wave::plugins::sdk_ffi::CrystalPluginVTable;
 use Crystal_wave::plugins::AudioPlugin;
 use Crystal_wave::export_crystal_plugin;
-use omid::{EventType, OmidFlags, OmidPacket};
+use omid::event::{OmidEventType, OmidFlags};
+use omid::OmidPacket;
 
 #[derive(Default)]
 struct TestOmidPlugin {
@@ -41,7 +42,7 @@ impl CrystalPlugin for TestOmidPlugin {
     fn poll_omid_response(&mut self) -> Option<OmidPacket> {
         // Echo back with modified event type
         self.last_received_packet.map(|pkt| {
-            OmidPacket::new(pkt.object_id(), EventType::RelativeChange, OmidFlags(0), 42)
+            OmidPacket::new(pkt.object_id, OmidEventType::RelativeChange as u8, 0, 42)
         })
     }
 }
@@ -68,7 +69,7 @@ fn test_dynamic_plugin_sdk_lifecycle_and_omid_packets() {
 
     // 2. Dispatch 12-bit ADC Omid Packet (value 2048 -> normalized 0.5)
     let flags = OmidFlags::new(false, false, false, 0);
-    let packet = OmidPacket::new_adc12(101, EventType::AbsoluteChange, flags, 2048);
+    let packet = OmidPacket::new_adc12(101, OmidEventType::AbsoluteChange, flags, 2048);
     host.dispatch_omid_packet(packet);
 
     // Reprocess with updated gain from OMID
@@ -82,6 +83,6 @@ fn test_dynamic_plugin_sdk_lifecycle_and_omid_packets() {
     let response_packet = host.poll_omid_response();
     assert!(response_packet.is_some());
     let resp = response_packet.unwrap();
-    assert_eq!(resp.object_id(), 101);
-    assert_eq!(resp.payload(), 42);
+    assert_eq!(resp.object_id, 101);
+    assert_eq!(resp.payload, 42);
 }

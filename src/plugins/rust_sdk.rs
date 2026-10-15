@@ -148,7 +148,7 @@ macro_rules! export_crystal_plugin {
                 let slice = std::slice::from_raw_parts(packet_bytes, 8);
                 let mut buf = [0u8; 8];
                 buf.copy_from_slice(slice);
-                wrapper.inner.on_omid_packet(omid::OmidPacket::from_bytes(buf));
+                wrapper.inner.on_omid_packet(omid::OmidPacket::from_bytes(&buf));
             }
         }
 
@@ -167,7 +167,7 @@ macro_rules! export_crystal_plugin {
             false
         }
 
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub extern "C" fn crystal_plugin_get_vtable() -> $crate::plugins::sdk_ffi::CrystalPluginVTable {
             $crate::plugins::sdk_ffi::CrystalPluginVTable {
                 get_descriptor: crystal_get_descriptor,

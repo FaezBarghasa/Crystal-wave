@@ -143,10 +143,15 @@ impl AudioPlugin for DynamicPluginHost {
             num_samples,
         };
 
-        // Synchronize parameter values into instance
-        for (i, p) in self.parameters.iter().enumerate() {
+        // Synchronize parameter values between host parameter handles and plugin instance
+        for (i, p) in self.parameters.iter_mut().enumerate() {
             unsafe {
-                (self.vtable.set_parameter_value)(self.instance, i as u32, p.get_value());
+                let current_instance_val = (self.vtable.get_parameter_value)(self.instance, i as u32);
+                if (current_instance_val - p.get_value()).abs() > 1e-5 {
+                    p.set_value(current_instance_val);
+                } else {
+                    (self.vtable.set_parameter_value)(self.instance, i as u32, p.get_value());
+                }
             }
         }
 
