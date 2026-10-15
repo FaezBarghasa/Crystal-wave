@@ -70,6 +70,12 @@ pub enum UiMessage {
     ChannelRackToggleStep { channel_id: usize, step_index: usize },
     ChannelRackDropSample { sample_id: usize },
     TimelineMoveClip { clip_id: usize, new_track_id: usize, new_start_tick: u64 },
+
+    // FL Studio Piano Roll Articulations & Tools
+    PianoRollQuickStrum,
+    PianoRollFlipHorizontal,
+    PianoRollFlipVertical,
+    PianoRollQuickChop,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

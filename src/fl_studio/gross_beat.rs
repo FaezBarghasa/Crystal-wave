@@ -153,7 +153,7 @@ impl crate::plugins::plugin_host::AudioPlugin for GrossBeatEngine {
             std::sync::OnceLock::new();
         DESC.get_or_init(|| {
             crate::plugins::plugin_descriptor::PluginDescriptor::new(
-                1005,
+                1006,
                 "Gross Beat",
                 crate::plugins::plugin_descriptor::PluginCategory::Modulation,
             )

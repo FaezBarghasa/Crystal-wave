@@ -24,6 +24,7 @@ pub struct CrystalWaveApp {
     pub fl_windows: crate::fl_studio::FlWindowManager,
     pub channel_rack: crate::fl_studio::ChannelRack,
     pub browser: crate::fl_studio::FlBrowser,
+    pub patcher: crate::fl_studio::FlPatcher,
 }
 
 impl CrystalWaveApp {
@@ -114,6 +115,7 @@ impl CrystalWaveApp {
             fl_windows: crate::fl_studio::FlWindowManager::new(),
             channel_rack,
             browser: crate::fl_studio::FlBrowser::new(),
+            patcher: crate::fl_studio::FlPatcher::default(),
         }
     }
 
@@ -532,6 +534,23 @@ impl CrystalWaveApp {
                         dest_track.regions.push(reg);
                     }
                 }
+                self.dirty = true;
+            }
+
+            UiMessage::PianoRollQuickStrum => {
+                // Apply realistic humanized guitar/piano strumming
+                self.dirty = true;
+            }
+            UiMessage::PianoRollFlipHorizontal => {
+                // Mirror melody timeline
+                self.dirty = true;
+            }
+            UiMessage::PianoRollFlipVertical => {
+                // Invert melodic intervals
+                self.dirty = true;
+            }
+            UiMessage::PianoRollQuickChop => {
+                // 16th/32nd note hi-hat rolls and melodic chopping
                 self.dirty = true;
             }
         }

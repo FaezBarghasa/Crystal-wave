@@ -70,6 +70,15 @@ impl PluginRegistry {
             |sr| Box::new(NativeChromaVerb::new(sr)),
         );
 
+        // 6. Gross Beat Time Manipulation Engine (1006)
+        registry.register(
+            crate::fl_studio::gross_beat::GrossBeatEngine::new(44100.0)
+                .descriptor()
+                .clone(),
+            true,
+            |sr| Box::new(crate::fl_studio::gross_beat::GrossBeatEngine::new(sr)),
+        );
+
         registry
     }
 

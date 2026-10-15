@@ -38,6 +38,8 @@ impl CrystalWaveApp {
             .on_press(UiMessage::ToggleFlBrowser);
         let win_mixer = button(text(if self.fl_windows.mixer_visible { "Mixer [F9]*" } else { "Mixer [F9]" }).size(11))
             .on_press(UiMessage::ToggleFlMixer);
+        let win_patcher = button(text(if self.fl_windows.patcher_visible { "Patcher*" } else { "Patcher" }).size(11))
+            .on_press(UiMessage::ToggleFlPatcher);
         let win_inspector = button(text(if self.workspace.inspector_open { "Inspect [I]*" } else { "Inspect [I]" }).size(11))
             .on_press(UiMessage::ToggleInspector);
         let win_plugins = button(text("Plugins [L]").size(11)).on_press(UiMessage::ToggleLibraryBrowser);
@@ -56,6 +58,7 @@ impl CrystalWaveApp {
             win_piano_roll,
             win_browser,
             win_mixer,
+            win_patcher,
             win_inspector,
             win_plugins
         ]
@@ -376,12 +379,21 @@ impl CrystalWaveApp {
         }
 
         if self.fl_windows.piano_roll_visible || self.workspace.editor_drawer_open {
+            let btn_strum = button(text("Strum").size(10)).on_press(UiMessage::PianoRollQuickStrum);
+            let btn_flip_h = button(text("Flip H").size(10)).on_press(UiMessage::PianoRollFlipHorizontal);
+            let btn_flip_v = button(text("Flip V").size(10)).on_press(UiMessage::PianoRollFlipVertical);
+            let btn_chop = button(text("Chop 1/16").size(10)).on_press(UiMessage::PianoRollQuickChop);
+
             let roll_header = row![
                 text("FL Piano Roll [F7] (Ghost Polyphony: Active)").size(12),
+                btn_strum,
+                btn_flip_h,
+                btn_flip_v,
+                btn_chop,
                 text("Scale: Chromatic | Grid: 1/16 | Slide Pitch: Active").size(10),
                 button(text("x").size(10)).on_press(UiMessage::ToggleFlPianoRoll),
             ]
-            .spacing(8);
+            .spacing(6);
 
             let keys_col = column![
                 text("C5 - [ Lead ]").size(10),
@@ -410,6 +422,35 @@ impl CrystalWaveApp {
             let roll_body = row![keys_col, grid_content].spacing(8);
 
             return container(column![roll_header, roll_body].spacing(4))
+                .height(Length::Fixed(190.0))
+                .width(Length::Fill)
+                .padding(4)
+                .into();
+        }
+
+        if self.fl_windows.patcher_visible {
+            let mut nodes_row = row![].spacing(12).padding(8);
+            for node in &self.patcher.nodes {
+                let node_box = container(
+                    column![
+                        text(&node.name).size(11),
+                        text(format!("{:?}", node.kind)).size(9),
+                        text(format!("({:.0}, {:.0})", node.canvas_x, node.canvas_y)).size(8),
+                    ]
+                    .spacing(2),
+                )
+                .padding(6);
+                nodes_row = nodes_row.push(node_box);
+            }
+
+            let patcher_header = row![
+                text("FL Patcher Modular Routing Graph").size(12),
+                text(format!("Nodes: {} | Cables: {}", self.patcher.nodes.len(), self.patcher.cables.len())).size(10),
+                button(text("x").size(10)).on_press(UiMessage::ToggleFlPatcher),
+            ]
+            .spacing(8);
+
+            return container(column![patcher_header, scrollable(nodes_row)].spacing(4))
                 .height(Length::Fixed(190.0))
                 .width(Length::Fill)
                 .padding(4)
