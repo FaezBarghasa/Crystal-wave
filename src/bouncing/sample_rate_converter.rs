@@ -60,7 +60,7 @@ impl SampleRateConverter {
                 }
             }
 
-            if weight_sum.abs() > 1e-6 {
+            if weight_sum > 1e-6 {
                 output.push(sum / weight_sum);
             } else {
                 output.push(0.0);

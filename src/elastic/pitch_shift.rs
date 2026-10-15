@@ -102,12 +102,12 @@ impl FlexPitchEngine {
             let src_i0 = src_f.floor() as usize;
             let frac = src_f - src_f.floor();
 
-            let resampled = if src_i0 + 1 < slice_len {
-                source_copy[src_i0] * (1.0 - frac) + source_copy[src_i0 + 1] * frac
-            } else if src_i0 < slice_len {
-                source_copy[src_i0]
+            let resampled = if slice_len > 0 {
+                let wrapped_i0 = src_i0 % slice_len;
+                let wrapped_i1 = (src_i0 + 1) % slice_len;
+                source_copy[wrapped_i0] * (1.0 - frac) + source_copy[wrapped_i1] * frac
             } else {
-                source_copy[slice_len.saturating_sub(1)]
+                0.0
             };
 
             *s = resampled * linear_gain;

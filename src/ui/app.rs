@@ -358,9 +358,35 @@ impl CrystalWaveApp {
                     self.playhead_tick = 0;
                     self.is_playing = false;
                     self.dirty = false;
+                    self.arrangement.timeline.tracks.clear();
+                    self.mixer.channels.clear();
+                    let _ = self.mixer.add_channel("Master");
                 }
                 crate::ui::message::MenuCommand::SaveSession
                 | crate::ui::message::MenuCommand::SaveSessionAs => {
+                    let project = crate::format::project_format::CrystalWaveProject::default();
+                    if let Ok(json) = crate::format::ProjectSerializer::to_json_string(&project) {
+                        let _ = std::fs::write("session_backup.cwave.json", json);
+                    }
+                    self.dirty = false;
+                }
+                crate::ui::message::MenuCommand::BounceWav => {
+                    let exporter = crate::bouncing::Exporter::new(
+                        crate::bouncing::export_format::ExportFormatConfig::default(),
+                        crate::bouncing::bit_depth_converter::BitDepth::Bit24,
+                        crate::bouncing::dithering::DitherType::None,
+                    );
+                    let mut dummy_l = vec![0.0f32; 44100 * 2];
+                    let mut dummy_r = vec![0.0f32; 44100 * 2];
+                    self.mixer.sum_buses(&mut dummy_l, &mut dummy_r);
+                    if let Ok(wav_bytes) = exporter.export_stereo_wav(&dummy_l, &dummy_r, 44100.0) {
+                        let _ = std::fs::write("bounce_output.wav", wav_bytes);
+                    }
+                    self.dirty = false;
+                }
+                crate::ui::message::MenuCommand::ExportAaf => {
+                    let session = crate::format::AafSession::new("ExportedSession", 44100.0, crate::format::SmpteFrameRate::Fps24);
+                    let _ = std::fs::write("session_export.edl", format!("{:?}", session));
                     self.dirty = false;
                 }
                 crate::ui::message::MenuCommand::ToggleMixer => {

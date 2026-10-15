@@ -243,6 +243,11 @@ impl EbuR128LoudnessMeter {
 
             if self.block_sample_count >= self.block_size_samples {
                 let mean_block_power = self.block_accumulator / (self.block_sample_count as f32);
+                // Bounded block history (max 36,000 blocks = 1 hour of integrated audio)
+                const MAX_BLOCKS: usize = 36_000;
+                if self.block_energies.len() >= MAX_BLOCKS {
+                    self.block_energies.remove(0);
+                }
                 self.block_energies.push(mean_block_power);
                 self.block_accumulator = 0.0;
                 self.block_sample_count = 0;
