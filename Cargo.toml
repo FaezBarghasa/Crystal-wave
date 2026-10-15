@@ -82,6 +82,7 @@ rayon = "1.10" # Background disk buffering & offline render
 midir = "0.11.1"
 wmidi = "4.0"    # Zero-alloc parsing for the real-time callback
 midly = "0.5"    # Fast SMF parsing for timeline clip loading
+omid = { path = "../omid", features = ["std"] }
 
 # -------------------------------------------------------------
 # 7. Plugin Hosting (CLAP & VST3)
