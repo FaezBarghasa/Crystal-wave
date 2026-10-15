@@ -24,6 +24,7 @@ pub enum UiMessage {
     SetPlayhead(u64),
     SetTempoBpm(f32),
     SetTimeSignature(u8, u8),
+    SetMasterTuning(f32),
 
     // Timeline & View Navigation
     SelectTrack(usize),

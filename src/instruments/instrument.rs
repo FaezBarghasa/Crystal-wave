@@ -15,4 +15,5 @@ pub trait VirtualInstrument: Send + Sync {
     fn render_block(&mut self, left: &mut [f32], right: &mut [f32]);
     fn active_voices(&self) -> usize;
     fn reset(&mut self);
+    fn set_master_tuning(&mut self, _tuning_hz: f32) {}
 }

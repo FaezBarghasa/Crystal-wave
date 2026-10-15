@@ -71,16 +71,21 @@ impl CrystalWaveApp {
         let record_btn = button(text("Record")).on_press(UiMessage::TransportRecord);
 
         let lcd = container(text(format!(
-            "BPM: {:.1} | Sig: {}/{} | Pos: {} | CPU: {:.1}%",
+            "BPM: {:.1} | Sig: {}/{} | Pos: {} | A4: {:.1}Hz | CPU: {:.1}%",
             self.workspace.lcd_diagnostic.project_tempo_bpm,
             self.workspace.lcd_diagnostic.time_signature.0,
             self.workspace.lcd_diagnostic.time_signature.1,
             self.playhead_tick,
+            self.workspace.lcd_diagnostic.master_tuning_hz,
             self.workspace.lcd_diagnostic.cpu_load_percent,
         )))
         .padding(6);
 
-        row![play_btn, stop_btn, record_btn, lcd]
+        let tune_440_btn = button(text("440 Hz")).on_press(UiMessage::SetMasterTuning(440.0));
+        let tune_432_btn = button(text("432 Hz")).on_press(UiMessage::SetMasterTuning(432.0));
+        let tune_434_btn = button(text("434.5 Hz")).on_press(UiMessage::SetMasterTuning(434.5));
+
+        row![play_btn, stop_btn, record_btn, lcd, tune_440_btn, tune_432_btn, tune_434_btn]
             .spacing(8)
             .padding(4)
             .into()

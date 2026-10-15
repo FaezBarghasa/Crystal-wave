@@ -177,6 +177,15 @@ impl CrystalWaveApp {
                 };
                 self.workspace.lcd_diagnostic.time_signature = (safe_num, safe_den);
             }
+            UiMessage::SetMasterTuning(hz) => {
+                let safe_hz = if hz.is_finite() {
+                    hz.clamp(400.0, 480.0)
+                } else {
+                    440.0
+                };
+                self.workspace.lcd_diagnostic.master_tuning_hz = safe_hz;
+                self.dirty = true;
+            }
 
             // Hardened Track Selection: safe indexing
             UiMessage::SelectTrack(idx) => {

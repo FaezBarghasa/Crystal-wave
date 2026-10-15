@@ -33,6 +33,7 @@ pub struct LcdDiagnosticState {
     pub varispeed_cents_offset: f32,
     pub project_tempo_bpm: f32,
     pub time_signature: (u8, u8),
+    pub master_tuning_hz: f32, // Master reference frequency for A4 (e.g. 440.0, 432.0, 434.5)
 }
 
 /// Workspace Window Management (Logic Pro Single-Window Architecture)
@@ -70,6 +71,7 @@ impl Default for WorkspaceState {
                 varispeed_cents_offset: 0.0,
                 project_tempo_bpm: 120.0,
                 time_signature: (4, 4),
+                master_tuning_hz: 440.0,
             },
             selected_track_id: 0,
         }

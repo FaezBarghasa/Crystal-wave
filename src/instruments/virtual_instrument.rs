@@ -100,6 +100,7 @@ pub struct PolyphonicSynth {
     pub sample_rate: f32,
     pub pitch_bend_semitones: f32,
     pub filter_cutoff_hz: f32,
+    pub master_tuning_hz: f32,
     global_age_counter: u64,
 }
 
@@ -121,13 +122,25 @@ impl PolyphonicSynth {
             sample_rate,
             pitch_bend_semitones: 0.0,
             filter_cutoff_hz: 5000.0,
+            master_tuning_hz: 440.0,
             global_age_counter: 0,
         }
     }
 
-    pub fn midi_to_freq(note: u8, bend_semitones: f32) -> f32 {
+    pub fn set_master_tuning(&mut self, tuning_hz: f32) {
+        if tuning_hz.is_finite() {
+            self.master_tuning_hz = tuning_hz.clamp(200.0, 1000.0);
+        }
+    }
+
+    pub fn midi_to_freq_tuned(note: u8, bend_semitones: f32, tuning_hz: f32) -> f32 {
         let semitones = note as f32 + bend_semitones;
-        440.0 * 2.0f32.powf((semitones - 69.0) / 12.0)
+        let base_a = if tuning_hz.is_finite() { tuning_hz.clamp(200.0, 1000.0) } else { 440.0 };
+        base_a * 2.0f32.powf((semitones - 69.0) / 12.0)
+    }
+
+    pub fn midi_to_freq(note: u8, bend_semitones: f32) -> f32 {
+        Self::midi_to_freq_tuned(note, bend_semitones, 440.0)
     }
 }
 
@@ -181,13 +194,14 @@ impl VirtualInstrument for PolyphonicSynth {
         let sr = self.sample_rate;
         let bend = self.pitch_bend_semitones;
         let wave = self.waveform;
+        let tuning = self.master_tuning_hz;
 
         for voice in &mut self.voices {
             if !voice.is_active() {
                 continue;
             }
 
-            let freq = Self::midi_to_freq(voice.note, bend);
+            let freq = Self::midi_to_freq_tuned(voice.note, bend, tuning);
             let phase_inc = (2.0 * PI * freq) / sr;
 
             for i in 0..len {
@@ -262,5 +276,9 @@ impl VirtualInstrument for PolyphonicSynth {
         for v in &mut self.voices {
             v.state = SynthVoiceState::Idle;
         }
+    }
+
+    fn set_master_tuning(&mut self, tuning_hz: f32) {
+        self.set_master_tuning(tuning_hz);
     }
 }
