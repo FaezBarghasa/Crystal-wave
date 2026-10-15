@@ -57,6 +57,19 @@ pub enum UiMessage {
     RemovePlugin(u32),
     EnablePlugin(u32),
     DisablePlugin(u32),
+
+    // FL Studio Multi-Window & Free Floating View Actions
+    ToggleFlChannelRack,
+    ToggleFlPianoRoll,
+    ToggleFlPlaylist,
+    ToggleFlMixer,
+    ToggleFlBrowser,
+    ToggleFlPatcher,
+
+    // FL Studio Channel Rack Step Sequencer & Drag-and-Drop
+    ChannelRackToggleStep { channel_id: usize, step_index: usize },
+    ChannelRackDropSample { sample_id: usize },
+    TimelineMoveClip { clip_id: usize, new_track_id: usize, new_start_tick: u64 },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

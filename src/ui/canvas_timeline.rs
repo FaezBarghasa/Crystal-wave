@@ -6,6 +6,8 @@ use iced::{Color, Element, Length, Point, Rectangle, Size};
 #[derive(Debug, Clone, Default)]
 pub struct CanvasInteractionState {
     pub is_dragging_playhead: bool,
+    pub dragged_clip_id: Option<usize>,
+    pub drag_start_offset_ticks: u64,
     pub last_cursor_pos: Option<Point>,
 }
 
@@ -17,6 +19,7 @@ pub struct WaveformPeak {
 
 #[derive(Debug, Clone)]
 pub struct TimelineClipDisplay {
+    pub id: usize,
     pub track_index: usize,
     pub start_tick: u64,
     pub length_ticks: u64,
@@ -69,6 +72,11 @@ impl ArrangementCanvasProgram {
         let progress = (x / (bounds_width * self.horizontal_zoom)).clamp(0.0, 1.0);
         self.visible_start_tick + (progress * total_ticks as f32) as u64
     }
+
+    pub fn y_to_track(&self, y: f32, bounds_height: f32) -> usize {
+        let lane_h = (bounds_height / self.track_count as f32).clamp(30.0, 120.0);
+        ((y / lane_h) as usize).min(self.track_count.saturating_sub(1))
+    }
 }
 
 impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
@@ -85,13 +93,42 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
 
         match event {
             canvas::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
-                state.is_dragging_playhead = true;
                 let target_tick = self.x_to_tick(cursor_position.x, bounds.width);
-                Some(Action::publish(UiMessage::SetPlayhead(target_tick)))
+                let target_trk = self.y_to_track(cursor_position.y, bounds.height);
+
+                // Check if user clicked directly on an existing clip (enabling Drag-and-Drop)
+                let clicked_clip = self.clips.iter().find(|clip| {
+                    clip.track_index == target_trk
+                        && target_tick >= clip.start_tick
+                        && target_tick < (clip.start_tick + clip.length_ticks)
+                });
+
+                if let Some(clip) = clicked_clip {
+                    state.dragged_clip_id = Some(clip.id);
+                    state.drag_start_offset_ticks = target_tick.saturating_sub(clip.start_tick);
+                    state.is_dragging_playhead = false;
+                    None
+                } else {
+                    state.is_dragging_playhead = true;
+                    Some(Action::publish(UiMessage::SetPlayhead(target_tick)))
+                }
             }
             canvas::Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
-                state.is_dragging_playhead = false;
-                None
+                if let Some(clip_id) = state.dragged_clip_id.take() {
+                    let target_tick = self.x_to_tick(cursor_position.x, bounds.width);
+                    let target_trk = self.y_to_track(cursor_position.y, bounds.height);
+                    let new_start_tick = target_tick.saturating_sub(state.drag_start_offset_ticks);
+                    // Snap to 16th note (240 ticks) for clean studio alignment
+                    let snapped_tick = (new_start_tick / 240) * 240;
+                    Some(Action::publish(UiMessage::TimelineMoveClip {
+                        clip_id,
+                        new_track_id: target_trk,
+                        new_start_tick: snapped_tick,
+                    }))
+                } else {
+                    state.is_dragging_playhead = false;
+                    None
+                }
             }
             canvas::Event::Mouse(mouse::Event::CursorMoved { .. }) => {
                 if state.is_dragging_playhead {

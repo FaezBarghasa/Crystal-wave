@@ -238,3 +238,24 @@ fn test_step_sequencer_directions() {
     assert_eq!(lane.advance_step().unwrap().note_number, 39);
     assert_eq!(lane.advance_step().unwrap().note_number, 36); // Wrapped
 }
+
+#[test]
+fn test_master_tuning_calibration() {
+    use Crystal_wave::instruments::virtual_instrument::PolyphonicSynth;
+
+    // Test A4 (MIDI note 69) at standard 440.0 Hz
+    let freq_440 = PolyphonicSynth::midi_to_freq_tuned(69, 0.0, 440.0);
+    assert!((freq_440 - 440.0).abs() < 1e-4);
+
+    // Test A4 at 432.0 Hz
+    let freq_432 = PolyphonicSynth::midi_to_freq_tuned(69, 0.0, 432.0);
+    assert!((freq_432 - 432.0).abs() < 1e-4);
+
+    // Test A4 at 434.5 Hz
+    let freq_434_5 = PolyphonicSynth::midi_to_freq_tuned(69, 0.0, 434.5);
+    assert!((freq_434_5 - 434.5).abs() < 1e-4);
+
+    // Test A5 (MIDI note 81) one octave up at 432 Hz reference (864.0 Hz)
+    let freq_a5_432 = PolyphonicSynth::midi_to_freq_tuned(81, 0.0, 432.0);
+    assert!((freq_a5_432 - 864.0).abs() < 1e-4);
+}

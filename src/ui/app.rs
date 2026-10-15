@@ -21,6 +21,9 @@ pub struct CrystalWaveApp {
     pub playhead_tick: u64,
     pub dirty: bool,
     pub plugin_registry: crate::plugins::PluginRegistry,
+    pub fl_windows: crate::fl_studio::FlWindowManager,
+    pub channel_rack: crate::fl_studio::ChannelRack,
+    pub browser: crate::fl_studio::FlBrowser,
 }
 
 impl CrystalWaveApp {
@@ -78,6 +81,23 @@ impl CrystalWaveApp {
             .as_mut()
             .and_then(|d| d.start_stream(4096).ok());
 
+        let mut channel_rack = crate::fl_studio::ChannelRack::new(16);
+        let kick_idx = channel_rack.add_channel("808 Kick");
+        let snare_idx = channel_rack.add_channel("Clap / Snare");
+        let hat_idx = channel_rack.add_channel("Hi-Hat");
+        let bass_idx = channel_rack.add_channel("Spinz Bass");
+
+        // Pre-activate standard 4-on-the-floor and trap rhythm
+        channel_rack.toggle_step(kick_idx, 0);
+        channel_rack.toggle_step(kick_idx, 8);
+        channel_rack.toggle_step(snare_idx, 4);
+        channel_rack.toggle_step(snare_idx, 12);
+        for i in (0..16).step_by(2) {
+            channel_rack.toggle_step(hat_idx, i);
+        }
+        channel_rack.toggle_step(bass_idx, 0);
+        channel_rack.toggle_step(bass_idx, 6);
+
         Self {
             workspace: WorkspaceState::default(),
             inspector: DualChannelInspector::new(0, 0),
@@ -91,6 +111,9 @@ impl CrystalWaveApp {
             playhead_tick: 0,
             dirty: false,
             plugin_registry: crate::plugins::PluginRegistry::new(),
+            fl_windows: crate::fl_studio::FlWindowManager::new(),
+            channel_rack,
+            browser: crate::fl_studio::FlBrowser::new(),
         }
     }
 
@@ -450,6 +473,67 @@ impl CrystalWaveApp {
             UiMessage::DisablePlugin(id) => {
                 self.plugin_registry.disable_plugin(id);
             }
+
+            UiMessage::ToggleFlChannelRack => {
+                self.fl_windows.toggle_channel_rack();
+            }
+            UiMessage::ToggleFlPianoRoll => {
+                self.fl_windows.toggle_piano_roll();
+            }
+            UiMessage::ToggleFlPlaylist => {
+                self.fl_windows.toggle_playlist();
+            }
+            UiMessage::ToggleFlMixer => {
+                self.fl_windows.toggle_mixer();
+            }
+            UiMessage::ToggleFlBrowser => {
+                self.fl_windows.toggle_browser();
+            }
+            UiMessage::ToggleFlPatcher => {
+                self.fl_windows.toggle_patcher();
+            }
+
+            UiMessage::ChannelRackToggleStep {
+                channel_id,
+                step_index,
+            } => {
+                self.channel_rack.toggle_step(channel_id, step_index);
+                self.dirty = true;
+            }
+
+            UiMessage::ChannelRackDropSample { sample_id } => {
+                let _ = self
+                    .browser
+                    .drop_to_channel_rack(&mut self.channel_rack, sample_id);
+                self.dirty = true;
+            }
+
+            UiMessage::TimelineMoveClip {
+                clip_id,
+                new_track_id,
+                new_start_tick,
+            } => {
+                // Find and extract region
+                let mut found_region = None;
+                for track in &mut self.arrangement.timeline.tracks {
+                    if let Some(pos) = track.regions.iter().position(|r| r.id == clip_id) {
+                        let mut reg = track.regions.remove(pos);
+                        reg.start_tick = new_start_tick;
+                        reg.track_id = new_track_id;
+                        found_region = Some(reg);
+                        break;
+                    }
+                }
+                // Insert into new destination track
+                if let Some(reg) = found_region {
+                    if let Some(dest_track) =
+                        self.arrangement.timeline.tracks.get_mut(new_track_id)
+                    {
+                        dest_track.regions.push(reg);
+                    }
+                }
+                self.dirty = true;
+            }
         }
     }
 
@@ -464,11 +548,20 @@ impl CrystalWaveApp {
                     iced::keyboard::Key::Named(iced::keyboard::key::Named::Enter) => {
                         UiMessage::SetPlayhead(0)
                     }
-                    iced::keyboard::Key::Named(iced::keyboard::key::Named::F9) => {
-                        UiMessage::ToggleMixerDrawer
+                    iced::keyboard::Key::Named(iced::keyboard::key::Named::F5) => {
+                        UiMessage::ToggleFlPlaylist
+                    }
+                    iced::keyboard::Key::Named(iced::keyboard::key::Named::F6) => {
+                        UiMessage::ToggleFlChannelRack
                     }
                     iced::keyboard::Key::Named(iced::keyboard::key::Named::F7) => {
-                        UiMessage::ToggleEditorDrawer
+                        UiMessage::ToggleFlPianoRoll
+                    }
+                    iced::keyboard::Key::Named(iced::keyboard::key::Named::F8) => {
+                        UiMessage::ToggleFlBrowser
+                    }
+                    iced::keyboard::Key::Named(iced::keyboard::key::Named::F9) => {
+                        UiMessage::ToggleFlMixer
                     }
                     iced::keyboard::Key::Character(ref c) if c.eq_ignore_ascii_case("i") => {
                         UiMessage::ToggleInspector
