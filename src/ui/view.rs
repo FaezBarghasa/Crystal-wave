@@ -408,16 +408,23 @@ impl CrystalWaveApp {
             .spacing(2)
             .width(Length::Fixed(110.0));
 
-            let grid_content = container(
-                column![
-                    text("[--- Note 60: C4 (0..480) Vel: 100 ---]").size(10),
-                    text("     [--- Note 64: E4 (480..960) Vel: 95 ---]").size(10),
-                    text("          [--- Note 67: G4 (960..1440) Vel: 110 ---]").size(10),
-                    text("               [--- Note 72: C5 Slide to D5 (1440..1920) ---]").size(10),
-                ]
-                .spacing(3),
-            )
-            .padding(4);
+            let mut notes_col = column![].spacing(3);
+            for note in &self.piano_roll_notes {
+                let slide_tag = if note.is_slide { " [Slide]" } else { "" };
+                notes_col = notes_col.push(
+                    text(format!(
+                        "Note {}: Key {} ({}..{}) Vel: {:.0}%{}",
+                        note.id,
+                        note.key,
+                        note.start_tick,
+                        note.start_tick + note.length_ticks,
+                        note.velocity * 100.0,
+                        slide_tag
+                    ))
+                    .size(10),
+                );
+            }
+            let grid_content = container(scrollable(notes_col)).padding(4);
 
             let roll_body = row![keys_col, grid_content].spacing(8);
 

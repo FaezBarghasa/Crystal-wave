@@ -25,6 +25,7 @@ pub struct CrystalWaveApp {
     pub channel_rack: crate::fl_studio::ChannelRack,
     pub browser: crate::fl_studio::FlBrowser,
     pub patcher: crate::fl_studio::FlPatcher,
+    pub piano_roll_notes: Vec<crate::fl_studio::FlPianoRollNote>,
 }
 
 impl CrystalWaveApp {
@@ -116,6 +117,13 @@ impl CrystalWaveApp {
             channel_rack,
             browser: crate::fl_studio::FlBrowser::new(),
             patcher: crate::fl_studio::FlPatcher::default(),
+            piano_roll_notes: vec![
+                crate::fl_studio::FlPianoRollNote::new(1, 0, 60, 0, 960),    // C4
+                crate::fl_studio::FlPianoRollNote::new(2, 0, 64, 0, 960),    // E4
+                crate::fl_studio::FlPianoRollNote::new(3, 0, 67, 0, 960),    // G4
+                crate::fl_studio::FlPianoRollNote::new(4, 0, 71, 0, 960),    // B4
+                crate::fl_studio::FlPianoRollNote::new(5, 0, 72, 960, 960).with_slide(true), // C5 Slide
+            ],
         }
     }
 
@@ -538,19 +546,29 @@ impl CrystalWaveApp {
             }
 
             UiMessage::PianoRollQuickStrum => {
-                // Apply realistic humanized guitar/piano strumming
+                crate::fl_studio::FlPianoRollTools::quick_strum(
+                    &mut self.piano_roll_notes,
+                    15, // 15 ticks human strumming offset
+                    true,
+                );
                 self.dirty = true;
             }
             UiMessage::PianoRollFlipHorizontal => {
-                // Mirror melody timeline
+                let pivot = self.piano_roll_notes.iter().map(|n| n.start_tick).max().unwrap_or(960) / 2;
+                crate::fl_studio::FlPianoRollTools::flip_horizontal(&mut self.piano_roll_notes, pivot);
                 self.dirty = true;
             }
             UiMessage::PianoRollFlipVertical => {
-                // Invert melodic intervals
+                crate::fl_studio::FlPianoRollTools::flip_vertical(&mut self.piano_roll_notes, 64); // E4 harmonic pivot
                 self.dirty = true;
             }
             UiMessage::PianoRollQuickChop => {
-                // 16th/32nd note hi-hat rolls and melodic chopping
+                let mut chopped_notes = Vec::new();
+                for note in &self.piano_roll_notes {
+                    let mut subs = crate::fl_studio::FlPianoRollTools::quick_chop(note, 2);
+                    chopped_notes.append(&mut subs);
+                }
+                self.piano_roll_notes = chopped_notes;
                 self.dirty = true;
             }
         }
