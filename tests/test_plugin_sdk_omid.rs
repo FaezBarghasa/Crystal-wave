@@ -1,10 +1,10 @@
+use Crystal_wave::export_crystal_plugin;
+use Crystal_wave::plugins::AudioPlugin;
 use Crystal_wave::plugins::omid_adapter::DynamicPluginHost;
 use Crystal_wave::plugins::rust_sdk::CrystalPlugin;
 use Crystal_wave::plugins::sdk_ffi::CrystalPluginVTable;
-use Crystal_wave::plugins::AudioPlugin;
-use Crystal_wave::export_crystal_plugin;
-use omid::event::{OmidEventType, OmidFlags};
 use omid::OmidPacket;
+use omid::event::{OmidEventType, OmidFlags};
 
 #[derive(Default)]
 struct TestOmidPlugin {
@@ -13,11 +13,21 @@ struct TestOmidPlugin {
 }
 
 impl CrystalPlugin for TestOmidPlugin {
-    fn name(&self) -> &'static str { "Test Omid Synth" }
-    fn vendor(&self) -> &'static str { "OmidAudio" }
-    fn version(&self) -> &'static str { "1.0.0" }
-    fn category(&self) -> u32 { 9 } // Synth
-    fn unique_id(&self) -> u32 { 7777 }
+    fn name(&self) -> &'static str {
+        "Test Omid Synth"
+    }
+    fn vendor(&self) -> &'static str {
+        "OmidAudio"
+    }
+    fn version(&self) -> &'static str {
+        "1.0.0"
+    }
+    fn category(&self) -> u32 {
+        9
+    } // Synth
+    fn unique_id(&self) -> u32 {
+        7777
+    }
 
     fn process(&mut self, left: &mut [f32], right: &mut [f32], _sidechain: Option<&[f32]>) {
         for (l, r) in left.iter_mut().zip(right.iter_mut()) {
@@ -26,10 +36,18 @@ impl CrystalPlugin for TestOmidPlugin {
         }
     }
 
-    fn parameter_count(&self) -> usize { 1 }
-    fn parameter_name(&self, _index: usize) -> &'static str { "Master Gain" }
-    fn get_parameter(&self, _index: usize) -> f32 { self.gain }
-    fn set_parameter(&mut self, _index: usize, val: f32) { self.gain = val; }
+    fn parameter_count(&self) -> usize {
+        1
+    }
+    fn parameter_name(&self, _index: usize) -> &'static str {
+        "Master Gain"
+    }
+    fn get_parameter(&self, _index: usize) -> f32 {
+        self.gain
+    }
+    fn set_parameter(&mut self, _index: usize, val: f32) {
+        self.gain = val;
+    }
 
     fn on_omid_packet(&mut self, packet: OmidPacket) {
         self.last_received_packet = Some(packet);
@@ -41,9 +59,8 @@ impl CrystalPlugin for TestOmidPlugin {
 
     fn poll_omid_response(&mut self) -> Option<OmidPacket> {
         // Echo back with modified event type
-        self.last_received_packet.map(|pkt| {
-            OmidPacket::new(pkt.object_id, OmidEventType::RelativeChange as u8, 0, 42)
-        })
+        self.last_received_packet
+            .map(|pkt| OmidPacket::new(pkt.object_id, OmidEventType::RelativeChange as u8, 0, 42))
     }
 }
 

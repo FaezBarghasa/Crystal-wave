@@ -15,7 +15,10 @@ fn test_piano_roll_articulation_tools_execution() {
     // 1. Quick Strum Tool: Staggers chord note start times
     app.update(UiMessage::PianoRollQuickStrum);
     let strummed_b4_start = app.piano_roll_notes[3].start_tick;
-    assert!(strummed_b4_start > 0, "Strum tool must stagger start offsets");
+    assert!(
+        strummed_b4_start > 0,
+        "Strum tool must stagger start offsets"
+    );
 
     // 2. Flip Vertical Tool: Inverts melodic intervals around key 64 (E4)
     // Key 60 (C4) -> inverted diff: 64 - (60 - 64) = 68 (G#4)

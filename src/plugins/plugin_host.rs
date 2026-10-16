@@ -212,3 +212,179 @@ impl AudioPlugin for NativeChromaVerb {
         &self.parameters
     }
 }
+
+/// Native Virtual Analog Subtractive Synthesizer
+pub struct NativeSubtractiveSynth {
+    descriptor: PluginDescriptor,
+    parameters: Vec<PluginParameter>,
+    sample_rate: f32,
+    phase1: f32,
+    phase2: f32,
+    filter_state: [f32; 2],
+}
+
+impl NativeSubtractiveSynth {
+    pub fn new(sample_rate: f32) -> Self {
+        Self {
+            descriptor: PluginDescriptor::new(1007, "Subtractive Synth", PluginCategory::Synth),
+            parameters: vec![
+                PluginParameter::new(1, "Cutoff", 50.0, 18000.0, 2500.0, "Hz"),
+                PluginParameter::new(2, "Resonance", 0.5, 8.0, 1.8, "Q"),
+                PluginParameter::new(3, "Detune", -50.0, 50.0, 7.0, "cents"),
+                PluginParameter::new(4, "Master Gain", 0.0, 1.0, 0.4, "%"),
+            ],
+            sample_rate,
+            phase1: 0.0,
+            phase2: 0.0,
+            filter_state: [0.0; 2],
+        }
+    }
+}
+
+impl AudioPlugin for NativeSubtractiveSynth {
+    fn descriptor(&self) -> &PluginDescriptor {
+        &self.descriptor
+    }
+
+    fn process(&mut self, left: &mut [f32], right: &mut [f32], _sidechain: Option<&[f32]>) {
+        let cutoff = self.parameters[0]
+            .get_value()
+            .clamp(20.0, self.sample_rate * 0.45);
+        let q = self.parameters[1].get_value().clamp(0.5, 10.0);
+        let detune_cents = self.parameters[2].get_value();
+        let gain = self.parameters[3].get_value();
+
+        let base_freq = 110.0f32; // A2
+        let osc2_ratio = 2.0f32.powf(detune_cents / 1200.0);
+        let dt1 = base_freq / self.sample_rate;
+        let dt2 = (base_freq * osc2_ratio) / self.sample_rate;
+
+        // 2-pole resonant lowpass filter coefficients
+        let w0 = 2.0 * std::f32::consts::PI * cutoff / self.sample_rate;
+        let alpha = (w0 * 0.5).sin() / q;
+        let cos_w0 = w0.cos();
+        let b1 = 1.0 - cos_w0;
+        let b0 = b1 * 0.5;
+        let b2 = b0;
+        let a0 = 1.0 + alpha;
+        let a1 = -2.0 * cos_w0;
+        let a2 = 1.0 - alpha;
+
+        let len = left.len().min(right.len());
+        for i in 0..len {
+            // Osc 1: Band-limited approximate saw (-1.0 to 1.0)
+            let saw = 2.0 * self.phase1 - 1.0;
+            // Osc 2: Square wave (-1.0 to 1.0)
+            let square = if self.phase2 < 0.5 { 0.8 } else { -0.8 };
+
+            let raw_voice = (saw * 0.6 + square * 0.4) * gain;
+
+            // Direct Form I biquad filtering
+            let filtered = (b0 / a0) * raw_voice
+                + (b1 / a0) * self.filter_state[0]
+                + (b2 / a0) * self.filter_state[1]
+                - (a1 / a0) * self.filter_state[0]
+                - (a2 / a0) * self.filter_state[1];
+
+            self.filter_state[1] = self.filter_state[0];
+            self.filter_state[0] = filtered.clamp(-2.0, 2.0);
+
+            left[i] += self.filter_state[0];
+            right[i] += self.filter_state[0];
+
+            self.phase1 = (self.phase1 + dt1).fract();
+            self.phase2 = (self.phase2 + dt2).fract();
+        }
+    }
+
+    fn reset(&mut self) {
+        self.phase1 = 0.0;
+        self.phase2 = 0.0;
+        self.filter_state = [0.0; 2];
+    }
+
+    fn parameters(&self) -> &[PluginParameter] {
+        &self.parameters
+    }
+}
+
+/// Native Percussion & Drum Synthesis Engine
+pub struct NativeDrumSynth {
+    descriptor: PluginDescriptor,
+    parameters: Vec<PluginParameter>,
+    sample_rate: f32,
+    kick_phase: f32,
+    kick_env: f32,
+    noise_seed: u32,
+}
+
+impl NativeDrumSynth {
+    pub fn new(sample_rate: f32) -> Self {
+        Self {
+            descriptor: PluginDescriptor::new(1008, "Drum Synth", PluginCategory::Synth),
+            parameters: vec![
+                PluginParameter::new(1, "Kick Pitch", 35.0, 140.0, 55.0, "Hz"),
+                PluginParameter::new(2, "Snare Snap", 0.0, 1.0, 0.6, "%"),
+                PluginParameter::new(3, "Decay Time", 50.0, 800.0, 250.0, "ms"),
+                PluginParameter::new(4, "Master Level", 0.0, 1.0, 0.5, "%"),
+            ],
+            sample_rate,
+            kick_phase: 0.0,
+            kick_env: 1.0,
+            noise_seed: 0x12345678,
+        }
+    }
+
+    fn next_noise(&mut self) -> f32 {
+        self.noise_seed = self
+            .noise_seed
+            .wrapping_mul(1664525)
+            .wrapping_add(1013904223);
+        ((self.noise_seed >> 9) as f32 / 8388608.0) - 1.0
+    }
+}
+
+impl AudioPlugin for NativeDrumSynth {
+    fn descriptor(&self) -> &PluginDescriptor {
+        &self.descriptor
+    }
+
+    fn process(&mut self, left: &mut [f32], right: &mut [f32], _sidechain: Option<&[f32]>) {
+        let base_pitch = self.parameters[0].get_value();
+        let snap = self.parameters[1].get_value();
+        let decay_ms = self.parameters[2].get_value();
+        let gain = self.parameters[3].get_value();
+
+        let decay_coeff = (-1.0 / ((decay_ms / 1000.0) * self.sample_rate)).exp();
+        let len = left.len().min(right.len());
+
+        for i in 0..len {
+            // Pitch drop envelope for punchy 808/909 kick
+            let current_freq = base_pitch + (self.kick_env * 180.0);
+            let dt = current_freq / self.sample_rate;
+            self.kick_phase = (self.kick_phase + dt).fract();
+
+            let kick_tone = (self.kick_phase * 2.0 * std::f32::consts::PI).sin() * self.kick_env;
+            let noise = self.next_noise() * snap * self.kick_env.powi(2);
+
+            let out_sample = (kick_tone + noise * 0.4) * gain;
+
+            left[i] += out_sample;
+            right[i] += out_sample;
+
+            self.kick_env *= decay_coeff;
+            if self.kick_env < 1e-4 {
+                self.kick_env = 0.0;
+            }
+        }
+    }
+
+    fn reset(&mut self) {
+        self.kick_phase = 0.0;
+        self.kick_env = 1.0;
+    }
+
+    fn parameters(&self) -> &[PluginParameter] {
+        &self.parameters
+    }
+}

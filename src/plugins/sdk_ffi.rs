@@ -35,16 +35,21 @@ pub struct CrystalPluginVTable {
     pub get_descriptor: unsafe extern "C" fn() -> CrystalPluginDescriptorC,
     pub create_instance: unsafe extern "C" fn(sample_rate: f32) -> *mut c_void,
     pub destroy_instance: unsafe extern "C" fn(instance: *mut c_void),
-    pub process_audio: unsafe extern "C" fn(instance: *mut c_void, buffer: *mut CrystalAudioBufferC),
+    pub process_audio:
+        unsafe extern "C" fn(instance: *mut c_void, buffer: *mut CrystalAudioBufferC),
     pub reset_state: unsafe extern "C" fn(instance: *mut c_void),
     pub get_parameter_count: unsafe extern "C" fn(instance: *mut c_void) -> u32,
     pub get_parameter_value: unsafe extern "C" fn(instance: *mut c_void, param_index: u32) -> f32,
-    pub set_parameter_value: unsafe extern "C" fn(instance: *mut c_void, param_index: u32, value: f32),
-    pub get_parameter_name: unsafe extern "C" fn(instance: *mut c_void, param_index: u32) -> *const c_char,
-    
+    pub set_parameter_value:
+        unsafe extern "C" fn(instance: *mut c_void, param_index: u32, value: f32),
+    pub get_parameter_name:
+        unsafe extern "C" fn(instance: *mut c_void, param_index: u32) -> *const c_char,
+
     // Omid Protocol Integration (Fixed 8-byte Packet Control & Haptics)
-    pub handle_omid_packet: Option<unsafe extern "C" fn(instance: *mut c_void, packet_bytes: *const u8)>,
-    pub poll_omid_response: Option<unsafe extern "C" fn(instance: *mut c_void, out_packet_bytes: *mut u8) -> bool>,
+    pub handle_omid_packet:
+        Option<unsafe extern "C" fn(instance: *mut c_void, packet_bytes: *const u8)>,
+    pub poll_omid_response:
+        Option<unsafe extern "C" fn(instance: *mut c_void, out_packet_bytes: *mut u8) -> bool>,
 }
 
 /// Safe helper mapping u32 to PluginCategory

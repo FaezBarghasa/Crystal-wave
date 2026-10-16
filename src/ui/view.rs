@@ -18,31 +18,88 @@ impl CrystalWaveApp {
     }
 
     fn view_menu_bar(&self) -> Element<'_, UiMessage> {
-        let file_new = button(text("New").size(11)).on_press(UiMessage::MenuAction(MenuCommand::NewProject));
-        let file_save = button(text("Save").size(11)).on_press(UiMessage::MenuAction(MenuCommand::SaveSession));
-        let file_bounce = button(text("Export WAV").size(11)).on_press(UiMessage::MenuAction(MenuCommand::BounceWav));
-        let file_aaf = button(text("AAF").size(11)).on_press(UiMessage::MenuAction(MenuCommand::ExportAaf));
+        let file_new =
+            button(text("New").size(11)).on_press(UiMessage::MenuAction(MenuCommand::NewProject));
+        let file_save =
+            button(text("Save").size(11)).on_press(UiMessage::MenuAction(MenuCommand::SaveSession));
+        let file_bounce = button(text("Export WAV").size(11))
+            .on_press(UiMessage::MenuAction(MenuCommand::BounceWav));
+        let file_aaf =
+            button(text("AAF").size(11)).on_press(UiMessage::MenuAction(MenuCommand::ExportAaf));
 
-        let edit_split = button(text("Cut (B)").size(11)).on_press(UiMessage::MenuAction(MenuCommand::SplitAtCursor));
-        let track_add_audio = button(text("+ Audio").size(11)).on_press(UiMessage::MenuAction(MenuCommand::AddAudioTrack));
-        let track_add_midi = button(text("+ MIDI").size(11)).on_press(UiMessage::MenuAction(MenuCommand::AddMidiTrack));
+        let edit_split = button(text("Cut (B)").size(11))
+            .on_press(UiMessage::MenuAction(MenuCommand::SplitAtCursor));
+        let track_add_audio = button(text("+ Audio").size(11))
+            .on_press(UiMessage::MenuAction(MenuCommand::AddAudioTrack));
+        let track_add_midi = button(text("+ MIDI").size(11))
+            .on_press(UiMessage::MenuAction(MenuCommand::AddMidiTrack));
 
         // FL Studio Multi-Window Toolbars (F5, F6, F7, F8, F9)
-        let win_playlist = button(text(if self.fl_windows.playlist_visible { "Playlist [F5]*" } else { "Playlist [F5]" }).size(11))
-            .on_press(UiMessage::ToggleFlPlaylist);
-        let win_channel_rack = button(text(if self.fl_windows.channel_rack_visible { "Rack [F6]*" } else { "Rack [F6]" }).size(11))
-            .on_press(UiMessage::ToggleFlChannelRack);
-        let win_piano_roll = button(text(if self.fl_windows.piano_roll_visible { "Piano Roll [F7]*" } else { "Piano Roll [F7]" }).size(11))
-            .on_press(UiMessage::ToggleFlPianoRoll);
-        let win_browser = button(text(if self.fl_windows.browser_visible { "Browser [F8]*" } else { "Browser [F8]" }).size(11))
-            .on_press(UiMessage::ToggleFlBrowser);
-        let win_mixer = button(text(if self.fl_windows.mixer_visible { "Mixer [F9]*" } else { "Mixer [F9]" }).size(11))
-            .on_press(UiMessage::ToggleFlMixer);
-        let win_patcher = button(text(if self.fl_windows.patcher_visible { "Patcher*" } else { "Patcher" }).size(11))
-            .on_press(UiMessage::ToggleFlPatcher);
-        let win_inspector = button(text(if self.workspace.inspector_open { "Inspect [I]*" } else { "Inspect [I]" }).size(11))
-            .on_press(UiMessage::ToggleInspector);
-        let win_plugins = button(text("Plugins [L]").size(11)).on_press(UiMessage::ToggleLibraryBrowser);
+        let win_playlist = button(
+            text(if self.fl_windows.playlist_visible {
+                "Playlist [F5]*"
+            } else {
+                "Playlist [F5]"
+            })
+            .size(11),
+        )
+        .on_press(UiMessage::ToggleFlPlaylist);
+        let win_channel_rack = button(
+            text(if self.fl_windows.channel_rack_visible {
+                "Rack [F6]*"
+            } else {
+                "Rack [F6]"
+            })
+            .size(11),
+        )
+        .on_press(UiMessage::ToggleFlChannelRack);
+        let win_piano_roll = button(
+            text(if self.fl_windows.piano_roll_visible {
+                "Piano Roll [F7]*"
+            } else {
+                "Piano Roll [F7]"
+            })
+            .size(11),
+        )
+        .on_press(UiMessage::ToggleFlPianoRoll);
+        let win_browser = button(
+            text(if self.fl_windows.browser_visible {
+                "Browser [F8]*"
+            } else {
+                "Browser [F8]"
+            })
+            .size(11),
+        )
+        .on_press(UiMessage::ToggleFlBrowser);
+        let win_mixer = button(
+            text(if self.fl_windows.mixer_visible {
+                "Mixer [F9]*"
+            } else {
+                "Mixer [F9]"
+            })
+            .size(11),
+        )
+        .on_press(UiMessage::ToggleFlMixer);
+        let win_patcher = button(
+            text(if self.fl_windows.patcher_visible {
+                "Patcher*"
+            } else {
+                "Patcher"
+            })
+            .size(11),
+        )
+        .on_press(UiMessage::ToggleFlPatcher);
+        let win_inspector = button(
+            text(if self.workspace.inspector_open {
+                "Inspect [I]*"
+            } else {
+                "Inspect [I]"
+            })
+            .size(11),
+        )
+        .on_press(UiMessage::ToggleInspector);
+        let win_plugins =
+            button(text("Plugins [L]").size(11)).on_press(UiMessage::ToggleLibraryBrowser);
 
         row![
             container(text("CRYSTAL WAVE").size(12)).padding(4),
@@ -68,35 +125,48 @@ impl CrystalWaveApp {
     }
 
     fn view_control_bar(&self) -> Element<'_, UiMessage> {
-        let play_btn = button(text(if self.is_playing { "Pause" } else { "Play" }).size(12)).on_press(
-            if self.is_playing {
+        let play_btn = button(text(if self.is_playing { "Pause" } else { "Play" }).size(12))
+            .on_press(if self.is_playing {
                 UiMessage::TransportPause
             } else {
                 UiMessage::TransportPlay
-            },
-        );
+            });
         let stop_btn = button(text("Stop").size(12)).on_press(UiMessage::TransportStop);
         let record_btn = button(text("Record").size(12)).on_press(UiMessage::TransportRecord);
 
-        let lcd = container(text(format!(
-            "BPM: {:.1} | Sig: {}/{} | Pos: {} | A4: {:.1}Hz | CPU: {:.1}%",
-            self.workspace.lcd_diagnostic.project_tempo_bpm,
-            self.workspace.lcd_diagnostic.time_signature.0,
-            self.workspace.lcd_diagnostic.time_signature.1,
-            self.playhead_tick,
-            self.workspace.lcd_diagnostic.master_tuning_hz,
-            self.workspace.lcd_diagnostic.cpu_load_percent,
-        )).size(11))
+        let lcd = container(
+            text(format!(
+                "BPM: {:.1} | Sig: {}/{} | Pos: {} | A4: {:.1}Hz | CPU: {:.1}%",
+                self.workspace.lcd_diagnostic.project_tempo_bpm,
+                self.workspace.lcd_diagnostic.time_signature.0,
+                self.workspace.lcd_diagnostic.time_signature.1,
+                self.playhead_tick,
+                self.workspace.lcd_diagnostic.master_tuning_hz,
+                self.workspace.lcd_diagnostic.cpu_load_percent,
+            ))
+            .size(11),
+        )
         .padding(5);
 
-        let tune_440_btn = button(text("440 Hz").size(10)).on_press(UiMessage::SetMasterTuning(440.0));
-        let tune_432_btn = button(text("432 Hz").size(10)).on_press(UiMessage::SetMasterTuning(432.0));
-        let tune_434_btn = button(text("434.5 Hz").size(10)).on_press(UiMessage::SetMasterTuning(434.5));
+        let tune_440_btn =
+            button(text("440 Hz").size(10)).on_press(UiMessage::SetMasterTuning(440.0));
+        let tune_432_btn =
+            button(text("432 Hz").size(10)).on_press(UiMessage::SetMasterTuning(432.0));
+        let tune_434_btn =
+            button(text("434.5 Hz").size(10)).on_press(UiMessage::SetMasterTuning(434.5));
 
-        row![play_btn, stop_btn, record_btn, lcd, tune_440_btn, tune_432_btn, tune_434_btn]
-            .spacing(6)
-            .padding(4)
-            .into()
+        row![
+            play_btn,
+            stop_btn,
+            record_btn,
+            lcd,
+            tune_440_btn,
+            tune_432_btn,
+            tune_434_btn
+        ]
+        .spacing(6)
+        .padding(4)
+        .into()
     }
 
     fn view_main_workspace(&self) -> Element<'_, UiMessage> {
@@ -119,7 +189,11 @@ impl CrystalWaveApp {
                 let sample_card = button(
                     column![
                         text(&sample.name).size(11),
-                        text(format!("{} | {:.1}s", sample.category, sample.duration_seconds)).size(9),
+                        text(format!(
+                            "{} | {:.1}s",
+                            sample.category, sample.duration_seconds
+                        ))
+                        .size(9),
                     ]
                     .spacing(2),
                 )
@@ -185,7 +259,8 @@ impl CrystalWaveApp {
                     row![
                         text(format!("Track {}", trk_id)).size(12),
                         button(text("x").size(10)).on_press(UiMessage::ToggleInspector),
-                    ].spacing(8),
+                    ]
+                    .spacing(8),
                     text(format!("Name: {}", channel_name)).size(11),
                     text(format!("Level: {:.1} dB", fader_val)).size(11),
                     text(format!("Pan: {:.2}", pan_val)).size(11),
@@ -212,19 +287,18 @@ impl CrystalWaveApp {
 
             for chan in &self.channel_rack.channels {
                 let chan_id = chan.id;
-                let mut steps_row = row![
-                    container(text(&chan.name).size(11)).width(Length::Fixed(90.0)),
-                ]
-                .spacing(2);
+                let mut steps_row =
+                    row![container(text(&chan.name).size(11)).width(Length::Fixed(90.0)),]
+                        .spacing(2);
 
                 for (s_idx, step) in chan.steps.iter().enumerate() {
                     let step_lbl = if step.active { "■" } else { "·" };
-                    let step_btn = button(text(step_lbl).size(11))
-                        .padding(2)
-                        .on_press(UiMessage::ChannelRackToggleStep {
+                    let step_btn = button(text(step_lbl).size(11)).padding(2).on_press(
+                        UiMessage::ChannelRackToggleStep {
                             channel_id: chan_id,
                             step_index: s_idx,
-                        });
+                        },
+                    );
                     steps_row = steps_row.push(step_btn);
                 }
 
@@ -264,7 +338,8 @@ impl CrystalWaveApp {
                 }
             }
 
-            let arrangement_canvas = crate::ui::canvas_timeline::view_canvas_timeline(canvas_program);
+            let arrangement_canvas =
+                crate::ui::canvas_timeline::view_canvas_timeline(canvas_program);
             content = content.push(arrangement_canvas);
         }
 
@@ -293,8 +368,16 @@ impl CrystalWaveApp {
 
                 let plugin_card = container(
                     column![
-                        text(format!("{} v{}", entry.descriptor.name, entry.descriptor.version)).size(11),
-                        text(format!("{:?} | {}", entry.descriptor.category, entry.descriptor.vendor)).size(9),
+                        text(format!(
+                            "{} v{}",
+                            entry.descriptor.name, entry.descriptor.version
+                        ))
+                        .size(11),
+                        text(format!(
+                            "{:?} | {}",
+                            entry.descriptor.category, entry.descriptor.vendor
+                        ))
+                        .size(9),
                         row![toggle_btn, remove_btn].spacing(4),
                     ]
                     .spacing(2),
@@ -380,9 +463,12 @@ impl CrystalWaveApp {
 
         if self.fl_windows.piano_roll_visible || self.workspace.editor_drawer_open {
             let btn_strum = button(text("Strum").size(10)).on_press(UiMessage::PianoRollQuickStrum);
-            let btn_flip_h = button(text("Flip H").size(10)).on_press(UiMessage::PianoRollFlipHorizontal);
-            let btn_flip_v = button(text("Flip V").size(10)).on_press(UiMessage::PianoRollFlipVertical);
-            let btn_chop = button(text("Chop 1/16").size(10)).on_press(UiMessage::PianoRollQuickChop);
+            let btn_flip_h =
+                button(text("Flip H").size(10)).on_press(UiMessage::PianoRollFlipHorizontal);
+            let btn_flip_v =
+                button(text("Flip V").size(10)).on_press(UiMessage::PianoRollFlipVertical);
+            let btn_chop =
+                button(text("Chop 1/16").size(10)).on_press(UiMessage::PianoRollQuickChop);
 
             let roll_header = row![
                 text("FL Piano Roll [F7] (Ghost Polyphony: Active)").size(12),
@@ -452,7 +538,12 @@ impl CrystalWaveApp {
 
             let patcher_header = row![
                 text("FL Patcher Modular Routing Graph").size(12),
-                text(format!("Nodes: {} | Cables: {}", self.patcher.nodes.len(), self.patcher.cables.len())).size(10),
+                text(format!(
+                    "Nodes: {} | Cables: {}",
+                    self.patcher.nodes.len(),
+                    self.patcher.cables.len()
+                ))
+                .size(10),
                 button(text("x").size(10)).on_press(UiMessage::ToggleFlPatcher),
             ]
             .spacing(8);

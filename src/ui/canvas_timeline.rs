@@ -8,6 +8,7 @@ pub struct CanvasInteractionState {
     pub is_dragging_playhead: bool,
     pub dragged_clip_id: Option<usize>,
     pub drag_start_offset_ticks: u64,
+    pub drag_action: Option<crate::pro_tools::smart_tool::SmartToolAction>,
     pub last_cursor_pos: Option<Point>,
 }
 

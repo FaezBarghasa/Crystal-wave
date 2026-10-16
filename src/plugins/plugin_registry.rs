@@ -79,6 +79,24 @@ impl PluginRegistry {
             |sr| Box::new(crate::fl_studio::gross_beat::GrossBeatEngine::new(sr)),
         );
 
+        // 7. Subtractive Synthesizer (1007)
+        registry.register(
+            crate::plugins::plugin_host::NativeSubtractiveSynth::new(44100.0)
+                .descriptor()
+                .clone(),
+            true,
+            |sr| Box::new(crate::plugins::plugin_host::NativeSubtractiveSynth::new(sr)),
+        );
+
+        // 8. Drum Synthesizer (1008)
+        registry.register(
+            crate::plugins::plugin_host::NativeDrumSynth::new(44100.0)
+                .descriptor()
+                .clone(),
+            true,
+            |sr| Box::new(crate::plugins::plugin_host::NativeDrumSynth::new(sr)),
+        );
+
         registry
     }
 

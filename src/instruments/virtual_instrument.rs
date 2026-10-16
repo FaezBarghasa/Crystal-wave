@@ -135,7 +135,11 @@ impl PolyphonicSynth {
 
     pub fn midi_to_freq_tuned(note: u8, bend_semitones: f32, tuning_hz: f32) -> f32 {
         let semitones = note as f32 + bend_semitones;
-        let base_a = if tuning_hz.is_finite() { tuning_hz.clamp(200.0, 1000.0) } else { 440.0 };
+        let base_a = if tuning_hz.is_finite() {
+            tuning_hz.clamp(200.0, 1000.0)
+        } else {
+            440.0
+        };
         base_a * 2.0f32.powf((semitones - 69.0) / 12.0)
     }
 

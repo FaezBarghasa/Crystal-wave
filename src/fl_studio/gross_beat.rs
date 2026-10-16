@@ -48,14 +48,38 @@ impl GrossBeatEngine {
     }
 
     #[inline(always)]
+    fn hermite_interpolate(y_m1: f32, y0: f32, y1: f32, y2: f32, x: f32) -> f32 {
+        let c0 = y0;
+        let c1 = 0.5 * (y1 - y_m1);
+        let c2 = y_m1 - 2.5 * y0 + 2.0 * y1 - 0.5 * y2;
+        let c3 = 0.5 * (y2 - y_m1) + 1.5 * (y0 - y1);
+        ((c3 * x + c2) * x + c1) * x + c0
+    }
+
+    #[inline(always)]
     fn read_interpolated(&self, read_pos: f32) -> (f32, f32) {
         let cap = self.capacity;
         let pos = read_pos.rem_euclid(cap as f32);
         let i0 = pos.floor() as usize % cap;
+        let i_m1 = (i0 + cap - 1) % cap;
         let i1 = (i0 + 1) % cap;
+        let i2 = (i0 + 2) % cap;
         let frac = pos - pos.floor();
-        let l = self.buffer_l[i0] * (1.0 - frac) + self.buffer_l[i1] * frac;
-        let r = self.buffer_r[i0] * (1.0 - frac) + self.buffer_r[i1] * frac;
+
+        let l = Self::hermite_interpolate(
+            self.buffer_l[i_m1],
+            self.buffer_l[i0],
+            self.buffer_l[i1],
+            self.buffer_l[i2],
+            frac,
+        );
+        let r = Self::hermite_interpolate(
+            self.buffer_r[i_m1],
+            self.buffer_r[i0],
+            self.buffer_r[i1],
+            self.buffer_r[i2],
+            frac,
+        );
         (l, r)
     }
 
@@ -84,7 +108,7 @@ impl GrossBeatEngine {
             self.buffer_l[self.write_pos] = in_l;
             self.buffer_r[self.write_pos] = in_r;
 
-            // 1. Time manipulation with interpolated playback
+            // 1. Time manipulation with 4-point Hermite cubic interpolated playback & click-free crossfade
             let out_sample = match self.time_preset {
                 GrossBeatTimePreset::Off => (in_l, in_r),
                 GrossBeatTimePreset::HalfSpeed => {
@@ -95,7 +119,22 @@ impl GrossBeatEngine {
                     let bar_len = (cap / 2).max(1);
                     let phase = self.write_pos % bar_len;
                     let read_idx = ((self.write_pos + bar_len - phase) % cap) as f32;
-                    self.read_interpolated(read_idx)
+                    let sample = self.read_interpolated(read_idx);
+
+                    // Equal-power crossfade window (64 samples) on 1-bar cycle boundary
+                    const XFADE: usize = 64;
+                    if phase < XFADE {
+                        let gain_fade =
+                            (phase as f32 / XFADE as f32 * std::f32::consts::FRAC_PI_2).sin();
+                        (sample.0 * gain_fade, sample.1 * gain_fade)
+                    } else if phase > bar_len - XFADE {
+                        let rem = bar_len - phase;
+                        let gain_fade =
+                            (rem as f32 / XFADE as f32 * std::f32::consts::FRAC_PI_2).sin();
+                        (sample.0 * gain_fade, sample.1 * gain_fade)
+                    } else {
+                        sample
+                    }
                 }
                 GrossBeatTimePreset::TapeStop => {
                     let decel =
@@ -104,13 +143,30 @@ impl GrossBeatEngine {
                     self.read_interpolated(read_idx)
                 }
                 GrossBeatTimePreset::TripletStutter => {
-                    let read_idx =
-                        ((self.write_pos / triplet_window * triplet_window) % cap) as f32;
-                    self.read_interpolated(read_idx)
+                    let block_start = self.write_pos / triplet_window * triplet_window;
+                    let read_idx = (block_start % cap) as f32;
+                    let sample = self.read_interpolated(read_idx);
+
+                    // Equal-power cosine de-click envelope at stutter boundaries
+                    let sub_phase = self.write_pos % triplet_window;
+                    const STUTTER_XFADE: usize = 32;
+                    if sub_phase < STUTTER_XFADE {
+                        let gain = (sub_phase as f32 / STUTTER_XFADE as f32
+                            * std::f32::consts::FRAC_PI_2)
+                            .sin();
+                        (sample.0 * gain, sample.1 * gain)
+                    } else if sub_phase > triplet_window - STUTTER_XFADE {
+                        let rem = triplet_window - sub_phase;
+                        let gain =
+                            (rem as f32 / STUTTER_XFADE as f32 * std::f32::consts::FRAC_PI_2).sin();
+                        (sample.0 * gain, sample.1 * gain)
+                    } else {
+                        sample
+                    }
                 }
             };
 
-            // 2. Volume Gating curve with de-clicking edge smoothing
+            // 2. Volume Gating curve with equal-power de-clicking raised cosine edges
             let vol_gain = match self.volume_preset {
                 GrossBeatVolumePreset::Off => 1.0,
                 GrossBeatVolumePreset::SidechainPump => {
@@ -120,12 +176,15 @@ impl GrossBeatEngine {
                 GrossBeatVolumePreset::Gate16th => {
                     let phase =
                         (self.write_pos % sixteenth_window) as f32 / sixteenth_window as f32;
-                    if phase < 0.05 {
-                        phase / 0.05
-                    } else if phase < 0.45 {
+                    if phase < 0.08 {
+                        // Smooth raised cosine attack
+                        (phase / 0.08 * std::f32::consts::FRAC_PI_2).sin()
+                    } else if phase < 0.42 {
                         1.0
                     } else if phase < 0.50 {
-                        1.0 - (phase - 0.45) / 0.05
+                        // Smooth raised cosine release
+                        let rel = (0.50 - phase) / 0.08;
+                        (rel * std::f32::consts::FRAC_PI_2).sin()
                     } else {
                         0.0
                     }

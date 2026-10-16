@@ -7,36 +7,48 @@ pub trait CrystalPlugin: Send + 'static {
     fn version(&self) -> &'static str;
     fn category(&self) -> u32; // 0..=11
     fn unique_id(&self) -> u32;
-    fn latency_samples(&self) -> usize { 0 }
-    fn supports_sidechain(&self) -> bool { false }
+    fn latency_samples(&self) -> usize {
+        0
+    }
+    fn supports_sidechain(&self) -> bool {
+        false
+    }
 
     fn process(&mut self, left: &mut [f32], right: &mut [f32], sidechain: Option<&[f32]>);
     fn reset(&mut self) {}
 
-    fn parameter_count(&self) -> usize { 0 }
-    fn parameter_name(&self, _index: usize) -> &'static str { "" }
-    fn get_parameter(&self, _index: usize) -> f32 { 0.0 }
+    fn parameter_count(&self) -> usize {
+        0
+    }
+    fn parameter_name(&self, _index: usize) -> &'static str {
+        ""
+    }
+    fn get_parameter(&self, _index: usize) -> f32 {
+        0.0
+    }
     fn set_parameter(&mut self, _index: usize, _val: f32) {}
 
     // Omid Protocol Hook
     fn on_omid_packet(&mut self, _packet: OmidPacket) {}
-    fn poll_omid_response(&mut self) -> Option<OmidPacket> { None }
+    fn poll_omid_response(&mut self) -> Option<OmidPacket> {
+        None
+    }
 }
 
 /// Helper macro to generate exported C-ABI vtable for any struct implementing `CrystalPlugin`
 #[macro_export]
 macro_rules! export_crystal_plugin {
     ($plugin_type:ty) => {
-        static PLUGIN_NAME: std::sync::LazyLock<std::ffi::CString> = std::sync::LazyLock::new(|| {
-            std::ffi::CString::new("Crystal Dynamic Plugin").unwrap()
-        });
+        static PLUGIN_NAME: std::sync::LazyLock<std::ffi::CString> =
+            std::sync::LazyLock::new(|| std::ffi::CString::new("Crystal Dynamic Plugin").unwrap());
 
         pub struct PluginInstanceWrapper {
             pub inner: $plugin_type,
             pub sample_rate: f32,
         }
 
-        pub unsafe extern "C" fn crystal_get_descriptor() -> $crate::plugins::sdk_ffi::CrystalPluginDescriptorC {
+        pub unsafe extern "C" fn crystal_get_descriptor()
+        -> $crate::plugins::sdk_ffi::CrystalPluginDescriptorC {
             // Temporary instance to inspect static properties
             $crate::plugins::sdk_ffi::CrystalPluginDescriptorC {
                 api_version: $crate::plugins::sdk_ffi::CRYSTAL_PLUGIN_API_VERSION,
@@ -52,7 +64,9 @@ macro_rules! export_crystal_plugin {
             }
         }
 
-        pub unsafe extern "C" fn crystal_create_instance(sample_rate: f32) -> *mut std::ffi::c_void {
+        pub unsafe extern "C" fn crystal_create_instance(
+            sample_rate: f32,
+        ) -> *mut std::ffi::c_void {
             let instance = Box::new(PluginInstanceWrapper {
                 inner: <$plugin_type>::default(),
                 sample_rate,
@@ -93,7 +107,9 @@ macro_rules! export_crystal_plugin {
             }
         }
 
-        pub unsafe extern "C" fn crystal_get_parameter_count(instance: *mut std::ffi::c_void) -> u32 {
+        pub unsafe extern "C" fn crystal_get_parameter_count(
+            instance: *mut std::ffi::c_void,
+        ) -> u32 {
             if instance.is_null() {
                 0
             } else {
@@ -148,7 +164,9 @@ macro_rules! export_crystal_plugin {
                 let slice = std::slice::from_raw_parts(packet_bytes, 8);
                 let mut buf = [0u8; 8];
                 buf.copy_from_slice(slice);
-                wrapper.inner.on_omid_packet(omid::OmidPacket::from_bytes(&buf));
+                wrapper
+                    .inner
+                    .on_omid_packet(omid::OmidPacket::from_bytes(&buf));
             }
         }
 
@@ -168,7 +186,8 @@ macro_rules! export_crystal_plugin {
         }
 
         #[unsafe(no_mangle)]
-        pub extern "C" fn crystal_plugin_get_vtable() -> $crate::plugins::sdk_ffi::CrystalPluginVTable {
+        pub extern "C" fn crystal_plugin_get_vtable()
+        -> $crate::plugins::sdk_ffi::CrystalPluginVTable {
             $crate::plugins::sdk_ffi::CrystalPluginVTable {
                 get_descriptor: crystal_get_descriptor,
                 create_instance: crystal_create_instance,

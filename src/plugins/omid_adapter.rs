@@ -49,7 +49,9 @@ impl DynamicPluginHost {
             if desc_c.version.is_null() {
                 "1.0.0".to_string()
             } else {
-                CStr::from_ptr(desc_c.version).to_string_lossy().into_owned()
+                CStr::from_ptr(desc_c.version)
+                    .to_string_lossy()
+                    .into_owned()
             }
         };
 
@@ -146,7 +148,8 @@ impl AudioPlugin for DynamicPluginHost {
         // Synchronize parameter values between host parameter handles and plugin instance
         for (i, p) in self.parameters.iter_mut().enumerate() {
             unsafe {
-                let current_instance_val = (self.vtable.get_parameter_value)(self.instance, i as u32);
+                let current_instance_val =
+                    (self.vtable.get_parameter_value)(self.instance, i as u32);
                 if (current_instance_val - p.get_value()).abs() > 1e-5 {
                     p.set_value(current_instance_val);
                 } else {

@@ -119,7 +119,74 @@ impl MixingEngine {
         }
     }
 
-    /// Process mixer graph summing: buses 1..256 accumulate into Stereo Out (Bus 0), then Bus 0 accumulates to Master
+    /// Clear all bus accumulators for a new processing block
+    pub fn clear_bus_accumulators(&mut self, block_size: usize) {
+        for bus in &mut self.buses {
+            bus.prepare_buffer(block_size);
+        }
+    }
+
+    /// Route channel audio into its assigned destination bus with gain, pan, and mute/solo handling
+    pub fn route_channel_audio(&mut self, channel_id: usize, left: &[f32], right: &[f32]) {
+        if channel_id >= self.channels.len() || self.buses.is_empty() {
+            return;
+        }
+
+        let any_solo = self.channels.iter().any(|c| c.solo);
+        let ch = &self.channels[channel_id];
+
+        if ch.muted || (any_solo && !ch.solo) {
+            return;
+        }
+
+        let fader_gain = if ch.volume_fader_db <= -96.0 {
+            0.0
+        } else {
+            10.0f32.powf(ch.volume_fader_db / 20.0)
+        };
+
+        let vca_gain = if let Some(vca_id) = ch.vca_group {
+            self.vca_faders
+                .get(vca_id)
+                .map(|v| v.linear_gain())
+                .unwrap_or(1.0)
+        } else {
+            1.0
+        };
+
+        let total_gain = fader_gain * vca_gain;
+        if total_gain <= 0.0 {
+            return;
+        }
+
+        let pan = ch.pan.balance.clamp(-1.0, 1.0);
+        let (pan_l, pan_r) = if pan <= 0.0 {
+            (1.0, 1.0 + pan)
+        } else {
+            (1.0 - pan, 1.0)
+        };
+
+        let target_bus_id = ch.output_bus.min(self.buses.len() - 1);
+        let len = left.len().min(right.len());
+
+        let target_bus = &mut self.buses[target_bus_id];
+        if target_bus.left_accumulator.len() < len {
+            target_bus.prepare_buffer(len);
+        }
+
+        let mut panned_l = [0.0f32; 128];
+        let mut panned_r = [0.0f32; 128];
+        for chunk_start in (0..len).step_by(128) {
+            let chunk_len = (len - chunk_start).min(128);
+            for j in 0..chunk_len {
+                panned_l[j] = left[chunk_start + j] * pan_l;
+                panned_r[j] = right[chunk_start + j] * pan_r;
+            }
+            target_bus.accumulate(&panned_l[..chunk_len], &panned_r[..chunk_len], total_gain);
+        }
+    }
+
+    /// Process mixer graph summing: topological multi-bus summing hierarchically into Bus 0 (Stereo Out), then Master
     pub fn sum_buses(&mut self, master_left: &mut [f32], master_right: &mut [f32]) {
         let len = master_left.len().min(master_right.len());
         let master_gain = self.master_linear_gain();
@@ -128,20 +195,45 @@ impl MixingEngine {
             return;
         }
 
-        // Prepare Bus 0 buffer size
-        self.buses[0].prepare_buffer(len);
-
-        // Hierarchical summing: Buses 1..256 accumulate into Bus 0 using zero-alloc split_at_mut
-        let (bus0_slice, other_buses) = self.buses.split_at_mut(1);
-        let bus0 = &mut bus0_slice[0];
-        for bus in other_buses {
-            let gain = bus.linear_gain();
-            if gain > 0.0 && !bus.left_accumulator.is_empty() {
-                bus0.accumulate(&bus.left_accumulator, &bus.right_accumulator, gain);
+        // Prepare all active bus buffers to len
+        for bus in &mut self.buses {
+            if bus.left_accumulator.len() < len {
+                bus.prepare_buffer(len);
             }
         }
 
-        // Accumulate Bus 0 (Stereo Out) into master output
+        // 1. Topological summation: For buses 1..256, if bus has target_bus pointing to another bus > 0,
+        // accumulate into that parent bus first. We process in reverse index order.
+        for i in (1..self.buses.len()).rev() {
+            if let Some(target) = self.buses[i].target_bus
+                && target < i
+                && target > 0
+            {
+                let gain = self.buses[i].linear_gain();
+                if gain > 0.0 && !self.buses[i].left_accumulator.is_empty() {
+                    let (earlier, current) = self.buses.split_at_mut(i);
+                    earlier[target].accumulate(
+                        &current[0].left_accumulator,
+                        &current[0].right_accumulator,
+                        gain,
+                    );
+                }
+            }
+        }
+
+        // 2. All remaining buses (target_bus == None or target_bus == Some(0)) accumulate into Bus 0 (Stereo Out)
+        let (bus0_slice, other_buses) = self.buses.split_at_mut(1);
+        let bus0 = &mut bus0_slice[0];
+        for bus in other_buses {
+            if bus.target_bus.unwrap_or(0) == 0 {
+                let gain = bus.linear_gain();
+                if gain > 0.0 && !bus.left_accumulator.is_empty() {
+                    bus0.accumulate(&bus.left_accumulator, &bus.right_accumulator, gain);
+                }
+            }
+        }
+
+        // 3. Accumulate Bus 0 (Stereo Out) into master output
         for i in 0..len {
             if i < bus0.left_accumulator.len() {
                 master_left[i] = bus0.left_accumulator[i] * master_gain;

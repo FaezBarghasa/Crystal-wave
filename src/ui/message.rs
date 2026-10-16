@@ -33,8 +33,14 @@ pub enum UiMessage {
     SetCatchPlayhead(CatchPlayheadMode),
 
     // Mixer & Channel Strip Controls
-    SetTrackFader { track_id: usize, volume_db: f32 },
-    SetTrackPan { track_id: usize, pan: f32 },
+    SetTrackFader {
+        track_id: usize,
+        volume_db: f32,
+    },
+    SetTrackPan {
+        track_id: usize,
+        pan: f32,
+    },
     ToggleTrackMute(usize),
     ToggleTrackSolo(usize),
     ResetAutoMute(usize),
@@ -46,7 +52,10 @@ pub enum UiMessage {
     // Keyboard Focus Single-Key Editing ('B', 'A', 'S', 'D', 'G', 'F')
     KeyboardFocusCommand(crate::pro_tools::KeyboardFocusCommand),
     ToggleVcaSpill(usize),
-    SetTrackColorCascade { track_id: usize, color_rgb: [u8; 3] },
+    SetTrackColorCascade {
+        track_id: usize,
+        color_rgb: [u8; 3],
+    },
 
     // Project Actions
     NewProject,
@@ -67,9 +76,31 @@ pub enum UiMessage {
     ToggleFlPatcher,
 
     // FL Studio Channel Rack Step Sequencer & Drag-and-Drop
-    ChannelRackToggleStep { channel_id: usize, step_index: usize },
-    ChannelRackDropSample { sample_id: usize },
-    TimelineMoveClip { clip_id: usize, new_track_id: usize, new_start_tick: u64 },
+    ChannelRackToggleStep {
+        channel_id: usize,
+        step_index: usize,
+    },
+    ChannelRackDropSample {
+        sample_id: usize,
+    },
+    TimelineMoveClip {
+        clip_id: usize,
+        new_track_id: usize,
+        new_start_tick: u64,
+    },
+    TimelineTrimClipStart {
+        clip_id: usize,
+        new_start_tick: u64,
+    },
+    TimelineTrimClipEnd {
+        clip_id: usize,
+        new_length_ticks: u64,
+    },
+    TimelineFadeClip {
+        clip_id: usize,
+        fade_in_ticks: Option<u64>,
+        fade_out_ticks: Option<u64>,
+    },
 
     // FL Studio Piano Roll Articulations & Tools
     PianoRollQuickStrum,

@@ -28,6 +28,12 @@ pub struct CrystalWaveApp {
     pub piano_roll_notes: Vec<crate::fl_studio::FlPianoRollNote>,
 }
 
+impl Default for CrystalWaveApp {
+    fn default() -> Self {
+        Self::new(44100.0)
+    }
+}
+
 impl CrystalWaveApp {
     pub fn new(sample_rate: f32) -> Self {
         let mut timeline = Timeline::new();
@@ -118,10 +124,10 @@ impl CrystalWaveApp {
             browser: crate::fl_studio::FlBrowser::new(),
             patcher: crate::fl_studio::FlPatcher::default(),
             piano_roll_notes: vec![
-                crate::fl_studio::FlPianoRollNote::new(1, 0, 60, 0, 960),    // C4
-                crate::fl_studio::FlPianoRollNote::new(2, 0, 64, 0, 960),    // E4
-                crate::fl_studio::FlPianoRollNote::new(3, 0, 67, 0, 960),    // G4
-                crate::fl_studio::FlPianoRollNote::new(4, 0, 71, 0, 960),    // B4
+                crate::fl_studio::FlPianoRollNote::new(1, 0, 60, 0, 960), // C4
+                crate::fl_studio::FlPianoRollNote::new(2, 0, 64, 0, 960), // E4
+                crate::fl_studio::FlPianoRollNote::new(3, 0, 67, 0, 960), // G4
+                crate::fl_studio::FlPianoRollNote::new(4, 0, 71, 0, 960), // B4
                 crate::fl_studio::FlPianoRollNote::new(5, 0, 72, 960, 960).with_slide(true), // C5 Slide
             ],
         }
@@ -374,14 +380,17 @@ impl CrystalWaveApp {
                     self.playhead_tick = self.playhead_tick.saturating_add(48);
                     self.arrangement.update_playhead_view(self.playhead_tick);
 
-                    let mut left = [0.0f32; 128];
-                    let mut right = [0.0f32; 128];
-                    self.mixer.sum_buses(&mut left, &mut right);
-
                     if let Some(ref mut prod) = self.audio_producer {
-                        for i in 0..128 {
-                            let _ = prod.push(left[i]);
-                            let _ = prod.push(right[i]);
+                        let mut frames_pushed = 0;
+                        while prod.slots() >= 256 && frames_pushed < 2048 {
+                            let mut left = [0.0f32; 128];
+                            let mut right = [0.0f32; 128];
+                            self.mixer.sum_buses(&mut left, &mut right);
+                            for i in 0..128 {
+                                let _ = prod.push(left[i]);
+                                let _ = prod.push(right[i]);
+                            }
+                            frames_pushed += 128;
                         }
                     }
                 }
@@ -427,7 +436,11 @@ impl CrystalWaveApp {
                     self.dirty = false;
                 }
                 crate::ui::message::MenuCommand::ExportAaf => {
-                    let session = crate::format::AafSession::new("ExportedSession", 44100.0, crate::format::SmpteFrameRate::Fps24);
+                    let session = crate::format::AafSession::new(
+                        "ExportedSession",
+                        44100.0,
+                        crate::format::SmpteFrameRate::Fps24,
+                    );
                     let _ = std::fs::write("session_export.edl", format!("{:?}", session));
                     self.dirty = false;
                 }
@@ -535,11 +548,56 @@ impl CrystalWaveApp {
                     }
                 }
                 // Insert into new destination track
-                if let Some(reg) = found_region {
-                    if let Some(dest_track) =
-                        self.arrangement.timeline.tracks.get_mut(new_track_id)
-                    {
-                        dest_track.regions.push(reg);
+                if let Some(reg) = found_region
+                    && let Some(dest_track) = self.arrangement.timeline.tracks.get_mut(new_track_id)
+                {
+                    dest_track.regions.push(reg);
+                }
+                self.dirty = true;
+            }
+
+            UiMessage::TimelineTrimClipStart {
+                clip_id,
+                new_start_tick,
+            } => {
+                for track in &mut self.arrangement.timeline.tracks {
+                    if let Some(reg) = track.regions.iter_mut().find(|r| r.id == clip_id) {
+                        let delta = new_start_tick.saturating_sub(reg.start_tick);
+                        reg.start_tick = new_start_tick;
+                        reg.length_ticks = reg.length_ticks.saturating_sub(delta).max(240);
+                        break;
+                    }
+                }
+                self.dirty = true;
+            }
+
+            UiMessage::TimelineTrimClipEnd {
+                clip_id,
+                new_length_ticks,
+            } => {
+                for track in &mut self.arrangement.timeline.tracks {
+                    if let Some(reg) = track.regions.iter_mut().find(|r| r.id == clip_id) {
+                        reg.length_ticks = new_length_ticks.max(240);
+                        break;
+                    }
+                }
+                self.dirty = true;
+            }
+
+            UiMessage::TimelineFadeClip {
+                clip_id,
+                fade_in_ticks,
+                fade_out_ticks,
+            } => {
+                for track in &mut self.arrangement.timeline.tracks {
+                    if let Some(reg) = track.regions.iter_mut().find(|r| r.id == clip_id) {
+                        if let Some(fi) = fade_in_ticks {
+                            reg.fade.in_ticks = fi;
+                        }
+                        if let Some(fo) = fade_out_ticks {
+                            reg.fade.out_ticks = fo;
+                        }
+                        break;
                     }
                 }
                 self.dirty = true;
@@ -554,8 +612,17 @@ impl CrystalWaveApp {
                 self.dirty = true;
             }
             UiMessage::PianoRollFlipHorizontal => {
-                let pivot = self.piano_roll_notes.iter().map(|n| n.start_tick).max().unwrap_or(960) / 2;
-                crate::fl_studio::FlPianoRollTools::flip_horizontal(&mut self.piano_roll_notes, pivot);
+                let pivot = self
+                    .piano_roll_notes
+                    .iter()
+                    .map(|n| n.start_tick)
+                    .max()
+                    .unwrap_or(960)
+                    / 2;
+                crate::fl_studio::FlPianoRollTools::flip_horizontal(
+                    &mut self.piano_roll_notes,
+                    pivot,
+                );
                 self.dirty = true;
             }
             UiMessage::PianoRollFlipVertical => {
@@ -574,46 +641,55 @@ impl CrystalWaveApp {
         }
     }
 
-    /// Event subscription listening for hardware keyboard shortcuts
+    /// Event subscription listening for hardware keyboard shortcuts and smooth GUI clock
     pub fn subscription(&self) -> iced::Subscription<UiMessage> {
-        iced::event::listen().map(|event| {
+        let clock = iced::window::frames().map(|_| UiMessage::Tick);
+        let keys = iced::event::listen_with(|event, _status, _window| {
             if let iced::Event::Keyboard(iced::keyboard::Event::KeyPressed { key, .. }) = event {
                 match key {
                     iced::keyboard::Key::Named(iced::keyboard::key::Named::Space) => {
-                        UiMessage::TransportPlay
+                        Some(UiMessage::TransportPlay)
                     }
                     iced::keyboard::Key::Named(iced::keyboard::key::Named::Enter) => {
-                        UiMessage::SetPlayhead(0)
+                        Some(UiMessage::SetPlayhead(0))
                     }
                     iced::keyboard::Key::Named(iced::keyboard::key::Named::F5) => {
-                        UiMessage::ToggleFlPlaylist
+                        Some(UiMessage::ToggleFlPlaylist)
                     }
                     iced::keyboard::Key::Named(iced::keyboard::key::Named::F6) => {
-                        UiMessage::ToggleFlChannelRack
+                        Some(UiMessage::ToggleFlChannelRack)
                     }
                     iced::keyboard::Key::Named(iced::keyboard::key::Named::F7) => {
-                        UiMessage::ToggleFlPianoRoll
+                        Some(UiMessage::ToggleFlPianoRoll)
                     }
                     iced::keyboard::Key::Named(iced::keyboard::key::Named::F8) => {
-                        UiMessage::ToggleFlBrowser
+                        Some(UiMessage::ToggleFlBrowser)
                     }
                     iced::keyboard::Key::Named(iced::keyboard::key::Named::F9) => {
-                        UiMessage::ToggleFlMixer
+                        Some(UiMessage::ToggleFlMixer)
                     }
                     iced::keyboard::Key::Character(ref c) if c.eq_ignore_ascii_case("i") => {
-                        UiMessage::ToggleInspector
+                        Some(UiMessage::ToggleInspector)
                     }
                     iced::keyboard::Key::Character(ref c) if c.eq_ignore_ascii_case("l") => {
-                        UiMessage::ToggleLibraryBrowser
+                        Some(UiMessage::ToggleLibraryBrowser)
                     }
                     iced::keyboard::Key::Character(ref c) if c.eq_ignore_ascii_case("r") => {
-                        UiMessage::TransportRecord
+                        Some(UiMessage::TransportRecord)
                     }
-                    _ => UiMessage::Tick,
+                    iced::keyboard::Key::Character(ref c) if c.eq_ignore_ascii_case("b") => Some(
+                        UiMessage::MenuAction(crate::ui::message::MenuCommand::SplitAtCursor),
+                    ),
+                    iced::keyboard::Key::Named(iced::keyboard::key::Named::Escape) => {
+                        Some(UiMessage::TransportStop)
+                    }
+                    _ => None,
                 }
             } else {
-                UiMessage::Tick
+                None
             }
-        })
+        });
+
+        iced::Subscription::batch([clock, keys])
     }
 }
