@@ -114,6 +114,42 @@ pub enum UiMessage {
     PianoRollFlipHorizontal,
     PianoRollFlipVertical,
     PianoRollQuickChop,
+
+    // UI/UX Fusion Upgrades
+    SetThemePreset(crate::ui::theme::ThemePreset),
+    SetSnapGrid(crate::ui::canvas_timeline::SnapGrid),
+    TimelineMarqueeSelect {
+        start_tick: u64,
+        end_tick: u64,
+        start_track: usize,
+        end_track: usize,
+    },
+    TimelineDuplicateClip(usize),
+    TimelineAddPatternClip {
+        track_id: usize,
+        start_tick: u64,
+        length_ticks: u64,
+        name: String,
+    },
+    SelectDrawerTab(crate::ui::layout::DrawerTab),
+    TogglePanelDock(crate::ui::layout::PanelId),
+    DetachPanelToWindow(crate::ui::layout::PanelId),
+    RedockPanel(crate::ui::layout::PanelId, crate::ui::layout::DockPosition),
+    ToggleCommandPalette,
+    CommandPaletteInput(String),
+    ExecuteCommand(String),
+    SetTimelineScrollY(f32),
+    PianoRollAddNote {
+        channel_id: usize,
+        key: u8,
+        start_tick: u64,
+        length_ticks: u64,
+    },
+    PianoRollDeleteNote(usize),
+    StepSequencerToggleStep {
+        channel_id: usize,
+        step_index: usize,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

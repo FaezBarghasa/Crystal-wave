@@ -50,6 +50,7 @@ pub struct WorkspaceState {
     pub lcd_mode: LcdDisplayMode,
     pub lcd_diagnostic: LcdDiagnosticState,
     pub selected_track_id: usize,
+    pub selected_region_id: Option<usize>,
 }
 
 impl Default for WorkspaceState {
@@ -74,6 +75,7 @@ impl Default for WorkspaceState {
                 master_tuning_hz: 440.0,
             },
             selected_track_id: 0,
+            selected_region_id: None,
         }
     }
 }

@@ -26,6 +26,14 @@ pub struct CrystalWaveApp {
     pub browser: crate::fl_studio::FlBrowser,
     pub patcher: crate::fl_studio::FlPatcher,
     pub piano_roll_notes: Vec<crate::fl_studio::FlPianoRollNote>,
+    pub theme: crate::ui::theme::UiTheme,
+    pub layout: crate::ui::layout::LayoutState,
+    pub snap_grid: crate::ui::canvas_timeline::SnapGrid,
+    pub timeline_scroll_y: f32,
+    pub timeline_scroll_x: f32,
+    pub marquee_selection: Option<(u64, u64, usize, usize)>,
+    pub command_palette_open: bool,
+    pub command_query: String,
 }
 
 impl Default for CrystalWaveApp {
@@ -130,6 +138,14 @@ impl CrystalWaveApp {
                 crate::fl_studio::FlPianoRollNote::new(4, 0, 71, 0, 960), // B4
                 crate::fl_studio::FlPianoRollNote::new(5, 0, 72, 960, 960).with_slide(true), // C5 Slide
             ],
+            theme: crate::ui::theme::UiTheme::default(),
+            layout: crate::ui::layout::LayoutState::default(),
+            snap_grid: crate::ui::canvas_timeline::SnapGrid::Sixteenth,
+            timeline_scroll_y: 0.0,
+            timeline_scroll_x: 0.0,
+            marquee_selection: None,
+            command_palette_open: false,
+            command_query: String::new(),
         }
     }
 
@@ -738,6 +754,137 @@ impl CrystalWaveApp {
                     chopped_notes.append(&mut subs);
                 }
                 self.piano_roll_notes = chopped_notes;
+                self.dirty = true;
+            }
+
+            UiMessage::SetThemePreset(preset) => {
+                self.theme = crate::ui::theme::UiTheme::from_preset(preset);
+            }
+            UiMessage::SetSnapGrid(snap) => {
+                self.snap_grid = snap;
+            }
+            UiMessage::TimelineMarqueeSelect {
+                start_tick,
+                end_tick,
+                start_track,
+                end_track,
+            } => {
+                self.marquee_selection = Some((start_tick, end_tick, start_track, end_track));
+                for trk in &mut self.arrangement.timeline.tracks {
+                    if trk.id >= start_track && trk.id <= end_track {
+                        for reg in &mut trk.regions {
+                            let reg_end = reg.start_tick + reg.length_ticks;
+                            if reg.start_tick < end_tick && reg_end > start_tick {
+                                self.workspace.selected_region_id = Some(reg.id);
+                            }
+                        }
+                    }
+                }
+            }
+            UiMessage::TimelineDuplicateClip(clip_id) => {
+                for trk in &mut self.arrangement.timeline.tracks {
+                    if let Some(pos) = trk.regions.iter().position(|r| r.id == clip_id) {
+                        let reg = &trk.regions[pos];
+                        let mut duplicated = reg.clone();
+                        duplicated.id = (trk.regions.len() + 100) * 10;
+                        duplicated.start_tick = reg.start_tick + reg.length_ticks;
+                        trk.regions.push(duplicated);
+                        self.dirty = true;
+                        break;
+                    }
+                }
+            }
+            UiMessage::TimelineAddPatternClip {
+                track_id,
+                start_tick,
+                length_ticks,
+                name,
+            } => {
+                if let Some(trk) = self.arrangement.timeline.tracks.get_mut(track_id) {
+                    let new_id = trk.regions.len() + 1;
+                    trk.regions.push(Region {
+                        id: new_id,
+                        track_id,
+                        name,
+                        start_tick,
+                        length_ticks,
+                        anchor_offset_ticks: 0,
+                        muted: false,
+                        looped: false,
+                        loop_length_ticks: None,
+                        gain_db: 0.0,
+                        transpose_semitones: 0.0,
+                        reversed: false,
+                        fade: Default::default(),
+                        kind: RegionKind::Midi { clip_id: new_id },
+                    });
+                    self.dirty = true;
+                }
+            }
+            UiMessage::SelectDrawerTab(tab) => {
+                self.layout.set_drawer_tab(tab);
+                self.workspace.editor_drawer_open = true;
+            }
+            UiMessage::TogglePanelDock(panel_id) => {
+                self.layout.toggle_panel(panel_id);
+            }
+            UiMessage::DetachPanelToWindow(panel_id) => {
+                self.layout.detach_to_window(panel_id);
+            }
+            UiMessage::RedockPanel(panel_id, dock) => {
+                self.layout.redock_to_main(panel_id, dock);
+            }
+            UiMessage::ToggleCommandPalette => {
+                self.command_palette_open = !self.command_palette_open;
+                self.command_query.clear();
+            }
+            UiMessage::CommandPaletteInput(query) => {
+                self.command_query = query;
+            }
+            UiMessage::ExecuteCommand(cmd) => {
+                let lower = cmd.to_lowercase();
+                if lower.contains("play") {
+                    self.is_playing = true;
+                } else if lower.contains("stop") {
+                    self.is_playing = false;
+                    self.playhead_tick = 0;
+                } else if lower.contains("record") {
+                    self.is_recording = !self.is_recording;
+                } else if lower.contains("save") {
+                    self.dirty = false;
+                } else if lower.contains("orange") || lower.contains("fl") {
+                    self.theme = crate::ui::theme::UiTheme::fl_dark_orange();
+                } else if lower.contains("graphite") || lower.contains("logic") {
+                    self.theme = crate::ui::theme::UiTheme::graphite();
+                } else if lower.contains("snap") {
+                    self.snap_grid = crate::ui::canvas_timeline::SnapGrid::Sixteenth;
+                }
+                self.command_palette_open = false;
+            }
+            UiMessage::SetTimelineScrollY(y) => {
+                self.timeline_scroll_y = y.max(0.0);
+            }
+            UiMessage::PianoRollAddNote {
+                channel_id,
+                key,
+                start_tick,
+                length_ticks,
+            } => {
+                let id = self.piano_roll_notes.len() + 1;
+                self.piano_roll_notes.push(
+                    crate::fl_studio::FlPianoRollNote::new(id, channel_id, key, start_tick, length_ticks)
+                );
+                self.dirty = true;
+            }
+            UiMessage::PianoRollDeleteNote(id) => {
+                self.piano_roll_notes.retain(|n| n.id != id);
+                self.dirty = true;
+            }
+            UiMessage::StepSequencerToggleStep {
+                channel_id,
+                step_index,
+            } => {
+                self.channel_rack.toggle_step(channel_id, step_index);
                 self.dirty = true;
             }
         }

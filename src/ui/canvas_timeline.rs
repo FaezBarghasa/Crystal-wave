@@ -58,11 +58,77 @@ pub struct TimelineClipDisplay {
     pub is_selected: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, Default)]
+pub enum SnapGrid {
+    Off,
+    Bar,
+    Half,
+    Beat,
+    Eighth,
+    #[default]
+    Sixteenth,
+    ThirtySecond,
+    Smart,
+}
+
+impl SnapGrid {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Off => "Snap: Off",
+            Self::Bar => "Snap: 1 Bar",
+            Self::Half => "Snap: 1/2",
+            Self::Beat => "Snap: 1/4 (Beat)",
+            Self::Eighth => "Snap: 1/8",
+            Self::Sixteenth => "Snap: 1/16",
+            Self::ThirtySecond => "Snap: 1/32",
+            Self::Smart => "Snap: Smart",
+        }
+    }
+
+    pub fn snap_step_ticks(&self, zoom: f32) -> u64 {
+        match self {
+            Self::Off => 1,
+            Self::Bar => TICKS_PER_BAR,
+            Self::Half => TICKS_PER_BAR / 2,
+            Self::Beat => PPQN,
+            Self::Eighth => PPQN / 2,
+            Self::Sixteenth => PPQN / 4,
+            Self::ThirtySecond => PPQN / 8,
+            Self::Smart => {
+                if zoom > 4.0 {
+                    PPQN / 8
+                } else if zoom > 1.8 {
+                    PPQN / 4
+                } else if zoom > 0.8 {
+                    PPQN / 2
+                } else {
+                    PPQN
+                }
+            }
+        }
+    }
+
+    pub fn snap(&self, tick: u64, zoom: f32) -> u64 {
+        let step = self.snap_step_ticks(zoom);
+        if step <= 1 {
+            tick
+        } else {
+            let rem = tick % step;
+            if rem >= step / 2 {
+                tick - rem + step
+            } else {
+                tick - rem
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct CanvasInteractionState {
     pub is_scrubbing_playhead: bool,
     pub cycle_drag: Option<(CycleDragMode, u64, u64)>, // mode, start_anchor, end_anchor
     pub dragged_clip: Option<(usize, SmartToolZone, usize, u64, u64, u64)>, // clip_id, zone, orig_track, orig_start, orig_len, offset_ticks
+    pub marquee_drag: Option<(Point, Point)>, // start_anchor, current_anchor
     pub last_cursor_pos: Option<Point>,
 }
 
@@ -75,6 +141,10 @@ pub struct ArrangementCanvasProgram {
     pub loop_range: Option<(u64, u64)>,
     pub clips: Vec<TimelineClipDisplay>,
     pub selected_track_id: usize,
+    pub snap: SnapGrid,
+    pub scroll_offset_y: f32,
+    pub marquee_selection: Option<(u64, u64, usize, usize)>,
+    pub is_fl_theme: bool,
 }
 
 impl ArrangementCanvasProgram {
@@ -88,7 +158,31 @@ impl ArrangementCanvasProgram {
             loop_range: Some((0, TICKS_PER_BAR * 4)),
             clips: Vec::new(),
             selected_track_id: 0,
+            snap: SnapGrid::Sixteenth,
+            scroll_offset_y: 0.0,
+            marquee_selection: None,
+            is_fl_theme: false,
         }
+    }
+
+    pub fn with_theme(mut self, is_fl_theme: bool) -> Self {
+        self.is_fl_theme = is_fl_theme;
+        self
+    }
+
+    pub fn with_snap(mut self, snap: SnapGrid) -> Self {
+        self.snap = snap;
+        self
+    }
+
+    pub fn with_scroll_y(mut self, scroll_offset_y: f32) -> Self {
+        self.scroll_offset_y = scroll_offset_y.max(0.0);
+        self
+    }
+
+    pub fn with_marquee(mut self, marquee: Option<(u64, u64, usize, usize)>) -> Self {
+        self.marquee_selection = marquee;
+        self
     }
 
     pub fn tick_to_x(&self, tick: u64, bounds_width: f32) -> f32 {
@@ -116,9 +210,17 @@ impl ArrangementCanvasProgram {
         if y < RULER_HEIGHT {
             None
         } else {
-            let trk = ((y - RULER_HEIGHT) / LANE_HEIGHT) as usize;
+            let scrolled_y = y - RULER_HEIGHT + self.scroll_offset_y;
+            if scrolled_y < 0.0 {
+                return None;
+            }
+            let trk = (scrolled_y / LANE_HEIGHT) as usize;
             Some(trk.min(self.track_count.saturating_sub(1)))
         }
+    }
+
+    pub fn track_to_y(&self, track_index: usize) -> f32 {
+        RULER_HEIGHT + (track_index as f32 * LANE_HEIGHT) - self.scroll_offset_y
     }
 }
 
@@ -219,8 +321,9 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
 
                         return Some(Action::publish(UiMessage::SelectRegion(clip.id)));
                     } else {
-                        // Clicked empty lane: snap playhead to 16th note (240 ticks)
-                        let snapped_tick = (target_tick / 240) * 240;
+                        // Clicked empty lane: start marquee drag and snap playhead
+                        let snapped_tick = self.snap.snap(target_tick, self.horizontal_zoom);
+                        state.marquee_drag = Some((cursor_pos, cursor_pos));
                         return Some(Action::publish(UiMessage::SetPlayhead(snapped_tick)));
                     }
                 }
@@ -232,6 +335,24 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                 state.is_scrubbing_playhead = false;
                 state.cycle_drag = None;
 
+                // Handle Marquee Selection Completion
+                if let Some((start_pt, end_pt)) = state.marquee_drag.take() {
+                    let dx = (end_pt.x - start_pt.x).abs();
+                    let dy = (end_pt.y - start_pt.y).abs();
+                    if dx > 8.0 || dy > 8.0 {
+                        let t1 = self.x_to_tick(start_pt.x.min(end_pt.x), bounds.width);
+                        let t2 = self.x_to_tick(start_pt.x.max(end_pt.x), bounds.width);
+                        let trk1 = self.y_to_track(start_pt.y.min(end_pt.y)).unwrap_or(0);
+                        let trk2 = self.y_to_track(start_pt.y.max(end_pt.y)).unwrap_or(trk1);
+                        return Some(Action::publish(UiMessage::TimelineMarqueeSelect {
+                            start_tick: t1,
+                            end_tick: t2,
+                            start_track: trk1.min(trk2),
+                            end_track: trk1.max(trk2),
+                        }));
+                    }
+                }
+
                 if let Some((clip_id, zone, orig_trk, orig_start, orig_len, offset_ticks)) =
                     state.dragged_clip.take()
                 {
@@ -240,7 +361,7 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                         SmartToolZone::GrabMove => {
                             let target_trk = self.y_to_track(cursor_pos.y).unwrap_or(orig_trk);
                             let new_start = target_tick.saturating_sub(offset_ticks);
-                            let snapped_tick = (new_start / 240) * 240;
+                            let snapped_tick = self.snap.snap(new_start, self.horizontal_zoom);
                             return Some(Action::publish(UiMessage::TimelineMoveClip {
                                 clip_id,
                                 new_track_id: target_trk,
@@ -248,8 +369,8 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                             }));
                         }
                         SmartToolZone::TrimStart => {
-                            let snapped_tick = (target_tick / 240) * 240;
-                            if snapped_tick < orig_start + orig_len.saturating_sub(240) {
+                            let snapped_tick = self.snap.snap(target_tick, self.horizontal_zoom);
+                            if snapped_tick < orig_start + orig_len.saturating_sub(120) {
                                 return Some(Action::publish(UiMessage::TimelineTrimClipStart {
                                     clip_id,
                                     new_start_tick: snapped_tick,
@@ -257,8 +378,8 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                             }
                         }
                         SmartToolZone::TrimEnd => {
-                            let snapped_tick = (target_tick / 240) * 240;
-                            if snapped_tick > orig_start + 240 {
+                            let snapped_tick = self.snap.snap(target_tick, self.horizontal_zoom);
+                            if snapped_tick > orig_start + 120 {
                                 let new_len = snapped_tick.saturating_sub(orig_start);
                                 return Some(Action::publish(UiMessage::TimelineTrimClipEnd {
                                     clip_id,
@@ -295,11 +416,15 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                     return Some(Action::publish(UiMessage::SetPlayhead(target_tick)));
                 }
 
+                if let Some((_, ref mut curr)) = state.marquee_drag {
+                    *curr = cursor_pos;
+                }
+
                 if let Some((mode, start_anchor, end_anchor)) = state.cycle_drag {
-                    let snapped = (target_tick / 240) * 240;
+                    let snapped = self.snap.snap(target_tick, self.horizontal_zoom);
                     match mode {
                         CycleDragMode::AdjustStart => {
-                            if snapped < end_anchor.saturating_sub(240) {
+                            if snapped < end_anchor.saturating_sub(120) {
                                 return Some(Action::publish(UiMessage::SetCycleRange {
                                     start_tick: snapped,
                                     end_tick: end_anchor,
@@ -307,7 +432,7 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                             }
                         }
                         CycleDragMode::AdjustEnd => {
-                            if snapped > start_anchor + 240 {
+                            if snapped > start_anchor + 120 {
                                 return Some(Action::publish(UiMessage::SetCycleRange {
                                     start_tick: start_anchor,
                                     end_tick: snapped,
@@ -341,7 +466,7 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
 
     fn draw(
         &self,
-        _state: &Self::State,
+        state: &Self::State,
         renderer: &iced::Renderer,
         _theme: &Theme,
         bounds: Rectangle,
@@ -350,17 +475,30 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
         let mut frame = Frame::new(renderer, bounds.size());
 
         // 1. Overall Dark Background
+        let base_bg = if self.is_fl_theme {
+            Color::from_rgb8(0x15, 0x15, 0x18)
+        } else {
+            Color::from_rgb8(0x13, 0x14, 0x18)
+        };
         frame.fill_rectangle(
             Point::ORIGIN,
             bounds.size(),
-            Color::from_rgb8(0x16, 0x18, 0x1c),
+            base_bg,
         );
 
         // 2. Track Lanes (Alternating Charcoal & Slate)
         for i in 0..self.track_count {
-            let y = RULER_HEIGHT + (i as f32 * LANE_HEIGHT);
+            let y = self.track_to_y(i);
+            if y + LANE_HEIGHT < RULER_HEIGHT || y > bounds.height {
+                continue;
+            }
+
             let bg_color = if i == self.selected_track_id {
-                Color::from_rgb8(0x22, 0x27, 0x33) // Highlighted selected track
+                if self.is_fl_theme {
+                    Color::from_rgb8(0x2a, 0x22, 0x1c)
+                } else {
+                    Color::from_rgb8(0x22, 0x27, 0x33) // Highlighted selected track
+                }
             } else if i % 2 == 0 {
                 Color::from_rgb8(0x1b, 0x1d, 0x22)
             } else {
@@ -429,13 +567,13 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
         // 4. Logic Pro Region Cards (Audio, MIDI, Pattern)
         for clip in &self.clips {
             if clip.track_index < self.track_count {
-                let y = RULER_HEIGHT + (clip.track_index as f32 * LANE_HEIGHT) + 4.0;
+                let y = self.track_to_y(clip.track_index) + 4.0;
                 let h = LANE_HEIGHT - 8.0;
                 let x_start = self.tick_to_x(clip.start_tick, bounds.width);
                 let x_end = self.tick_to_x(clip.start_tick + clip.length_ticks, bounds.width);
                 let w = (x_end - x_start).max(6.0);
 
-                if x_start < bounds.width && x_end > 0.0 {
+                if x_start < bounds.width && x_end > 0.0 && y + h > RULER_HEIGHT && y < bounds.height {
                     let (base_color, glyph) = match clip.kind {
                         ClipVisualKind::Audio { .. } => (
                             Color::from_rgb8(
@@ -574,13 +712,20 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                             }
                         }
                         ClipVisualKind::Pattern => {
-                            // Draw step sequencer dot blocks
+                            // FL Studio style 16-step sequencer pattern preview blocks
+                            let step_w = (w / 16.0).max(3.0);
                             for s in 0..16 {
-                                let dot_x = x_start + (s as f32 * (w / 16.0)) + 2.0;
+                                let block_x = x_start + (s as f32 * step_w) + 1.0;
+                                let is_even_beat = (s / 4) % 2 == 0;
+                                let step_color = if is_even_beat {
+                                    Color::from_rgba8(240, 240, 245, 0.85)
+                                } else {
+                                    Color::from_rgba8(180, 185, 200, 0.70)
+                                };
                                 frame.fill_rectangle(
-                                    Point::new(dot_x, mid_y - 2.0),
-                                    Size::new(3.0, 4.0),
-                                    Color::from_rgba8(240, 220, 255, 0.85),
+                                    Point::new(block_x, mid_y - 4.0),
+                                    Size::new(step_w - 2.0, 8.0),
+                                    step_color,
                                 );
                             }
                         }
@@ -626,7 +771,11 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                     // 4f. Region Outline Border & Selection Ring
                     let outline = Path::rectangle(Point::new(x_start, y), Size::new(w, h));
                     let (border_color, border_w) = if clip.is_selected {
-                        (Color::from_rgb8(0x00, 0x7a, 0xff), 2.0) // Apple Blue Glowing Selection
+                        if self.is_fl_theme {
+                            (Color::from_rgb8(0xf8, 0x8a, 0x36), 2.0) // FL Studio Orange Glowing Selection
+                        } else {
+                            (Color::from_rgb8(0x00, 0x7a, 0xff), 2.0) // Apple Blue Glowing Selection
+                        }
                     } else {
                         (Color::from_rgba8(255, 255, 255, 0.35), 1.0)
                     };
@@ -638,6 +787,55 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                     );
                 }
             }
+        }
+
+        // 4g. Active Marquee Drag or Selection Box
+        if let Some((start_pt, end_pt)) = state.marquee_drag {
+            let rx = start_pt.x.min(end_pt.x);
+            let ry = start_pt.y.min(end_pt.y);
+            let rw = (end_pt.x - start_pt.x).abs();
+            let rh = (end_pt.y - start_pt.y).abs();
+            let marquee_color = if self.is_fl_theme {
+                Color::from_rgba8(0xf8, 0x8a, 0x36, 0.20)
+            } else {
+                Color::from_rgba8(0x00, 0x7a, 0xff, 0.20)
+            };
+            let marquee_border = if self.is_fl_theme {
+                Color::from_rgb8(0xf8, 0x8a, 0x36)
+            } else {
+                Color::from_rgb8(0x00, 0x7a, 0xff)
+            };
+            frame.fill_rectangle(Point::new(rx, ry), Size::new(rw, rh), marquee_color);
+            let border_rect = Path::rectangle(Point::new(rx, ry), Size::new(rw, rh));
+            frame.stroke(
+                &border_rect,
+                Stroke::default().with_color(marquee_border).with_width(1.2),
+            );
+        } else if let Some((t1, t2, trk1, trk2)) = self.marquee_selection {
+            let x1 = self.tick_to_x(t1, bounds.width);
+            let x2 = self.tick_to_x(t2, bounds.width);
+            let y1 = self.track_to_y(trk1);
+            let y2 = self.track_to_y(trk2) + LANE_HEIGHT;
+            let rx = x1.min(x2);
+            let ry = y1.min(y2);
+            let rw = (x2 - x1).abs();
+            let rh = (y2 - y1).abs();
+            let marquee_color = if self.is_fl_theme {
+                Color::from_rgba8(0xf8, 0x8a, 0x36, 0.15)
+            } else {
+                Color::from_rgba8(0x00, 0x7a, 0xff, 0.15)
+            };
+            let marquee_border = if self.is_fl_theme {
+                Color::from_rgb8(0xf8, 0x8a, 0x36)
+            } else {
+                Color::from_rgb8(0x00, 0x7a, 0xff)
+            };
+            frame.fill_rectangle(Point::new(rx, ry), Size::new(rw, rh), marquee_color);
+            let border_rect = Path::rectangle(Point::new(rx, ry), Size::new(rw, rh));
+            frame.stroke(
+                &border_rect,
+                Stroke::default().with_color(marquee_border).with_width(1.0),
+            );
         }
 
         // 5. Logic Pro Top Ruler Bar (Height = 30.0)
@@ -659,16 +857,20 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                 .with_width(1.0),
         );
 
-        // 5a. Logic Pro Signature Amber Cycle Bar (Top 12px)
+        // 5a. Logic Pro Signature Amber Cycle Bar (Top 12px) / FL Orange Cycle Bar
         if let Some((start_tick, end_tick)) = self.loop_range {
             let start_x = self.tick_to_x(start_tick, bounds.width);
             let end_x = self.tick_to_x(end_tick, bounds.width);
             if end_x > start_x {
-                // Amber bar fill
+                let cycle_color = if self.is_fl_theme {
+                    Color::from_rgb8(0xf8, 0x8a, 0x36)
+                } else {
+                    Color::from_rgb8(0xe5, 0xa9, 0x3c)
+                };
                 frame.fill_rectangle(
                     Point::new(start_x, 1.0),
                     Size::new(end_x - start_x, 11.0),
-                    Color::from_rgb8(0xe5, 0xa9, 0x3c),
+                    cycle_color,
                 );
 
                 // Start Bracket Handle '['

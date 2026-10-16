@@ -10,10 +10,20 @@ impl CrystalWaveApp {
         let main_workspace = self.view_main_workspace();
         let bottom_drawer = self.view_bottom_drawer();
 
-        column![menu_bar, control_bar, main_workspace, bottom_drawer]
+        let mut main_col = column![menu_bar, control_bar, main_workspace, bottom_drawer]
             .width(Length::Fill)
             .height(Length::Fill)
-            .spacing(2)
+            .spacing(2);
+
+        if self.command_palette_open {
+            let palette = self.view_command_palette();
+            main_col = main_col.push(container(palette).padding(8));
+        }
+
+        container(main_col)
+            .style(|_t| self.theme.header_container_style())
+            .width(Length::Fill)
+            .height(Length::Fill)
             .into()
     }
 
@@ -101,6 +111,46 @@ impl CrystalWaveApp {
         let win_plugins =
             button(text("Plugins [L]").size(11)).on_press(UiMessage::ToggleLibraryBrowser);
 
+        // Theme Switcher & Snap Toggle
+        let theme_btn = button(
+            text(match self.theme.preset {
+                crate::ui::theme::ThemePreset::Graphite => "Theme: Logic Graphite",
+                crate::ui::theme::ThemePreset::FlDarkOrange => "Theme: FL Dark Orange",
+            })
+            .size(11),
+        )
+        .on_press(UiMessage::SetThemePreset(
+            if self.theme.preset == crate::ui::theme::ThemePreset::Graphite {
+                crate::ui::theme::ThemePreset::FlDarkOrange
+            } else {
+                crate::ui::theme::ThemePreset::Graphite
+            },
+        ));
+
+        let snap_btn = button(text(self.snap_grid.label()).size(11)).on_press(
+            UiMessage::SetSnapGrid(match self.snap_grid {
+                crate::ui::canvas_timeline::SnapGrid::Sixteenth => {
+                    crate::ui::canvas_timeline::SnapGrid::Eighth
+                }
+                crate::ui::canvas_timeline::SnapGrid::Eighth => {
+                    crate::ui::canvas_timeline::SnapGrid::Beat
+                }
+                crate::ui::canvas_timeline::SnapGrid::Beat => {
+                    crate::ui::canvas_timeline::SnapGrid::Bar
+                }
+                crate::ui::canvas_timeline::SnapGrid::Bar => {
+                    crate::ui::canvas_timeline::SnapGrid::Smart
+                }
+                crate::ui::canvas_timeline::SnapGrid::Smart => {
+                    crate::ui::canvas_timeline::SnapGrid::Off
+                }
+                _ => crate::ui::canvas_timeline::SnapGrid::Sixteenth,
+            }),
+        );
+
+        let cmd_palette_btn =
+            button(text("⌘K / Ctrl+K").size(11)).on_press(UiMessage::ToggleCommandPalette);
+
         row![
             container(text("CRYSTAL WAVE").size(12)).padding(4),
             file_new,
@@ -110,6 +160,9 @@ impl CrystalWaveApp {
             edit_split,
             track_add_audio,
             track_add_midi,
+            snap_btn,
+            theme_btn,
+            cmd_palette_btn,
             win_playlist,
             win_channel_rack,
             win_piano_roll,
@@ -446,8 +499,14 @@ impl CrystalWaveApp {
             }
 
             let track_header_column = container(track_headers).width(Length::Fixed(200.0));
-            let arrangement_canvas =
-                crate::ui::canvas_timeline::view_canvas_timeline(canvas_program);
+            let is_fl = self.theme.preset == crate::ui::theme::ThemePreset::FlDarkOrange;
+            let arrangement_canvas = crate::ui::canvas_timeline::view_canvas_timeline(
+                canvas_program
+                    .with_snap(self.snap_grid)
+                    .with_theme(is_fl)
+                    .with_scroll_y(self.timeline_scroll_y)
+                    .with_marquee(self.marquee_selection),
+            );
 
             let logic_timeline = row![track_header_column, arrangement_canvas]
                 .width(Length::Fill)
@@ -512,163 +571,279 @@ impl CrystalWaveApp {
     }
 
     fn view_bottom_drawer(&self) -> Element<'_, UiMessage> {
-        // Multi-Window Bottom Area: Either FL Mixer (F9) or Piano Roll (F7)
-        if self.fl_windows.mixer_visible || self.workspace.mixer_drawer_open {
-            let mut channel_strips = row![].spacing(6).padding(4);
+        let is_open = self.workspace.editor_drawer_open
+            || self.fl_windows.mixer_visible
+            || self.fl_windows.piano_roll_visible
+            || self.fl_windows.channel_rack_visible
+            || self.fl_windows.patcher_visible;
 
-            for (idx, ch) in self.mixer.channels.iter().enumerate() {
-                let mute_btn = button(text(if ch.muted { "M" } else { "m" }).size(10))
-                    .on_press(UiMessage::ToggleTrackMute(idx));
+        if !is_open {
+            return column![].into();
+        }
 
-                let solo_btn = button(text(if ch.solo { "S" } else { "s" }).size(10))
-                    .on_press(UiMessage::ToggleTrackSolo(idx));
+        // Top Drawer Tab Navigation Bar
+        let tab_piano = button(text("Piano Roll [F7]").size(11))
+            .style(self.theme.button_style(self.layout.active_drawer_tab == crate::ui::layout::DrawerTab::PianoRoll))
+            .on_press(UiMessage::SelectDrawerTab(crate::ui::layout::DrawerTab::PianoRoll));
 
-                let fader_slider = slider(-60.0..=6.0, ch.volume_fader_db, move |vol| {
-                    UiMessage::SetTrackFader {
-                        track_id: idx,
-                        volume_db: vol,
+        let tab_step = button(text("Step Sequencer [F6]").size(11))
+            .style(self.theme.button_style(self.layout.active_drawer_tab == crate::ui::layout::DrawerTab::StepSequencer))
+            .on_press(UiMessage::SelectDrawerTab(crate::ui::layout::DrawerTab::StepSequencer));
+
+        let tab_mixer = button(text("Mixer Console [F9]").size(11))
+            .style(self.theme.button_style(self.layout.active_drawer_tab == crate::ui::layout::DrawerTab::Mixer))
+            .on_press(UiMessage::SelectDrawerTab(crate::ui::layout::DrawerTab::Mixer));
+
+        let tab_patcher = button(text("Modular Patcher").size(11))
+            .style(self.theme.button_style(false))
+            .on_press(UiMessage::ToggleFlPatcher);
+
+        let close_btn = button(text("✕").size(10)).on_press(UiMessage::ToggleEditorDrawer);
+
+        let tab_bar = row![
+            tab_piano,
+            tab_step,
+            tab_mixer,
+            tab_patcher,
+            close_btn,
+        ]
+        .spacing(6)
+        .padding(4);
+
+        // Drawer Content per Active Tab
+        let content_element: Element<'_, UiMessage> = match self.layout.active_drawer_tab {
+            crate::ui::layout::DrawerTab::StepSequencer => {
+                // FL Studio Signature 16-Step Channel Rack Sequencer
+                let mut rack_col = column![].spacing(6).padding(4);
+
+                for ch in &self.channel_rack.channels {
+                    let mut steps_row = row![].spacing(3);
+
+                    // 16 Step Buttons with 4-beat alternating grouping
+                    for (s_idx, step) in ch.steps.iter().enumerate() {
+                        let is_active = step.active;
+                        let is_even_beat = (s_idx / 4) % 2 == 0;
+                        let step_label = if is_active { "■" } else { "·" };
+
+                        let step_btn = button(text(step_label).size(11))
+                            .style(move |_t, _st| {
+                                let bg = if is_active {
+                                    self.theme.accent
+                                } else if is_even_beat {
+                                    self.theme.step_even
+                                } else {
+                                    self.theme.step_odd
+                                };
+                                iced::widget::button::Style {
+                                    background: Some(iced::Background::Color(bg)),
+                                    text_color: if is_active { iced::Color::WHITE } else { self.theme.text_secondary },
+                                    border: iced::Border {
+                                        color: self.theme.border,
+                                        width: 1.0,
+                                        radius: iced::border::Radius::from(2.0),
+                                    },
+                                    shadow: iced::Shadow::default(),
+                                    ..iced::widget::button::Style::default()
+                                }
+                            })
+                            .on_press(UiMessage::StepSequencerToggleStep {
+                                channel_id: ch.id,
+                                step_index: s_idx,
+                            });
+
+                        steps_row = steps_row.push(step_btn);
                     }
-                })
-                .step(0.5_f32)
-                .width(Length::Fixed(70.0));
 
-                let pan_slider = slider(-1.0..=1.0, ch.pan.balance, move |p| {
-                    UiMessage::SetTrackPan {
-                        track_id: idx,
-                        pan: p,
-                    }
-                })
-                .step(0.05_f32)
-                .width(Length::Fixed(70.0));
-
-                let strip = container(
-                    column![
-                        text(&ch.name).size(11),
-                        text(format!("{:.1} dB", ch.volume_fader_db)).size(10),
-                        fader_slider,
-                        text(format!("Pan: {:.2}", ch.pan.balance)).size(10),
-                        pan_slider,
-                        row![mute_btn, solo_btn].spacing(4),
+                    let ch_row = row![
+                        container(text(&ch.name).size(11))
+                            .width(Length::Fixed(120.0))
+                            .padding(2),
+                        steps_row,
                     ]
-                    .spacing(3),
-                )
-                .padding(4)
-                .width(Length::Fixed(90.0));
+                    .spacing(8);
 
-                channel_strips = channel_strips.push(strip);
+                    rack_col = rack_col.push(ch_row);
+                }
+
+                column![
+                    text("FL Studio Channel Rack (16-Step Pattern Sequencer)").size(11),
+                    scrollable(rack_col),
+                ]
+                .spacing(4)
+                .into()
             }
 
-            return container(
+            crate::ui::layout::DrawerTab::PianoRoll => {
+                // Interactive Piano Roll with Alt-Tools & Polyphonic Ghost Notes
+                let btn_strum = button(text("Strum").size(10)).on_press(UiMessage::PianoRollQuickStrum);
+                let btn_flip_h = button(text("Flip H").size(10)).on_press(UiMessage::PianoRollFlipHorizontal);
+                let btn_flip_v = button(text("Flip V").size(10)).on_press(UiMessage::PianoRollFlipVertical);
+                let btn_chop = button(text("Chop 1/16").size(10)).on_press(UiMessage::PianoRollQuickChop);
+                let btn_add_c4 = button(text("+ Note C4").size(10)).on_press(UiMessage::PianoRollAddNote {
+                    channel_id: 0,
+                    key: 60,
+                    start_tick: self.playhead_tick,
+                    length_ticks: 960,
+                });
+
+                let roll_header = row![
+                    text("FL Studio Piano Roll (Ghost Polyphony: Active)").size(11),
+                    btn_strum,
+                    btn_flip_h,
+                    btn_flip_v,
+                    btn_chop,
+                    btn_add_c4,
+                    text(format!("Notes: {} | Scale: Chromatic | Grid: {}", self.piano_roll_notes.len(), self.snap_grid.label())).size(10),
+                ]
+                .spacing(6);
+
+                let keys_col = column![
+                    text("C5 - [ Lead ]").size(10),
+                    text("B4 - [ Ghost ]").size(10),
+                    text("A4 - [ Bass ]").size(10),
+                    text("G4 - [ Chord ]").size(10),
+                    text("F4 - [ Ghost ]").size(10),
+                    text("E4 - [ Pad ]").size(10),
+                    text("D4 - [ Note ]").size(10),
+                    text("C4 - [ Root ]").size(10),
+                ]
+                .spacing(2)
+                .width(Length::Fixed(110.0));
+
+                let mut notes_col = column![].spacing(3);
+                for note in &self.piano_roll_notes {
+                    let slide_tag = if note.is_slide { " [Slide]" } else { "" };
+                    let del_btn = button(text("✕").size(9)).on_press(UiMessage::PianoRollDeleteNote(note.id));
+
+                    notes_col = notes_col.push(
+                        row![
+                            text(format!(
+                                "Note {}: Key {} ({}..{}) Vel: {:.0}%{}",
+                                note.id,
+                                note.key,
+                                note.start_tick,
+                                note.start_tick + note.length_ticks,
+                                note.velocity * 100.0,
+                                slide_tag
+                            ))
+                            .size(10),
+                            del_btn,
+                        ]
+                        .spacing(6),
+                    );
+                }
+                let grid_content = container(scrollable(notes_col)).padding(4);
+                let roll_body = row![keys_col, grid_content].spacing(8);
+
+                column![roll_header, roll_body].spacing(4).into()
+            }
+
+            crate::ui::layout::DrawerTab::Mixer => {
+                // Mixer Console Strip View
+                let mut channel_strips = row![].spacing(6).padding(4);
+
+                for (idx, ch) in self.mixer.channels.iter().enumerate() {
+                    let mute_btn = button(text(if ch.muted { "M" } else { "m" }).size(10))
+                        .on_press(UiMessage::ToggleTrackMute(idx));
+
+                    let solo_btn = button(text(if ch.solo { "S" } else { "s" }).size(10))
+                        .on_press(UiMessage::ToggleTrackSolo(idx));
+
+                    let fader_slider = slider(-60.0..=6.0, ch.volume_fader_db, move |vol| {
+                        UiMessage::SetTrackFader {
+                            track_id: idx,
+                            volume_db: vol,
+                        }
+                    })
+                    .step(0.5_f32)
+                    .width(Length::Fixed(70.0));
+
+                    let pan_slider = slider(-1.0..=1.0, ch.pan.balance, move |p| {
+                        UiMessage::SetTrackPan {
+                            track_id: idx,
+                            pan: p,
+                        }
+                    })
+                    .step(0.05_f32)
+                    .width(Length::Fixed(70.0));
+
+                    let strip = container(
+                        column![
+                            text(&ch.name).size(11),
+                            text(format!("{:.1} dB", ch.volume_fader_db)).size(10),
+                            fader_slider,
+                            text(format!("Pan: {:.2}", ch.pan.balance)).size(10),
+                            pan_slider,
+                            row![mute_btn, solo_btn].spacing(4),
+                        ]
+                        .spacing(3),
+                    )
+                    .padding(4)
+                    .width(Length::Fixed(90.0));
+
+                    channel_strips = channel_strips.push(strip);
+                }
+
                 column![
-                    row![
-                        text("FL Studio Mixer Console [F9]").size(12),
-                        button(text("x").size(10)).on_press(UiMessage::ToggleFlMixer),
-                    ]
-                    .spacing(8),
+                    text("Logic Pro / FL Studio 256-Bus Topological Mixing Console").size(11),
                     scrollable(channel_strips),
                 ]
-                .spacing(4),
-            )
-            .height(Length::Fixed(190.0))
+                .spacing(4)
+                .into()
+            }
+
+            crate::ui::layout::DrawerTab::Automation => {
+                column![
+                    text("Automation Curve Drawer").size(11),
+                    text("Select clip or parameter to edit spline curves").size(10),
+                ]
+                .spacing(4)
+                .into()
+            }
+        };
+
+        container(column![tab_bar, content_element].spacing(4))
+            .style(|_t| self.theme.panel_container_style())
+            .height(Length::Fixed(220.0))
             .width(Length::Fill)
             .padding(4)
-            .into();
-        }
+            .into()
+    }
 
-        if self.fl_windows.piano_roll_visible || self.workspace.editor_drawer_open {
-            let btn_strum = button(text("Strum").size(10)).on_press(UiMessage::PianoRollQuickStrum);
-            let btn_flip_h =
-                button(text("Flip H").size(10)).on_press(UiMessage::PianoRollFlipHorizontal);
-            let btn_flip_v =
-                button(text("Flip V").size(10)).on_press(UiMessage::PianoRollFlipVertical);
-            let btn_chop =
-                button(text("Chop 1/16").size(10)).on_press(UiMessage::PianoRollQuickChop);
+    /// Quick Command Palette Modal Overlay (Ctrl+K / ⌘K)
+    fn view_command_palette(&self) -> Element<'_, UiMessage> {
+        let title = text("Crystal Wave Command Palette").size(13);
+        let subtitle = text("Fast action launcher (click action or press key)").size(10);
 
-            let roll_header = row![
-                text("FL Piano Roll [F7] (Ghost Polyphony: Active)").size(12),
-                btn_strum,
-                btn_flip_h,
-                btn_flip_v,
-                btn_chop,
-                text("Scale: Chromatic | Grid: 1/16 | Slide Pitch: Active").size(10),
-                button(text("x").size(10)).on_press(UiMessage::ToggleFlPianoRoll),
+        let cmd_play = button(text("▶ Transport: Play / Pause").size(11))
+            .on_press(UiMessage::ExecuteCommand("play".to_string()));
+        let cmd_rec = button(text("● Transport: Toggle Record Overdub").size(11))
+            .on_press(UiMessage::ExecuteCommand("record".to_string()));
+        let cmd_fl_theme = button(text("🎨 Theme: Switch to FL Studio Dark Orange").size(11))
+            .on_press(UiMessage::ExecuteCommand("orange".to_string()));
+        let cmd_logic_theme = button(text("🎨 Theme: Switch to Logic Pro Graphite").size(11))
+            .on_press(UiMessage::ExecuteCommand("logic".to_string()));
+        let cmd_snap_16 = button(text("⚡ Grid: Snap to 1/16 Beat").size(11))
+            .on_press(UiMessage::ExecuteCommand("snap".to_string()));
+        let cmd_close = button(text("✕ Close Palette").size(11)).on_press(UiMessage::ToggleCommandPalette);
+
+        container(
+            column![
+                title,
+                subtitle,
+                cmd_play,
+                cmd_rec,
+                cmd_fl_theme,
+                cmd_logic_theme,
+                cmd_snap_16,
+                cmd_close,
             ]
-            .spacing(6);
-
-            let keys_col = column![
-                text("C5 - [ Lead ]").size(10),
-                text("B4 - [ Ghost ]").size(10),
-                text("A4 - [ Bass ]").size(10),
-                text("G4 - [ Chord ]").size(10),
-                text("F4 - [ Ghost ]").size(10),
-                text("E4 - [ Pad ]").size(10),
-                text("D4 - [ Note ]").size(10),
-                text("C4 - [ Root ]").size(10),
-            ]
-            .spacing(2)
-            .width(Length::Fixed(110.0));
-
-            let mut notes_col = column![].spacing(3);
-            for note in &self.piano_roll_notes {
-                let slide_tag = if note.is_slide { " [Slide]" } else { "" };
-                notes_col = notes_col.push(
-                    text(format!(
-                        "Note {}: Key {} ({}..{}) Vel: {:.0}%{}",
-                        note.id,
-                        note.key,
-                        note.start_tick,
-                        note.start_tick + note.length_ticks,
-                        note.velocity * 100.0,
-                        slide_tag
-                    ))
-                    .size(10),
-                );
-            }
-            let grid_content = container(scrollable(notes_col)).padding(4);
-
-            let roll_body = row![keys_col, grid_content].spacing(8);
-
-            return container(column![roll_header, roll_body].spacing(4))
-                .height(Length::Fixed(190.0))
-                .width(Length::Fill)
-                .padding(4)
-                .into();
-        }
-
-        if self.fl_windows.patcher_visible {
-            let mut nodes_row = row![].spacing(12).padding(8);
-            for node in &self.patcher.nodes {
-                let node_box = container(
-                    column![
-                        text(&node.name).size(11),
-                        text(format!("{:?}", node.kind)).size(9),
-                        text(format!("({:.0}, {:.0})", node.canvas_x, node.canvas_y)).size(8),
-                    ]
-                    .spacing(2),
-                )
-                .padding(6);
-                nodes_row = nodes_row.push(node_box);
-            }
-
-            let patcher_header = row![
-                text("FL Patcher Modular Routing Graph").size(12),
-                text(format!(
-                    "Nodes: {} | Cables: {}",
-                    self.patcher.nodes.len(),
-                    self.patcher.cables.len()
-                ))
-                .size(10),
-                button(text("x").size(10)).on_press(UiMessage::ToggleFlPatcher),
-            ]
-            .spacing(8);
-
-            return container(column![patcher_header, scrollable(nodes_row)].spacing(4))
-                .height(Length::Fixed(190.0))
-                .width(Length::Fill)
-                .padding(4)
-                .into();
-        }
-
-        column![].into()
+            .spacing(6)
+            .padding(12),
+        )
+        .style(|_t| self.theme.panel_container_style())
+        .width(Length::Fixed(380.0))
+        .into()
     }
 }
+
