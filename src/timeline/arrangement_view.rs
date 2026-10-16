@@ -62,7 +62,7 @@ impl ArrangementView {
     }
 
     pub fn select_track(&mut self, index: usize) {
-        if index < self.track_pool.len() {
+        if index < self.timeline.tracks.len() || index < self.track_pool.len() {
             self.selected_track_index = Some(index);
         }
     }

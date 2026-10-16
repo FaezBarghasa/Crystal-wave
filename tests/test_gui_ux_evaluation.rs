@@ -69,6 +69,135 @@ fn test_gui_ux_telemetry_and_status_bar() {
 }
 
 #[test]
+fn test_gui_ux_track_and_clip_lifecycle_journey() {
+    let mut driver = UiSessionDriver::new(48000.0);
+    let initial_tracks = driver.app.arrangement.timeline.tracks.len();
+
+    // 1. User adds an Audio track and a MIDI track
+    driver.dispatch(UiMessage::MenuAction(
+        Crystal_wave::ui::message::MenuCommand::AddAudioTrack,
+    ));
+    driver.dispatch(UiMessage::MenuAction(
+        Crystal_wave::ui::message::MenuCommand::AddMidiTrack,
+    ));
+    assert_eq!(
+        driver.app.arrangement.timeline.tracks.len(),
+        initial_tracks + 2
+    );
+
+    // 2. User selects Track 1, adjusts Fader dB and Pan
+    driver.dispatch(UiMessage::SelectTrack(1));
+    assert_eq!(driver.app.arrangement.selected_track_index, Some(1));
+
+    driver.dispatch(UiMessage::SetTrackFader {
+        track_id: 1,
+        volume_db: -3.5,
+    });
+    driver.dispatch(UiMessage::SetTrackPan {
+        track_id: 1,
+        pan: -0.25,
+    });
+    assert!((driver.app.mixer.channels[1].volume_fader_db - (-3.5)).abs() < 0.001);
+    assert!((driver.app.mixer.channels[1].pan.balance - (-0.25)).abs() < 0.001);
+
+    // 3. User toggles Mute, Solo, and Record Arm
+    driver.dispatch(UiMessage::ToggleTrackMute(1));
+    assert!(driver.app.mixer.channels[1].muted);
+
+    driver.dispatch(UiMessage::ToggleTrackSolo(1));
+    assert!(driver.app.mixer.channels[1].solo);
+
+    driver.dispatch(UiMessage::ToggleTrackRecordArm(1));
+    assert!(driver.app.arrangement.timeline.tracks[1].record_armed);
+
+    // 4. User adds a pattern clip on Track 1 and adjusts fades
+    let initial_regions = driver.app.arrangement.timeline.tracks[1].regions.len();
+    driver.dispatch(UiMessage::TimelineAddPatternClip {
+        track_id: 1,
+        start_tick: 7680,
+        length_ticks: 3840,
+        name: "Verse Drums".to_string(),
+    });
+    assert_eq!(
+        driver.app.arrangement.timeline.tracks[1].regions.len(),
+        initial_regions + 1
+    );
+
+    let clip_id = driver.app.arrangement.timeline.tracks[1]
+        .regions
+        .last()
+        .expect("must have added region")
+        .id;
+    driver.dispatch(UiMessage::TimelineFadeClip {
+        clip_id,
+        fade_in_ticks: Some(240),
+        fade_out_ticks: Some(480),
+    });
+    let last_region = driver.app.arrangement.timeline.tracks[1]
+        .regions
+        .last()
+        .expect("must have region");
+    assert_eq!(last_region.fade.in_ticks, 240);
+    assert_eq!(last_region.fade.out_ticks, 480);
+
+    // 5. User duplicates clip
+    driver.dispatch(UiMessage::TimelineDuplicateClip(clip_id));
+    assert_eq!(
+        driver.app.arrangement.timeline.tracks[1].regions.len(),
+        initial_regions + 2
+    );
+
+    // 6. User verifies view renders cleanly with duplicated clips
+    let _tree = driver.app.view();
+}
+
+#[test]
+fn test_gui_ux_piano_roll_and_drawer_render_integrity() {
+    let mut driver = UiSessionDriver::new(48000.0);
+
+    // 1. Switch to Piano Roll drawer and add notes
+    driver.dispatch(UiMessage::SelectDrawerTab(
+        Crystal_wave::ui::layout::DrawerTab::PianoRoll,
+    ));
+    assert_eq!(
+        driver.app.layout.active_drawer_tab,
+        Crystal_wave::ui::layout::DrawerTab::PianoRoll
+    );
+
+    driver.dispatch(UiMessage::PianoRollAddNote {
+        channel_id: 0,
+        key: 60, // C4
+        start_tick: 0,
+        length_ticks: 480,
+    });
+    driver.dispatch(UiMessage::PianoRollAddNote {
+        channel_id: 0,
+        key: 64, // E4
+        start_tick: 480,
+        length_ticks: 480,
+    });
+
+    // 2. Perform FL-style articulations
+    driver.dispatch(UiMessage::PianoRollQuickStrum);
+    driver.dispatch(UiMessage::PianoRollQuickChop);
+    driver.dispatch(UiMessage::PianoRollFlipHorizontal);
+    driver.dispatch(UiMessage::PianoRollFlipVertical);
+
+    // 3. Cycle through all drawer views and verify view tree rendering
+    let drawer_tabs = [
+        Crystal_wave::ui::layout::DrawerTab::PianoRoll,
+        Crystal_wave::ui::layout::DrawerTab::StepSequencer,
+        Crystal_wave::ui::layout::DrawerTab::Automation,
+        Crystal_wave::ui::layout::DrawerTab::Mixer,
+    ];
+
+    for tab in drawer_tabs {
+        driver.dispatch(UiMessage::SelectDrawerTab(tab));
+        let _rendered_tree = driver.app.view();
+    }
+}
+
+#[test]
 fn test_gui_ux_anti_slop_and_contrast_tokens() {
     let graphite = UiTheme::graphite();
     let fl_orange = UiTheme::fl_dark_orange();

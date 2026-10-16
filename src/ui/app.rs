@@ -783,11 +783,20 @@ impl CrystalWaveApp {
                 }
             }
             UiMessage::TimelineDuplicateClip(clip_id) => {
+                let max_id = self
+                    .arrangement
+                    .timeline
+                    .tracks
+                    .iter()
+                    .flat_map(|t| t.regions.iter())
+                    .map(|r| r.id)
+                    .max()
+                    .unwrap_or(0);
                 for trk in &mut self.arrangement.timeline.tracks {
                     if let Some(pos) = trk.regions.iter().position(|r| r.id == clip_id) {
                         let reg = &trk.regions[pos];
                         let mut duplicated = reg.clone();
-                        duplicated.id = (trk.regions.len() + 100) * 10;
+                        duplicated.id = max_id + 1;
                         duplicated.start_tick = reg.start_tick + reg.length_ticks;
                         trk.regions.push(duplicated);
                         self.dirty = true;
@@ -801,8 +810,17 @@ impl CrystalWaveApp {
                 length_ticks,
                 name,
             } => {
+                let max_id = self
+                    .arrangement
+                    .timeline
+                    .tracks
+                    .iter()
+                    .flat_map(|t| t.regions.iter())
+                    .map(|r| r.id)
+                    .max()
+                    .unwrap_or(0);
+                let new_id = max_id + 1;
                 if let Some(trk) = self.arrangement.timeline.tracks.get_mut(track_id) {
-                    let new_id = trk.regions.len() + 1;
                     trk.regions.push(Region {
                         id: new_id,
                         track_id,
