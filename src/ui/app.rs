@@ -208,6 +208,7 @@ impl CrystalWaveApp {
             }
             UiMessage::TransportToggleLoop => {
                 self.is_looping = !self.is_looping;
+                self.arrangement.timeline.loop_region.enabled = self.is_looping;
             }
             UiMessage::SetPlayhead(tick) => {
                 self.playhead_tick = tick;

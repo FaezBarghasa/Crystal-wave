@@ -1,6 +1,6 @@
 use crate::ui::app::CrystalWaveApp;
 use crate::ui::message::{MenuCommand, UiMessage};
-use iced::widget::{button, column, container, row, scrollable, slider, text};
+use iced::widget::{button, column, container, row, scrollable, slider, text, text_input};
 use iced::{Element, Length};
 
 impl CrystalWaveApp {
@@ -9,11 +9,18 @@ impl CrystalWaveApp {
         let control_bar = self.view_control_bar();
         let main_workspace = self.view_main_workspace();
         let bottom_drawer = self.view_bottom_drawer();
+        let status_bar = self.view_status_bar();
 
-        let mut main_col = column![menu_bar, control_bar, main_workspace, bottom_drawer]
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .spacing(2);
+        let mut main_col = column![
+            menu_bar,
+            control_bar,
+            main_workspace,
+            bottom_drawer,
+            status_bar
+        ]
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .spacing(1);
 
         if self.command_palette_open {
             let palette = self.view_command_palette();
@@ -1013,40 +1020,118 @@ impl CrystalWaveApp {
             .into()
     }
 
-    /// Quick Command Palette Modal Overlay (Ctrl+K / ⌘K)
+    /// Studio Telemetry Status Bar (Bottom 20px)
+    fn view_status_bar(&self) -> Element<'_, UiMessage> {
+        let left_telemetry = row![
+            text("● ENGINE: ACTIVE").size(9),
+            text("|").size(9),
+            text(format!("RATE: {:.1} kHz", self.mixer.sample_rate / 1000.0)).size(9),
+            text("|").size(9),
+            text("BUFFER: 128 spl (2.6 ms)").size(9),
+            text("|").size(9),
+            text("XRUNS: 0").size(9),
+        ]
+        .spacing(6);
+
+        let center_tool = row![
+            text("TOOL: [ SMART SELECT / TRIM / FADE ]").size(9),
+            text("|").size(9),
+            text(format!("GRID: [ {} ]", self.snap_grid.label())).size(9),
+        ]
+        .spacing(6);
+
+        let right_env = row![
+            text("BACKEND: PIPEWIRE / ALSA").size(9),
+            text("|").size(9),
+            text("HOST: LINUX (COSMIC)").size(9),
+            text("|").size(9),
+            text("PEAK: -0.1 dBFS").size(9),
+        ]
+        .spacing(6);
+
+        container(
+            row![
+                left_telemetry,
+                container(center_tool)
+                    .width(Length::Fill)
+                    .align_x(iced::alignment::Horizontal::Center),
+                right_env,
+            ]
+            .width(Length::Fill)
+            .padding(2),
+        )
+        .style(|_t| self.theme.header_container_style())
+        .height(Length::Fixed(20.0))
+        .width(Length::Fill)
+        .into()
+    }
+
+    /// Quick Command Palette Modal Overlay (Ctrl+K / ⌘K) with live search filter
     fn view_command_palette(&self) -> Element<'_, UiMessage> {
         let title = text("Crystal Wave Command Palette").size(13);
-        let subtitle = text("Fast action launcher (click action or press key)").size(10);
+        let subtitle = text("Fast action launcher — type to search commands").size(10);
 
-        let cmd_play = button(text("▶ Transport: Play / Pause").size(11))
-            .on_press(UiMessage::ExecuteCommand("play".to_string()));
-        let cmd_rec = button(text("● Transport: Toggle Record Overdub").size(11))
-            .on_press(UiMessage::ExecuteCommand("record".to_string()));
-        let cmd_fl_theme = button(text("🎨 Theme: Switch to FL Studio Dark Orange").size(11))
-            .on_press(UiMessage::ExecuteCommand("orange".to_string()));
-        let cmd_logic_theme = button(text("🎨 Theme: Switch to Logic Pro Graphite").size(11))
-            .on_press(UiMessage::ExecuteCommand("logic".to_string()));
-        let cmd_snap_16 = button(text("⚡ Grid: Snap to 1/16 Beat").size(11))
-            .on_press(UiMessage::ExecuteCommand("snap".to_string()));
-        let cmd_close =
-            button(text("✕ Close Palette").size(11)).on_press(UiMessage::ToggleCommandPalette);
+        let search_box = text_input(
+            "Search actions (play, record, theme, snap, track, save, bounce)...",
+            &self.command_query,
+        )
+        .on_input(UiMessage::CommandPaletteInput)
+        .padding(6)
+        .size(11);
+
+        let query = self.command_query.to_lowercase();
+
+        let all_commands = [
+            ("▶ Transport: Play / Pause (Space)", "play"),
+            ("● Transport: Toggle Record Overdub (R)", "record"),
+            ("■ Transport: Stop and Rewind (Enter)", "stop"),
+            ("[Theme] Switch to FL Studio Dark Orange", "orange"),
+            ("[Theme] Switch to Logic Pro Graphite", "logic"),
+            ("[Grid] Snap: Sixteenth Beat (1/16)", "snap"),
+            ("[Project] Save Session (Ctrl+S)", "save"),
+            ("[Export] Bounce Mix to 24-bit WAV", "bounce"),
+            ("[Track] Add New Audio Track", "audio"),
+            ("[Track] Add New MIDI Instrument Track", "midi"),
+            ("[View] Toggle FL Playlist Window (F5)", "playlist"),
+            ("[View] Toggle Channel Rack Matrix (F6)", "rack"),
+            ("[View] Toggle Piano Roll (F7)", "piano"),
+            ("[View] Toggle Mixer Console (F9)", "mixer"),
+        ];
+
+        let mut cmd_list = column![].spacing(3);
+        for (label, action_key) in all_commands {
+            if query.is_empty()
+                || label.to_lowercase().contains(&query)
+                || action_key.contains(&query)
+            {
+                let cmd_btn = button(text(label).size(10))
+                    .style(self.theme.button_style(false))
+                    .on_press(UiMessage::ExecuteCommand(action_key.to_string()))
+                    .width(Length::Fill);
+                cmd_list = cmd_list.push(cmd_btn);
+            }
+        }
+
+        let close_btn = button(text("✕ Close").size(10)).on_press(UiMessage::ToggleCommandPalette);
 
         container(
             column![
-                title,
+                row![
+                    title,
+                    container(close_btn)
+                        .width(Length::Fill)
+                        .align_x(iced::alignment::Horizontal::Right),
+                ]
+                .spacing(4),
                 subtitle,
-                cmd_play,
-                cmd_rec,
-                cmd_fl_theme,
-                cmd_logic_theme,
-                cmd_snap_16,
-                cmd_close,
+                search_box,
+                scrollable(cmd_list).height(Length::Fixed(160.0)),
             ]
             .spacing(6)
-            .padding(12),
+            .padding(10),
         )
         .style(|_t| self.theme.panel_container_style())
-        .width(Length::Fixed(380.0))
+        .width(Length::Fixed(440.0))
         .into()
     }
 }
