@@ -1,8 +1,8 @@
-use Crystal_wave::ui::canvas_timeline::{ArrangementCanvasProgram, SnapGrid, TICKS_PER_BAR, PPQN};
+use Crystal_wave::ui::CrystalWaveApp;
+use Crystal_wave::ui::canvas_timeline::{ArrangementCanvasProgram, PPQN, SnapGrid, TICKS_PER_BAR};
 use Crystal_wave::ui::layout::{DockPosition, DrawerTab, LayoutState, PanelId};
 use Crystal_wave::ui::message::UiMessage;
 use Crystal_wave::ui::theme::{ThemePreset, UiTheme};
-use Crystal_wave::ui::CrystalWaveApp;
 
 #[test]
 fn test_ui_theme_tokens_and_presets() {
@@ -17,7 +17,10 @@ fn test_ui_theme_tokens_and_presets() {
     assert_eq!(fl_orange.meters.len(), 6);
 
     // FL Orange accent verification
-    assert_eq!(fl_orange.border_focus, iced::Color::from_rgb8(0xf8, 0x8a, 0x36));
+    assert_eq!(
+        fl_orange.border_focus,
+        iced::Color::from_rgb8(0xf8, 0x8a, 0x36)
+    );
     assert_eq!(fl_orange.accent, iced::Color::from_rgb8(0xf8, 0x8a, 0x36));
 
     // Note colors rotation

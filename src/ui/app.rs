@@ -871,9 +871,14 @@ impl CrystalWaveApp {
                 length_ticks,
             } => {
                 let id = self.piano_roll_notes.len() + 1;
-                self.piano_roll_notes.push(
-                    crate::fl_studio::FlPianoRollNote::new(id, channel_id, key, start_tick, length_ticks)
-                );
+                self.piano_roll_notes
+                    .push(crate::fl_studio::FlPianoRollNote::new(
+                        id,
+                        channel_id,
+                        key,
+                        start_tick,
+                        length_ticks,
+                    ));
                 self.dirty = true;
             }
             UiMessage::PianoRollDeleteNote(id) => {

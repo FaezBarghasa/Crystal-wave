@@ -96,7 +96,12 @@ impl Default for LayoutState {
             inspector: PanelState::new(PanelId::Inspector, DockPosition::Left, 0.18, false),
             bottom_drawer: PanelState::new(PanelId::EditorDrawer, DockPosition::Bottom, 0.35, true),
             mixer_panel: PanelState::new(PanelId::Mixer, DockPosition::Bottom, 0.40, false),
-            channel_rack_panel: PanelState::new(PanelId::ChannelRack, DockPosition::Float, 0.30, false),
+            channel_rack_panel: PanelState::new(
+                PanelId::ChannelRack,
+                DockPosition::Float,
+                0.30,
+                false,
+            ),
             patcher_panel: PanelState::new(PanelId::Patcher, DockPosition::Float, 0.50, false),
             active_drawer_tab: DrawerTab::PianoRoll,
             detached_to_os_window: Vec::new(),
@@ -112,7 +117,9 @@ impl LayoutState {
             PanelId::Inspector => self.inspector.visible = !self.inspector.visible,
             PanelId::EditorDrawer => self.bottom_drawer.visible = !self.bottom_drawer.visible,
             PanelId::Mixer => self.mixer_panel.visible = !self.mixer_panel.visible,
-            PanelId::ChannelRack => self.channel_rack_panel.visible = !self.channel_rack_panel.visible,
+            PanelId::ChannelRack => {
+                self.channel_rack_panel.visible = !self.channel_rack_panel.visible
+            }
             PanelId::Patcher => self.patcher_panel.visible = !self.patcher_panel.visible,
             _ => {}
         }

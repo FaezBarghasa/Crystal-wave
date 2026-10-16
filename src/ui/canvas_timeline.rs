@@ -480,11 +480,7 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
         } else {
             Color::from_rgb8(0x13, 0x14, 0x18)
         };
-        frame.fill_rectangle(
-            Point::ORIGIN,
-            bounds.size(),
-            base_bg,
-        );
+        frame.fill_rectangle(Point::ORIGIN, bounds.size(), base_bg);
 
         // 2. Track Lanes (Alternating Charcoal & Slate)
         for i in 0..self.track_count {
@@ -573,7 +569,11 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                 let x_end = self.tick_to_x(clip.start_tick + clip.length_ticks, bounds.width);
                 let w = (x_end - x_start).max(6.0);
 
-                if x_start < bounds.width && x_end > 0.0 && y + h > RULER_HEIGHT && y < bounds.height {
+                if x_start < bounds.width
+                    && x_end > 0.0
+                    && y + h > RULER_HEIGHT
+                    && y < bounds.height
+                {
                     let (base_color, glyph) = match clip.kind {
                         ClipVisualKind::Audio { .. } => (
                             Color::from_rgb8(

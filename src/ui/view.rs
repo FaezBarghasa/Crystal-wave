@@ -583,16 +583,29 @@ impl CrystalWaveApp {
 
         // Top Drawer Tab Navigation Bar
         let tab_piano = button(text("Piano Roll [F7]").size(11))
-            .style(self.theme.button_style(self.layout.active_drawer_tab == crate::ui::layout::DrawerTab::PianoRoll))
-            .on_press(UiMessage::SelectDrawerTab(crate::ui::layout::DrawerTab::PianoRoll));
+            .style(self.theme.button_style(
+                self.layout.active_drawer_tab == crate::ui::layout::DrawerTab::PianoRoll,
+            ))
+            .on_press(UiMessage::SelectDrawerTab(
+                crate::ui::layout::DrawerTab::PianoRoll,
+            ));
 
         let tab_step = button(text("Step Sequencer [F6]").size(11))
-            .style(self.theme.button_style(self.layout.active_drawer_tab == crate::ui::layout::DrawerTab::StepSequencer))
-            .on_press(UiMessage::SelectDrawerTab(crate::ui::layout::DrawerTab::StepSequencer));
+            .style(self.theme.button_style(
+                self.layout.active_drawer_tab == crate::ui::layout::DrawerTab::StepSequencer,
+            ))
+            .on_press(UiMessage::SelectDrawerTab(
+                crate::ui::layout::DrawerTab::StepSequencer,
+            ));
 
-        let tab_mixer = button(text("Mixer Console [F9]").size(11))
-            .style(self.theme.button_style(self.layout.active_drawer_tab == crate::ui::layout::DrawerTab::Mixer))
-            .on_press(UiMessage::SelectDrawerTab(crate::ui::layout::DrawerTab::Mixer));
+        let tab_mixer =
+            button(text("Mixer Console [F9]").size(11))
+                .style(self.theme.button_style(
+                    self.layout.active_drawer_tab == crate::ui::layout::DrawerTab::Mixer,
+                ))
+                .on_press(UiMessage::SelectDrawerTab(
+                    crate::ui::layout::DrawerTab::Mixer,
+                ));
 
         let tab_patcher = button(text("Modular Patcher").size(11))
             .style(self.theme.button_style(false))
@@ -600,15 +613,9 @@ impl CrystalWaveApp {
 
         let close_btn = button(text("✕").size(10)).on_press(UiMessage::ToggleEditorDrawer);
 
-        let tab_bar = row![
-            tab_piano,
-            tab_step,
-            tab_mixer,
-            tab_patcher,
-            close_btn,
-        ]
-        .spacing(6)
-        .padding(4);
+        let tab_bar = row![tab_piano, tab_step, tab_mixer, tab_patcher, close_btn,]
+            .spacing(6)
+            .padding(4);
 
         // Drawer Content per Active Tab
         let content_element: Element<'_, UiMessage> = match self.layout.active_drawer_tab {
@@ -636,7 +643,11 @@ impl CrystalWaveApp {
                                 };
                                 iced::widget::button::Style {
                                     background: Some(iced::Background::Color(bg)),
-                                    text_color: if is_active { iced::Color::WHITE } else { self.theme.text_secondary },
+                                    text_color: if is_active {
+                                        iced::Color::WHITE
+                                    } else {
+                                        self.theme.text_secondary
+                                    },
                                     border: iced::Border {
                                         color: self.theme.border,
                                         width: 1.0,
@@ -675,16 +686,21 @@ impl CrystalWaveApp {
 
             crate::ui::layout::DrawerTab::PianoRoll => {
                 // Interactive Piano Roll with Alt-Tools & Polyphonic Ghost Notes
-                let btn_strum = button(text("Strum").size(10)).on_press(UiMessage::PianoRollQuickStrum);
-                let btn_flip_h = button(text("Flip H").size(10)).on_press(UiMessage::PianoRollFlipHorizontal);
-                let btn_flip_v = button(text("Flip V").size(10)).on_press(UiMessage::PianoRollFlipVertical);
-                let btn_chop = button(text("Chop 1/16").size(10)).on_press(UiMessage::PianoRollQuickChop);
-                let btn_add_c4 = button(text("+ Note C4").size(10)).on_press(UiMessage::PianoRollAddNote {
-                    channel_id: 0,
-                    key: 60,
-                    start_tick: self.playhead_tick,
-                    length_ticks: 960,
-                });
+                let btn_strum =
+                    button(text("Strum").size(10)).on_press(UiMessage::PianoRollQuickStrum);
+                let btn_flip_h =
+                    button(text("Flip H").size(10)).on_press(UiMessage::PianoRollFlipHorizontal);
+                let btn_flip_v =
+                    button(text("Flip V").size(10)).on_press(UiMessage::PianoRollFlipVertical);
+                let btn_chop =
+                    button(text("Chop 1/16").size(10)).on_press(UiMessage::PianoRollQuickChop);
+                let btn_add_c4 =
+                    button(text("+ Note C4").size(10)).on_press(UiMessage::PianoRollAddNote {
+                        channel_id: 0,
+                        key: 60,
+                        start_tick: self.playhead_tick,
+                        length_ticks: 960,
+                    });
 
                 let roll_header = row![
                     text("FL Studio Piano Roll (Ghost Polyphony: Active)").size(11),
@@ -693,7 +709,12 @@ impl CrystalWaveApp {
                     btn_flip_v,
                     btn_chop,
                     btn_add_c4,
-                    text(format!("Notes: {} | Scale: Chromatic | Grid: {}", self.piano_roll_notes.len(), self.snap_grid.label())).size(10),
+                    text(format!(
+                        "Notes: {} | Scale: Chromatic | Grid: {}",
+                        self.piano_roll_notes.len(),
+                        self.snap_grid.label()
+                    ))
+                    .size(10),
                 ]
                 .spacing(6);
 
@@ -713,7 +734,8 @@ impl CrystalWaveApp {
                 let mut notes_col = column![].spacing(3);
                 for note in &self.piano_roll_notes {
                     let slide_tag = if note.is_slide { " [Slide]" } else { "" };
-                    let del_btn = button(text("✕").size(9)).on_press(UiMessage::PianoRollDeleteNote(note.id));
+                    let del_btn =
+                        button(text("✕").size(9)).on_press(UiMessage::PianoRollDeleteNote(note.id));
 
                     notes_col = notes_col.push(
                         row![
@@ -792,14 +814,12 @@ impl CrystalWaveApp {
                 .into()
             }
 
-            crate::ui::layout::DrawerTab::Automation => {
-                column![
-                    text("Automation Curve Drawer").size(11),
-                    text("Select clip or parameter to edit spline curves").size(10),
-                ]
-                .spacing(4)
-                .into()
-            }
+            crate::ui::layout::DrawerTab::Automation => column![
+                text("Automation Curve Drawer").size(11),
+                text("Select clip or parameter to edit spline curves").size(10),
+            ]
+            .spacing(4)
+            .into(),
         };
 
         container(column![tab_bar, content_element].spacing(4))
@@ -825,7 +845,8 @@ impl CrystalWaveApp {
             .on_press(UiMessage::ExecuteCommand("logic".to_string()));
         let cmd_snap_16 = button(text("⚡ Grid: Snap to 1/16 Beat").size(11))
             .on_press(UiMessage::ExecuteCommand("snap".to_string()));
-        let cmd_close = button(text("✕ Close Palette").size(11)).on_press(UiMessage::ToggleCommandPalette);
+        let cmd_close =
+            button(text("✕ Close Palette").size(11)).on_press(UiMessage::ToggleCommandPalette);
 
         container(
             column![
@@ -846,4 +867,3 @@ impl CrystalWaveApp {
         .into()
     }
 }
-

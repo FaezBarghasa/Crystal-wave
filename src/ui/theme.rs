@@ -220,7 +220,10 @@ impl UiTheme {
     }
 
     /// Standard DAW button style
-    pub fn button_style<'a>(&'a self, active: bool) -> impl Fn(&iced::Theme, button::Status) -> button::Style + 'a {
+    pub fn button_style<'a>(
+        &'a self,
+        active: bool,
+    ) -> impl Fn(&iced::Theme, button::Status) -> button::Style + 'a {
         move |_theme, status| {
             let bg = if active {
                 self.accent
@@ -266,7 +269,10 @@ impl UiTheme {
     }
 
     /// Accent button style (Play, Bounce, Record)
-    pub fn accent_button_style<'a>(&'a self, color: Color) -> impl Fn(&iced::Theme, button::Status) -> button::Style + 'a {
+    pub fn accent_button_style<'a>(
+        &'a self,
+        color: Color,
+    ) -> impl Fn(&iced::Theme, button::Status) -> button::Style + 'a {
         move |_theme, status| {
             let bg = match status {
                 button::Status::Active => color,
