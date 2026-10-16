@@ -304,4 +304,133 @@ impl UiTheme {
             }
         }
     }
+
+    /// Luxury Vacuum Fluorescent Display (VFD) / OLED instrument panel container
+    pub fn oled_vfd_display_style(&self) -> container::Style {
+        let border_glow = match self.preset {
+            ThemePreset::Graphite => Color::from_rgba8(0x00, 0xa8, 0xff, 0.35),
+            ThemePreset::FlDarkOrange => Color::from_rgba8(0xf8, 0x8a, 0x36, 0.40),
+        };
+        container::Style {
+            background: Some(Background::Color(Color::from_rgb8(0x08, 0x09, 0x0d))),
+            text_color: Some(match self.preset {
+                ThemePreset::Graphite => Color::from_rgb8(0x5a, 0xe0, 0xff), // VFD Cyan
+                ThemePreset::FlDarkOrange => Color::from_rgb8(0xff, 0xb8, 0x5a), // FL Amber VFD
+            }),
+            border: Border {
+                color: border_glow,
+                width: 1.0,
+                radius: Radius::from(4.0),
+            },
+            shadow: Shadow::default(),
+            ..container::Style::default()
+        }
+    }
+
+    /// Studio hardware rack panel container with beveled chamfer
+    pub fn hardware_rack_style(&self) -> container::Style {
+        container::Style {
+            background: Some(Background::Color(self.surface)),
+            text_color: Some(self.text_primary),
+            border: Border {
+                color: self.border,
+                width: 1.0,
+                radius: Radius::from(2.0),
+            },
+            shadow: Shadow::default(),
+            ..container::Style::default()
+        }
+    }
+
+    /// Tactile 16-step sequencer button style with illuminated LED core
+    pub fn step_pad_style<'a>(
+        &'a self,
+        active: bool,
+        is_even_beat: bool,
+    ) -> impl Fn(&iced::Theme, button::Status) -> button::Style + 'a {
+        move |_theme, status| {
+            let (bg, border_col) = if active {
+                let col = self.accent;
+                match status {
+                    button::Status::Hovered => (
+                        Color {
+                            r: (col.r * 1.2).min(1.0),
+                            g: (col.g * 1.2).min(1.0),
+                            b: (col.b * 1.2).min(1.0),
+                            a: 1.0,
+                        },
+                        Color::WHITE,
+                    ),
+                    _ => (col, self.accent_active),
+                }
+            } else {
+                let base = if is_even_beat {
+                    self.step_even
+                } else {
+                    self.step_odd
+                };
+                match status {
+                    button::Status::Hovered => (
+                        Color {
+                            r: (base.r * 1.25).min(1.0),
+                            g: (base.g * 1.25).min(1.0),
+                            b: (base.b * 1.25).min(1.0),
+                            a: base.a,
+                        },
+                        self.border_focus,
+                    ),
+                    _ => (base, self.border),
+                }
+            };
+
+            button::Style {
+                background: Some(Background::Color(bg)),
+                text_color: if active {
+                    Color::WHITE
+                } else {
+                    self.text_muted
+                },
+                border: Border {
+                    color: border_col,
+                    width: if active { 1.5 } else { 1.0 },
+                    radius: Radius::from(3.0),
+                },
+                shadow: Shadow::default(),
+                ..button::Style::default()
+            }
+        }
+    }
+
+    /// Neve / SSL Console-Grade multi-segment meter color mapping for dBFS
+    pub fn meter_color_for_db(&self, db: f32) -> Color {
+        if db >= 0.0 {
+            self.meters[5] // Clip Red
+        } else if db >= -3.0 {
+            self.meters[4] // Orange
+        } else if db >= -6.0 {
+            self.meters[3] // Yellow
+        } else if db >= -12.0 {
+            self.meters[2] // Lime
+        } else if db >= -24.0 {
+            self.meters[1] // Emerald
+        } else {
+            self.meters[0] // Dark Green
+        }
+    }
+
+    /// Curated luxury track accent color for stem identification
+    pub fn track_accent_color(&self, index: usize) -> Color {
+        const TRACK_PALETTE: [Color; 8] = [
+            Color::from_rgb(0.00, 0.48, 1.00), // Sapphire Blue (Vocals)
+            Color::from_rgb(0.96, 0.42, 0.20), // Coral Orange (Drums)
+            Color::from_rgb(0.12, 0.78, 0.45), // Emerald Green (Bass)
+            Color::from_rgb(0.62, 0.28, 0.90), // Royal Amethyst (Synths/Keys)
+            Color::from_rgb(0.95, 0.72, 0.15), // Amber Gold (Lead / Guitar)
+            Color::from_rgb(0.15, 0.75, 0.85), // Electric Cyan (Percussion)
+            Color::from_rgb(0.92, 0.25, 0.45), // Ruby Pink (Effects / FX)
+            Color::from_rgb(0.55, 0.60, 0.70), // Platinum Slate (Aux / Bus)
+        ];
+        TRACK_PALETTE[index % TRACK_PALETTE.len()]
+    }
 }
+
