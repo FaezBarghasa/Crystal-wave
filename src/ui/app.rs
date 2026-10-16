@@ -413,9 +413,33 @@ impl CrystalWaveApp {
                     self.mixer.channels.clear();
                     let _ = self.mixer.add_channel("Master");
                 }
+                crate::ui::message::MenuCommand::OpenSession => {
+                    if let Ok(json) = std::fs::read_to_string("session_backup.cwave.json")
+                        && let Ok(project) = crate::format::ProjectLoader::from_json_str(&json)
+                    {
+                        self.load_project_session(project);
+                    }
+                    self.dirty = false;
+                }
                 crate::ui::message::MenuCommand::SaveSession
                 | crate::ui::message::MenuCommand::SaveSessionAs => {
-                    let project = crate::format::project_format::CrystalWaveProject::default();
+                    let cycle_range = if self.arrangement.timeline.loop_region.enabled {
+                        Some((
+                            self.arrangement.timeline.loop_region.start_tick,
+                            self.arrangement.timeline.loop_region.end_tick,
+                        ))
+                    } else {
+                        None
+                    };
+                    let project = crate::format::project_format::CrystalWaveProject::from_session(
+                        "Crystal Wave Session",
+                        self.mixer.sample_rate,
+                        self.workspace.lcd_diagnostic.project_tempo_bpm,
+                        self.workspace.lcd_diagnostic.time_signature,
+                        &self.arrangement.timeline.tracks,
+                        &self.mixer.channels,
+                        cycle_range,
+                    );
                     if let Ok(json) = crate::format::ProjectSerializer::to_json_string(&project) {
                         let _ = std::fs::write("session_backup.cwave.json", json);
                     }
@@ -474,6 +498,47 @@ impl CrystalWaveApp {
                         name,
                         TrackType::Software,
                     ));
+                    self.dirty = true;
+                }
+                crate::ui::message::MenuCommand::DuplicateTrack => {
+                    let sel_id = self.workspace.selected_track_id;
+                    if let Some(track) = self.arrangement.timeline.tracks.get(sel_id).cloned() {
+                        let new_id = self.arrangement.timeline.tracks.len();
+                        let mut dup_track = track;
+                        dup_track.id = new_id;
+                        dup_track.name = format!("{} (Copy)", dup_track.name);
+                        for r in &mut dup_track.regions {
+                            r.id += 1000;
+                            r.track_id = new_id;
+                        }
+                        let _ = self.mixer.add_channel(dup_track.name.clone());
+                        let _ = self.arrangement.timeline.add_track(dup_track);
+                    }
+                    self.dirty = true;
+                }
+                crate::ui::message::MenuCommand::FreezeTrack => {
+                    let sel_id = self.workspace.selected_track_id;
+                    if let Some(track) = self.arrangement.timeline.tracks.get_mut(sel_id) {
+                        track.is_frozen = !track.is_frozen;
+                    }
+                    self.dirty = true;
+                }
+                crate::ui::message::MenuCommand::DeleteTrack => {
+                    let sel_id = self.workspace.selected_track_id;
+                    if self.arrangement.timeline.tracks.len() > 1 && sel_id < self.arrangement.timeline.tracks.len() {
+                        self.arrangement.timeline.tracks.remove(sel_id);
+                        if sel_id < self.mixer.channels.len() {
+                            self.mixer.channels.remove(sel_id);
+                        }
+                        self.workspace.selected_track_id = self.workspace.selected_track_id.min(self.arrangement.timeline.tracks.len().saturating_sub(1));
+                    }
+                    self.dirty = true;
+                }
+                crate::ui::message::MenuCommand::Quantize => {
+                    for note in &mut self.piano_roll_notes {
+                        note.start_tick = ((note.start_tick + 120) / 240) * 240;
+                        note.length_ticks = ((note.length_ticks.max(240) + 120) / 240) * 240;
+                    }
                     self.dirty = true;
                 }
                 crate::ui::message::MenuCommand::SplitAtCursor => {
@@ -691,5 +756,71 @@ impl CrystalWaveApp {
         });
 
         iced::Subscription::batch([clock, keys])
+    }
+
+    /// Load and restore an entire project session into active timeline tracks and mixer
+    pub fn load_project_session(
+        &mut self,
+        project: crate::format::project_format::CrystalWaveProject,
+    ) {
+        self.workspace.lcd_diagnostic.project_tempo_bpm = project.metadata.bpm;
+        self.workspace.lcd_diagnostic.time_signature = project.metadata.time_signature;
+        self.arrangement.timeline.loop_region.enabled = project.cycle_loop_enabled;
+        self.arrangement.timeline.loop_region.start_tick = project.cycle_loop_start_tick;
+        self.arrangement.timeline.loop_region.end_tick = project.cycle_loop_end_tick;
+
+        self.arrangement.timeline.tracks.clear();
+        self.mixer.channels.clear();
+
+        for (idx, strk) in project.tracks.into_iter().enumerate() {
+            let trk_type = match strk.track_type.as_str() {
+                "Software" => TrackType::Software,
+                "Drum" => TrackType::Drum,
+                "Midi" => TrackType::Midi,
+                _ => TrackType::Audio,
+            };
+
+            let mut track = Track::new(idx, strk.name.clone(), trk_type);
+            track.gain_db = strk.volume_fader_db;
+            track.pan = strk.pan;
+            track.muted = strk.muted;
+            track.soloed = strk.solo;
+
+            for r in strk.regions {
+                let mut reg = Region::new(
+                    r.id,
+                    idx,
+                    r.name,
+                    r.start_tick,
+                    r.length_ticks,
+                    RegionKind::Audio {
+                        file_path: None,
+                        sample_offset: 0,
+                        sample_length: (r.length_ticks as usize) * 441,
+                    },
+                );
+                reg.muted = r.muted;
+                reg.gain_db = r.gain_db;
+                track.regions.push(reg);
+            }
+
+            let _ = self.mixer.add_channel(strk.name);
+            if let Some(ch) = self.mixer.channels.get_mut(idx) {
+                ch.volume_fader_db = strk.volume_fader_db;
+                ch.pan.balance = strk.pan;
+                ch.muted = strk.muted;
+                ch.solo = strk.solo;
+            }
+
+            let _ = self.arrangement.timeline.add_track(track);
+        }
+
+        if self.arrangement.timeline.tracks.is_empty() {
+            let trk = Track::new(0, "Audio 1", TrackType::Audio);
+            let _ = self.mixer.add_channel("Audio 1");
+            let _ = self.arrangement.timeline.add_track(trk);
+        }
+        self.workspace.selected_track_id = 0;
+        self.dirty = false;
     }
 }

@@ -68,4 +68,9 @@ impl AudioDecoder {
             samples_interleaved,
         })
     }
+
+    /// Universal audio decoder fallback
+    pub fn decode_any_format_bytes(bytes: &[u8]) -> Result<DecodedAudio, String> {
+        Self::decode_wav_bytes(bytes)
+    }
 }

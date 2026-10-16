@@ -88,4 +88,57 @@ impl CrystalWaveProject {
     pub fn add_track(&mut self, track: SerializedTrack) {
         self.tracks.push(track);
     }
+
+    /// Construct a fully serialized project snapshot from live DAW state
+    pub fn from_session(
+        name: &str,
+        sample_rate: f32,
+        bpm: f32,
+        time_sig: (u8, u8),
+        tracks: &[crate::timeline::track::Track],
+        channel_strips: &[crate::mixing::channel_strip::ChannelStrip],
+        loop_range: Option<(u64, u64)>,
+    ) -> Self {
+        let mut proj = Self::new(name, sample_rate, bpm);
+        proj.metadata.time_signature = time_sig;
+        if let Some((start, end)) = loop_range {
+            proj.cycle_loop_start_tick = start;
+            proj.cycle_loop_end_tick = end;
+            proj.cycle_loop_enabled = true;
+        }
+
+        for (idx, trk) in tracks.iter().enumerate() {
+            let ch = channel_strips.get(idx);
+            let fader_db = ch.map(|c| c.volume_fader_db).unwrap_or(trk.gain_db);
+            let pan = ch.map(|c| c.pan.balance).unwrap_or(trk.pan);
+            let muted = ch.map(|c| c.muted).unwrap_or(trk.muted);
+            let solo = ch.map(|c| c.solo).unwrap_or(trk.soloed);
+
+            let regions: Vec<SerializedRegion> = trk
+                .regions
+                .iter()
+                .map(|r| SerializedRegion {
+                    id: r.id,
+                    track_id: r.track_id,
+                    name: r.name.clone(),
+                    start_tick: r.start_tick,
+                    length_ticks: r.length_ticks,
+                    muted: r.muted,
+                    gain_db: r.gain_db,
+                })
+                .collect();
+
+            proj.add_track(SerializedTrack {
+                id: trk.id,
+                name: trk.name.clone(),
+                track_type: format!("{:?}", trk.track_type),
+                volume_fader_db: fader_db,
+                pan,
+                muted,
+                solo,
+                regions,
+            });
+        }
+        proj
+    }
 }
