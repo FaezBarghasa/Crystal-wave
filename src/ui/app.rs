@@ -525,12 +525,17 @@ impl CrystalWaveApp {
                 }
                 crate::ui::message::MenuCommand::DeleteTrack => {
                     let sel_id = self.workspace.selected_track_id;
-                    if self.arrangement.timeline.tracks.len() > 1 && sel_id < self.arrangement.timeline.tracks.len() {
+                    if self.arrangement.timeline.tracks.len() > 1
+                        && sel_id < self.arrangement.timeline.tracks.len()
+                    {
                         self.arrangement.timeline.tracks.remove(sel_id);
                         if sel_id < self.mixer.channels.len() {
                             self.mixer.channels.remove(sel_id);
                         }
-                        self.workspace.selected_track_id = self.workspace.selected_track_id.min(self.arrangement.timeline.tracks.len().saturating_sub(1));
+                        self.workspace.selected_track_id = self
+                            .workspace
+                            .selected_track_id
+                            .min(self.arrangement.timeline.tracks.len().saturating_sub(1));
                     }
                     self.dirty = true;
                 }
@@ -664,6 +669,38 @@ impl CrystalWaveApp {
                         }
                         break;
                     }
+                }
+                self.dirty = true;
+            }
+
+            UiMessage::SelectRegion(region_id) => {
+                for (trk_idx, track) in self.arrangement.timeline.tracks.iter().enumerate() {
+                    if track.regions.iter().any(|r| r.id == region_id) {
+                        self.workspace.selected_track_id = trk_idx;
+                        break;
+                    }
+                }
+            }
+
+            UiMessage::SetCycleRange {
+                start_tick,
+                end_tick,
+            } => {
+                self.arrangement.timeline.loop_region.enabled = true;
+                self.arrangement.timeline.loop_region.start_tick = start_tick;
+                self.arrangement.timeline.loop_region.end_tick = end_tick.max(start_tick + 240);
+                self.dirty = true;
+            }
+
+            UiMessage::ToggleTrackRecordArm(track_id) => {
+                if let Some(track) = self.arrangement.timeline.tracks.get_mut(track_id) {
+                    track.record_armed = !track.record_armed;
+                }
+            }
+
+            UiMessage::ToggleTrackFreeze(track_id) => {
+                if let Some(track) = self.arrangement.timeline.tracks.get_mut(track_id) {
+                    track.is_frozen = !track.is_frozen;
                 }
                 self.dirty = true;
             }

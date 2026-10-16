@@ -312,19 +312,120 @@ impl CrystalWaveApp {
             content = content.push(rack_panel);
         }
 
-        // 4. FL Studio Playlist (F5) Arrangement Timeline Canvas with Clip Drag-and-Drop
+        // 4. Apple Logic Pro Professional Arrangement Timeline & Track Headers
         if self.fl_windows.playlist_visible {
+            let mut track_headers = column![
+                // Top Ruler spacer bar matching RULER_HEIGHT = 30.0
+                container(
+                    row![
+                        text("TRACKS").size(10),
+                        button(text("+ Aud").size(9))
+                            .padding(2)
+                            .on_press(UiMessage::MenuAction(MenuCommand::AddAudioTrack)),
+                        button(text("+ Inst").size(9))
+                            .padding(2)
+                            .on_press(UiMessage::MenuAction(MenuCommand::AddMidiTrack)),
+                    ]
+                    .spacing(4)
+                )
+                .height(Length::Fixed(crate::ui::canvas_timeline::RULER_HEIGHT))
+                .width(Length::Fill)
+                .padding(4),
+            ];
+
             let mut canvas_program = crate::ui::canvas_timeline::ArrangementCanvasProgram::new(
                 self.playhead_tick,
                 self.arrangement.horizontal_zoom,
-                self.mixer
-                    .channels
-                    .len()
-                    .max(self.arrangement.timeline.tracks.len()),
+                self.arrangement.timeline.tracks.len().max(1),
             );
 
+            canvas_program.selected_track_id = self.workspace.selected_track_id;
+            canvas_program.loop_range = if self.arrangement.timeline.loop_region.enabled {
+                Some((
+                    self.arrangement.timeline.loop_region.start_tick,
+                    self.arrangement.timeline.loop_region.end_tick,
+                ))
+            } else {
+                None
+            };
+
             for (trk_idx, track) in self.arrangement.timeline.tracks.iter().enumerate() {
+                let is_selected = trk_idx == self.workspace.selected_track_id;
+                let ch_muted = self
+                    .mixer
+                    .channels
+                    .get(trk_idx)
+                    .map(|c| c.muted)
+                    .unwrap_or(false);
+                let ch_solo = self
+                    .mixer
+                    .channels
+                    .get(trk_idx)
+                    .map(|c| c.solo)
+                    .unwrap_or(false);
+                let is_muted = track.muted || ch_muted;
+                let is_solo = track.soloed || ch_solo;
+
+                let type_badge = match track.track_type {
+                    crate::timeline::track::TrackType::Audio => "AUD",
+                    crate::timeline::track::TrackType::Software => "INST",
+                    crate::timeline::track::TrackType::Drum => "DRUM",
+                    crate::timeline::track::TrackType::Midi => "MIDI",
+                    crate::timeline::track::TrackType::Aux => "AUX",
+                    crate::timeline::track::TrackType::Master => "MST",
+                };
+
+                let mute_btn = button(text(if is_muted { "M" } else { "m" }).size(10))
+                    .padding(3)
+                    .on_press(UiMessage::ToggleTrackMute(trk_idx));
+
+                let solo_btn = button(text(if is_solo { "S" } else { "s" }).size(10))
+                    .padding(3)
+                    .on_press(UiMessage::ToggleTrackSolo(trk_idx));
+
+                let rec_btn = button(text(if track.record_armed { "R" } else { "r" }).size(10))
+                    .padding(3)
+                    .on_press(UiMessage::ToggleTrackRecordArm(trk_idx));
+
+                let freeze_btn = button(text(if track.is_frozen { "❄" } else { "·" }).size(10))
+                    .padding(3)
+                    .on_press(UiMessage::ToggleTrackFreeze(trk_idx));
+
+                let track_card = container(
+                    column![
+                        row![
+                            text(type_badge).size(9),
+                            button(text(&track.name).size(11))
+                                .padding(1)
+                                .on_press(UiMessage::SelectTrack(trk_idx)),
+                        ]
+                        .spacing(4),
+                        row![mute_btn, solo_btn, rec_btn, freeze_btn].spacing(3),
+                        text(format!("{:.1} dB | Pan {:.2}", track.gain_db, track.pan)).size(9),
+                    ]
+                    .spacing(2),
+                )
+                .height(Length::Fixed(crate::ui::canvas_timeline::LANE_HEIGHT))
+                .width(Length::Fill)
+                .padding(4);
+
+                track_headers = track_headers.push(track_card);
+
                 for region in &track.regions {
+                    let visual_kind = match &region.kind {
+                        crate::timeline::region::RegionKind::Audio { .. } => {
+                            crate::ui::canvas_timeline::ClipVisualKind::Audio {
+                                waveform_peaks: Vec::new(),
+                            }
+                        }
+                        crate::timeline::region::RegionKind::Midi { .. } => {
+                            crate::ui::canvas_timeline::ClipVisualKind::Midi { notes: Vec::new() }
+                        }
+                        crate::timeline::region::RegionKind::Pattern { .. } => {
+                            crate::ui::canvas_timeline::ClipVisualKind::Pattern
+                        }
+                    };
+
                     canvas_program
                         .clips
                         .push(crate::ui::canvas_timeline::TimelineClipDisplay {
@@ -334,13 +435,26 @@ impl CrystalWaveApp {
                             length_ticks: region.length_ticks,
                             name: region.name.clone(),
                             color_rgb: [track.color.r, track.color.g, track.color.b],
+                            muted: region.muted || is_muted,
+                            looped: region.looped,
+                            fade_in_ticks: region.fade.in_ticks,
+                            fade_out_ticks: region.fade.out_ticks,
+                            kind: visual_kind,
+                            is_selected,
                         });
                 }
             }
 
+            let track_header_column = container(track_headers).width(Length::Fixed(200.0));
             let arrangement_canvas =
                 crate::ui::canvas_timeline::view_canvas_timeline(canvas_program);
-            content = content.push(arrangement_canvas);
+
+            let logic_timeline = row![track_header_column, arrangement_canvas]
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .spacing(1);
+
+            content = content.push(logic_timeline);
         }
 
         // 5. Plugin Manager Sidebar

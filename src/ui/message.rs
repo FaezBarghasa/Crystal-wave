@@ -101,6 +101,13 @@ pub enum UiMessage {
         fade_in_ticks: Option<u64>,
         fade_out_ticks: Option<u64>,
     },
+    SelectRegion(usize),
+    SetCycleRange {
+        start_tick: u64,
+        end_tick: u64,
+    },
+    ToggleTrackRecordArm(usize),
+    ToggleTrackFreeze(usize),
 
     // FL Studio Piano Roll Articulations & Tools
     PianoRollQuickStrum,
