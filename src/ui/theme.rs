@@ -305,6 +305,21 @@ impl UiTheme {
         }
     }
 
+    /// Toggleable accent button style (inactive surface vs active illuminated color)
+    pub fn toggle_accent_button_style<'a>(
+        &'a self,
+        active: bool,
+        color: Color,
+    ) -> impl Fn(&iced::Theme, button::Status) -> button::Style + 'a {
+        move |_theme, status| {
+            if active {
+                (self.accent_button_style(color))(_theme, status)
+            } else {
+                (self.button_style(false))(_theme, status)
+            }
+        }
+    }
+
     /// Luxury Vacuum Fluorescent Display (VFD) / OLED instrument panel container
     pub fn oled_vfd_display_style(&self) -> container::Style {
         let border_glow = match self.preset {
@@ -433,4 +448,3 @@ impl UiTheme {
         TRACK_PALETTE[index % TRACK_PALETTE.len()]
     }
 }
-

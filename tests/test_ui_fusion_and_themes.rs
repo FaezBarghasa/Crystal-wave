@@ -32,6 +32,25 @@ fn test_ui_theme_tokens_and_presets() {
     assert!(panel_style.background.is_some());
     let header_style = fl_orange.header_container_style();
     assert!(header_style.background.is_some());
+
+    // Luxury Hardware & OLED Display Containers
+    let oled_style = fl_orange.oled_vfd_display_style();
+    assert!(oled_style.background.is_some());
+    let rack_style = graphite.hardware_rack_style();
+    assert!(rack_style.background.is_some());
+
+    // Studio Meter Color Mapping (-60 dB to +6 dB clip)
+    assert_eq!(graphite.meter_color_for_db(-30.0), graphite.meters[0]);
+    assert_eq!(graphite.meter_color_for_db(-15.0), graphite.meters[1]);
+    assert_eq!(graphite.meter_color_for_db(-8.0), graphite.meters[2]);
+    assert_eq!(graphite.meter_color_for_db(-4.0), graphite.meters[3]);
+    assert_eq!(graphite.meter_color_for_db(-1.5), graphite.meters[4]);
+    assert_eq!(graphite.meter_color_for_db(0.5), graphite.meters[5]); // Clip Red
+
+    // Curated Track Palette
+    let track_0 = graphite.track_accent_color(0);
+    let track_1 = graphite.track_accent_color(1);
+    assert_ne!(track_0, track_1);
 }
 
 #[test]

@@ -482,7 +482,7 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
         };
         frame.fill_rectangle(Point::ORIGIN, bounds.size(), base_bg);
 
-        // 2. Track Lanes (Alternating Charcoal & Slate)
+        // 2. Track Lanes (Alternating Charcoal & Slate with Hardware Rack Depth)
         for i in 0..self.track_count {
             let y = self.track_to_y(i);
             if y + LANE_HEIGHT < RULER_HEIGHT || y > bounds.height {
@@ -491,14 +491,14 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
 
             let bg_color = if i == self.selected_track_id {
                 if self.is_fl_theme {
-                    Color::from_rgb8(0x2a, 0x22, 0x1c)
+                    Color::from_rgb8(0x2d, 0x24, 0x1d)
                 } else {
-                    Color::from_rgb8(0x22, 0x27, 0x33) // Highlighted selected track
+                    Color::from_rgb8(0x23, 0x2a, 0x36) // Highlighted selected track
                 }
             } else if i % 2 == 0 {
-                Color::from_rgb8(0x1b, 0x1d, 0x22)
+                Color::from_rgb8(0x1a, 0x1c, 0x22)
             } else {
-                Color::from_rgb8(0x20, 0x23, 0x29)
+                Color::from_rgb8(0x1f, 0x22, 0x28)
             };
 
             frame.fill_rectangle(
@@ -507,7 +507,30 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                 bg_color,
             );
 
-            // 1px Horizontal Lane Separator Divider
+            // 1px Top Highlight for Hardware Rack Bevel Depth
+            let top_highlight = Path::line(Point::new(0.0, y), Point::new(bounds.width, y));
+            frame.stroke(
+                &top_highlight,
+                Stroke::default()
+                    .with_color(Color::from_rgba8(255, 255, 255, 0.03))
+                    .with_width(1.0),
+            );
+
+            // Left Indicator Strip for Selected Track
+            if i == self.selected_track_id {
+                let accent_col = if self.is_fl_theme {
+                    Color::from_rgb8(0xf8, 0x8a, 0x36)
+                } else {
+                    Color::from_rgb8(0x00, 0x7a, 0xff)
+                };
+                frame.fill_rectangle(
+                    Point::new(0.0, y),
+                    Size::new(3.0, LANE_HEIGHT - 1.0),
+                    accent_col,
+                );
+            }
+
+            // 1px Horizontal Bottom Groove Divider
             let divider = Path::line(
                 Point::new(0.0, y + LANE_HEIGHT - 1.0),
                 Point::new(bounds.width, y + LANE_HEIGHT - 1.0),
@@ -515,7 +538,7 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
             frame.stroke(
                 &divider,
                 Stroke::default()
-                    .with_color(Color::from_rgb8(0x13, 0x14, 0x18))
+                    .with_color(Color::from_rgba8(0, 0, 0, 0.45))
                     .with_width(1.0),
             );
         }
@@ -604,9 +627,18 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                         base_color
                     };
 
-                    // 4a. Region Base Body (3px rounded rectangle)
+                    // 4a. Region Base Body (4px rounded rectangle)
                     let card_rect = Path::rectangle(Point::new(x_start, y), Size::new(w, h));
                     frame.fill(&card_rect, effective_color);
+
+                    // 1px Glossy Top Acrylic Highlight
+                    let gloss_line = Path::line(Point::new(x_start, y), Point::new(x_start + w, y));
+                    frame.stroke(
+                        &gloss_line,
+                        Stroke::default()
+                            .with_color(Color::from_rgba8(255, 255, 255, 0.25))
+                            .with_width(1.0),
+                    );
 
                     // 4b. Top Region Header Bar (16px translucent overlay)
                     let header_h = 16.0;
@@ -649,7 +681,7 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                                     .with_width(0.8),
                             );
 
-                            // Draw Waveform Peak Contours
+                            // Draw Waveform with Filled RMS Energy Silhouette + Peak Contours
                             let num_bars = ((w / 3.0) as usize).clamp(4, 256);
                             for step in 0..num_bars {
                                 let bar_x = x_start + (step as f32 * 3.0);
@@ -665,6 +697,15 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                                 };
 
                                 let bar_half_h = (body_h * 0.45) * amp;
+
+                                // Translucent filled RMS energy block
+                                frame.fill_rectangle(
+                                    Point::new(bar_x - 0.5, mid_y - bar_half_h),
+                                    Size::new(2.0, bar_half_h * 2.0),
+                                    Color::from_rgba8(255, 255, 255, 0.18),
+                                );
+
+                                // Crisp outer peak line
                                 let peak_line = Path::line(
                                     Point::new(bar_x, mid_y - bar_half_h),
                                     Point::new(bar_x, mid_y + bar_half_h),
@@ -672,8 +713,8 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                                 frame.stroke(
                                     &peak_line,
                                     Stroke::default()
-                                        .with_color(Color::from_rgba8(230, 245, 255, 0.75))
-                                        .with_width(1.5),
+                                        .with_color(Color::from_rgba8(240, 250, 255, 0.85))
+                                        .with_width(1.2),
                                 );
                             }
                         }
@@ -731,7 +772,7 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                         }
                     }
 
-                    // 4d. Fade-In and Fade-Out Curve Visuals
+                    // 4d. Fade-In and Fade-Out Curve Visuals with Tactile Handles
                     if clip.fade_in_ticks > 0 {
                         let fi_w = (self
                             .tick_to_x(clip.start_tick + clip.fade_in_ticks, bounds.width)
@@ -744,6 +785,10 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                             p.close();
                         });
                         frame.fill(&fade_tri, Color::from_rgba8(0, 0, 0, 0.35));
+
+                        // Tactile node handle
+                        let handle = Path::circle(Point::new(x_start + fi_w, body_y + 2.0), 2.5);
+                        frame.fill(&handle, Color::from_rgba8(255, 255, 255, 0.85));
                     }
                     if clip.fade_out_ticks > 0 {
                         let fo_w = (x_end
@@ -760,6 +805,10 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                             p.close();
                         });
                         frame.fill(&fade_tri, Color::from_rgba8(0, 0, 0, 0.35));
+
+                        // Tactile node handle
+                        let handle = Path::circle(Point::new(x_end - fo_w, body_y + 2.0), 2.5);
+                        frame.fill(&handle, Color::from_rgba8(255, 255, 255, 0.85));
                     }
 
                     // 4e. Loop Notch Indicator (Logic Pro rounded corner loop notch)
@@ -873,7 +922,16 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                     cycle_color,
                 );
 
-                // Start Bracket Handle '['
+                // 1px Glossy Top Shine along Cycle Bar
+                let cycle_shine = Path::line(Point::new(start_x, 1.5), Point::new(end_x, 1.5));
+                frame.stroke(
+                    &cycle_shine,
+                    Stroke::default()
+                        .with_color(Color::from_rgba8(255, 255, 255, 0.45))
+                        .with_width(1.0),
+                );
+
+                // Start Bracket Handle '[' with Embossed Tactile Grip
                 let left_bracket = Path::line(
                     Point::new(start_x + 1.0, 1.0),
                     Point::new(start_x + 1.0, 12.0),
@@ -882,13 +940,31 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                     &left_bracket,
                     Stroke::default().with_color(Color::WHITE).with_width(2.0),
                 );
+                // Tactile rib marks
+                let rib1 = Path::line(
+                    Point::new(start_x + 3.0, 3.0),
+                    Point::new(start_x + 3.0, 10.0),
+                );
+                frame.stroke(
+                    &rib1,
+                    Stroke::default()
+                        .with_color(Color::from_rgba8(0, 0, 0, 0.35))
+                        .with_width(1.0),
+                );
 
-                // Right Bracket Handle ']'
+                // Right Bracket Handle ']' with Embossed Tactile Grip
                 let right_bracket =
                     Path::line(Point::new(end_x - 1.0, 1.0), Point::new(end_x - 1.0, 12.0));
                 frame.stroke(
                     &right_bracket,
                     Stroke::default().with_color(Color::WHITE).with_width(2.0),
+                );
+                let rib2 = Path::line(Point::new(end_x - 3.0, 3.0), Point::new(end_x - 3.0, 10.0));
+                frame.stroke(
+                    &rib2,
+                    Stroke::default()
+                        .with_color(Color::from_rgba8(0, 0, 0, 0.35))
+                        .with_width(1.0),
                 );
 
                 // Cycle Bar Label
@@ -896,7 +972,7 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                 let bar_end = (end_tick / TICKS_PER_BAR) + 1;
                 frame.fill_text(canvas::Text {
                     content: format!("CYCLE [{}-{}]", bar_start, bar_end),
-                    position: Point::new(start_x + 6.0, 2.0),
+                    position: Point::new(start_x + 7.0, 2.0),
                     color: Color::from_rgb8(0x20, 0x15, 0x05),
                     size: 8.0.into(),
                     ..Default::default()
@@ -904,7 +980,7 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
             }
         }
 
-        // 5b. Ruler Bar Numbers and Beat Hash Marks
+        // 5b. Ruler Bar Numbers and Precision Sub-Beat Hash Marks
         let mut ruler_tick = self.visible_start_tick;
         while ruler_tick <= self.visible_end_tick {
             let x = self.tick_to_x(ruler_tick, bounds.width);
@@ -920,7 +996,7 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                             .with_width(1.2),
                     );
 
-                    // Bar Number Text
+                    // Bar Number Text with Sub-pixel Baseline
                     frame.fill_text(canvas::Text {
                         content: format!("{}", bar_num),
                         position: Point::new(x + 3.0, 14.0),
@@ -930,22 +1006,44 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                     });
                 } else if ruler_tick.is_multiple_of(PPQN) {
                     // Beat Hash Mark
-                    let tick_line = Path::line(Point::new(x, 22.0), Point::new(x, RULER_HEIGHT));
+                    let tick_line = Path::line(Point::new(x, 20.0), Point::new(x, RULER_HEIGHT));
                     frame.stroke(
                         &tick_line,
                         Stroke::default()
-                            .with_color(Color::from_rgb8(0x6b, 0x72, 0x80))
-                            .with_width(0.8),
+                            .with_color(Color::from_rgb8(0x8a, 0x90, 0xa0))
+                            .with_width(0.9),
+                    );
+                } else if self.horizontal_zoom >= 1.5 && ruler_tick.is_multiple_of(PPQN / 2) {
+                    // 8th Note Sub-tick
+                    let tick_line = Path::line(Point::new(x, 24.0), Point::new(x, RULER_HEIGHT));
+                    frame.stroke(
+                        &tick_line,
+                        Stroke::default()
+                            .with_color(Color::from_rgba8(0x6b, 0x72, 0x80, 0.70))
+                            .with_width(0.7),
                     );
                 }
             }
-            ruler_tick += PPQN;
+            ruler_tick += 240; // 16th Note resolution
         }
 
-        // 6. Logic Pro Iconic Playhead
+        // 6. Logic Pro / FL Studio Iconic Glowing Laser Playhead
         let playhead_x = self.tick_to_x(self.playhead_tick, bounds.width);
+        let accent_glow = if self.is_fl_theme {
+            Color::from_rgba8(0xf8, 0x8a, 0x36, 0.40)
+        } else {
+            Color::from_rgba8(0x00, 0xa8, 0xff, 0.40)
+        };
 
-        // 6a. Playhead Downward Triangle Head in Ruler
+        // 6a. Playhead Downward Jewel-Cut Arrow Head in Ruler with Drop Shadow
+        let shadow_head = Path::new(|p| {
+            p.move_to(Point::new(playhead_x - 6.0, 3.0));
+            p.line_to(Point::new(playhead_x + 6.0, 3.0));
+            p.line_to(Point::new(playhead_x, RULER_HEIGHT - 1.0));
+            p.close();
+        });
+        frame.fill(&shadow_head, Color::from_rgba8(0, 0, 0, 0.50));
+
         let triangle_head = Path::new(|p| {
             p.move_to(Point::new(playhead_x - 6.0, 2.0));
             p.line_to(Point::new(playhead_x + 6.0, 2.0));
@@ -954,14 +1052,40 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
         });
         frame.fill(&triangle_head, Color::WHITE);
 
-        // 6b. Playhead Laser Guide Line extending across all lanes
-        let playhead_laser = Path::line(
+        // Center jewel pip inside triangle
+        let pip = Path::circle(Point::new(playhead_x, 8.0), 1.5);
+        frame.fill(
+            &pip,
+            if self.is_fl_theme {
+                Color::from_rgb8(0xf8, 0x8a, 0x36)
+            } else {
+                Color::from_rgb8(0x00, 0x7a, 0xff)
+            },
+        );
+
+        // 6b. Multi-Layer Playhead Laser Guide Line extending across all lanes
+        // Outer soft halo wash (6px)
+        let halo_line = Path::line(
             Point::new(playhead_x, RULER_HEIGHT),
             Point::new(playhead_x, bounds.height),
         );
         frame.stroke(
-            &playhead_laser,
-            Stroke::default().with_color(Color::WHITE).with_width(1.5),
+            &halo_line,
+            Stroke::default()
+                .with_color(Color::from_rgba8(255, 255, 255, 0.08))
+                .with_width(6.0),
+        );
+
+        // Mid neon aura (3px)
+        frame.stroke(
+            &halo_line,
+            Stroke::default().with_color(accent_glow).with_width(3.0),
+        );
+
+        // Razor-sharp core laser needle (1.2px pure white)
+        frame.stroke(
+            &halo_line,
+            Stroke::default().with_color(Color::WHITE).with_width(1.2),
         );
 
         vec![frame.into_geometry()]

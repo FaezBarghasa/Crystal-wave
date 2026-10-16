@@ -178,28 +178,108 @@ impl CrystalWaveApp {
     }
 
     fn view_control_bar(&self) -> Element<'_, UiMessage> {
-        let play_btn = button(text(if self.is_playing { "Pause" } else { "Play" }).size(12))
-            .on_press(if self.is_playing {
-                UiMessage::TransportPause
+        let play_btn = button(
+            text(if self.is_playing {
+                "⏸ PAUSE"
             } else {
-                UiMessage::TransportPlay
-            });
-        let stop_btn = button(text("Stop").size(12)).on_press(UiMessage::TransportStop);
-        let record_btn = button(text("Record").size(12)).on_press(UiMessage::TransportRecord);
-
-        let lcd = container(
-            text(format!(
-                "BPM: {:.1} | Sig: {}/{} | Pos: {} | A4: {:.1}Hz | CPU: {:.1}%",
-                self.workspace.lcd_diagnostic.project_tempo_bpm,
-                self.workspace.lcd_diagnostic.time_signature.0,
-                self.workspace.lcd_diagnostic.time_signature.1,
-                self.playhead_tick,
-                self.workspace.lcd_diagnostic.master_tuning_hz,
-                self.workspace.lcd_diagnostic.cpu_load_percent,
-            ))
+                "▶ PLAY"
+            })
             .size(11),
         )
-        .padding(5);
+        .style(self.theme.accent_button_style(if self.is_playing {
+            iced::Color::from_rgb8(0xe5, 0xa9, 0x3c)
+        } else {
+            iced::Color::from_rgb8(0x2e, 0xcc, 0x71)
+        }))
+        .on_press(if self.is_playing {
+            UiMessage::TransportPause
+        } else {
+            UiMessage::TransportPlay
+        });
+
+        let stop_btn = button(text("■ STOP").size(11))
+            .style(self.theme.button_style(false))
+            .on_press(UiMessage::TransportStop);
+
+        let record_btn = button(
+            text(if self.is_recording {
+                "● REC [ON]"
+            } else {
+                "● REC"
+            })
+            .size(11),
+        )
+        .style(self.theme.accent_button_style(self.theme.record))
+        .on_press(UiMessage::TransportRecord);
+
+        let cycle_btn = button(text("🔁 CYCLE").size(11))
+            .style(
+                self.theme
+                    .button_style(self.arrangement.timeline.loop_region.enabled),
+            )
+            .on_press(UiMessage::TransportToggleLoop);
+
+        // 1. Time Display Panel (Bar:Beat:Tick & SMPTE Timecode)
+        let bar = (self.playhead_tick / 3840) + 1;
+        let beat = ((self.playhead_tick % 3840) / 960) + 1;
+        let tick = self.playhead_tick % 960;
+        let total_seconds = self.playhead_tick as f64 / 1920.0;
+        let mins = (total_seconds / 60.0) as u32;
+        let secs = (total_seconds % 60.0) as u32;
+        let millis = ((total_seconds * 1000.0) % 1000.0) as u32;
+
+        let time_lcd = container(
+            column![
+                text(format!("{:03} . {:02} . {:03}", bar, beat, tick)).size(12),
+                text(format!(
+                    "SMPTE {:02}:{:02}:{:02}.{:03}",
+                    mins / 60,
+                    mins % 60,
+                    secs,
+                    millis
+                ))
+                .size(9),
+            ]
+            .spacing(1),
+        )
+        .style(|_t| self.theme.oled_vfd_display_style())
+        .padding(4);
+
+        // 2. Tempo & Signature Hub
+        let tempo_lcd = container(
+            column![
+                text(format!(
+                    "{:.2} BPM  {}/{}",
+                    self.workspace.lcd_diagnostic.project_tempo_bpm,
+                    self.workspace.lcd_diagnostic.time_signature.0,
+                    self.workspace.lcd_diagnostic.time_signature.1
+                ))
+                .size(11),
+                text(format!(
+                    "KEY: C min | A4: {:.1} Hz",
+                    self.workspace.lcd_diagnostic.master_tuning_hz
+                ))
+                .size(9),
+            ]
+            .spacing(1),
+        )
+        .style(|_t| self.theme.oled_vfd_display_style())
+        .padding(4);
+
+        // 3. Audio Engine DSP & System Telemetry
+        let dsp_lcd = container(
+            column![
+                text(format!(
+                    "DSP: {:.1}% | 2.6ms",
+                    self.workspace.lcd_diagnostic.cpu_load_percent
+                ))
+                .size(11),
+                text("48.0 kHz | 128 spl | 32v").size(9),
+            ]
+            .spacing(1),
+        )
+        .style(|_t| self.theme.oled_vfd_display_style())
+        .padding(4);
 
         let tune_440_btn =
             button(text("440 Hz").size(10)).on_press(UiMessage::SetMasterTuning(440.0));
@@ -212,7 +292,10 @@ impl CrystalWaveApp {
             play_btn,
             stop_btn,
             record_btn,
-            lcd,
+            cycle_btn,
+            time_lcd,
+            tempo_lcd,
+            dsp_lcd,
             tune_440_btn,
             tune_432_btn,
             tune_434_btn
@@ -428,39 +511,101 @@ impl CrystalWaveApp {
                     crate::timeline::track::TrackType::Master => "MST",
                 };
 
-                let mute_btn = button(text(if is_muted { "M" } else { "m" }).size(10))
+                let track_accent = self.theme.track_accent_color(trk_idx);
+
+                let mute_btn = button(text("M").size(10))
                     .padding(3)
+                    .style(
+                        self.theme
+                            .toggle_accent_button_style(is_muted, self.theme.mute),
+                    )
                     .on_press(UiMessage::ToggleTrackMute(trk_idx));
 
-                let solo_btn = button(text(if is_solo { "S" } else { "s" }).size(10))
+                let solo_btn = button(text("S").size(10))
                     .padding(3)
+                    .style(
+                        self.theme
+                            .toggle_accent_button_style(is_solo, self.theme.solo),
+                    )
                     .on_press(UiMessage::ToggleTrackSolo(trk_idx));
 
-                let rec_btn = button(text(if track.record_armed { "R" } else { "r" }).size(10))
+                let rec_btn = button(text(if track.record_armed { "● R" } else { "R" }).size(10))
                     .padding(3)
+                    .style(
+                        self.theme
+                            .toggle_accent_button_style(track.record_armed, self.theme.record),
+                    )
                     .on_press(UiMessage::ToggleTrackRecordArm(trk_idx));
 
                 let freeze_btn = button(text(if track.is_frozen { "❄" } else { "·" }).size(10))
                     .padding(3)
+                    .style(self.theme.button_style(track.is_frozen))
                     .on_press(UiMessage::ToggleTrackFreeze(trk_idx));
 
-                let track_card = container(
-                    column![
-                        row![
-                            text(type_badge).size(9),
-                            button(text(&track.name).size(11))
-                                .padding(1)
-                                .on_press(UiMessage::SelectTrack(trk_idx)),
-                        ]
-                        .spacing(4),
-                        row![mute_btn, solo_btn, rec_btn, freeze_btn].spacing(3),
-                        text(format!("{:.1} dB | Pan {:.2}", track.gain_db, track.pan)).size(9),
+                let pan_txt = if track.pan.abs() < 0.05 {
+                    "Pan: C".to_string()
+                } else if track.pan < 0.0 {
+                    format!("Pan: L{:.0}%", (-track.pan) * 100.0)
+                } else {
+                    format!("Pan: R{:.0}%", track.pan * 100.0)
+                };
+
+                // Vertical color ribbon on left edge
+                let accent_strip = container(column![])
+                    .width(Length::Fixed(4.0))
+                    .height(Length::Fill)
+                    .style(move |_t| container::Style {
+                        background: Some(iced::Background::Color(track_accent)),
+                        ..container::Style::default()
+                    });
+
+                let track_inner = column![
+                    row![
+                        container(text(type_badge).size(9))
+                            .padding(2)
+                            .style(move |_t| container::Style {
+                                background: Some(iced::Background::Color(iced::Color::from_rgba8(
+                                    0, 0, 0, 0.35
+                                ))),
+                                border: iced::Border {
+                                    color: track_accent,
+                                    width: 1.0,
+                                    radius: iced::border::Radius::from(3.0),
+                                },
+                                ..container::Style::default()
+                            }),
+                        button(text(&track.name).size(11))
+                            .padding(1)
+                            .on_press(UiMessage::SelectTrack(trk_idx)),
                     ]
-                    .spacing(2),
-                )
-                .height(Length::Fixed(crate::ui::canvas_timeline::LANE_HEIGHT))
-                .width(Length::Fill)
-                .padding(4);
+                    .spacing(4),
+                    row![mute_btn, solo_btn, rec_btn, freeze_btn].spacing(3),
+                    row![
+                        text(format!("{:.1} dB | {}", track.gain_db, pan_txt)).size(9),
+                        text(if is_muted {
+                            "▪▪▫▫"
+                        } else {
+                            "▪▪▪▪▪▫"
+                        })
+                        .size(8),
+                    ]
+                    .spacing(4),
+                ]
+                .spacing(2)
+                .width(Length::Fill);
+
+                let track_card =
+                    container(row![accent_strip, container(track_inner).padding(3)].spacing(4))
+                        .height(Length::Fixed(crate::ui::canvas_timeline::LANE_HEIGHT))
+                        .width(Length::Fill)
+                        .style(move |_t| {
+                            let mut st = self.theme.panel_container_style();
+                            if is_selected {
+                                st.border.color = self.theme.border_focus;
+                                st.border.width = 1.5;
+                            }
+                            st
+                        });
 
                 track_headers = track_headers.push(track_card);
 
@@ -626,37 +771,15 @@ impl CrystalWaveApp {
                 for ch in &self.channel_rack.channels {
                     let mut steps_row = row![].spacing(3);
 
-                    // 16 Step Buttons with 4-beat alternating grouping
+                    // 16 Step Buttons with 4-beat alternating grouping & tactile hardware styling
                     for (s_idx, step) in ch.steps.iter().enumerate() {
                         let is_active = step.active;
                         let is_even_beat = (s_idx / 4) % 2 == 0;
                         let step_label = if is_active { "■" } else { "·" };
 
                         let step_btn = button(text(step_label).size(11))
-                            .style(move |_t, _st| {
-                                let bg = if is_active {
-                                    self.theme.accent
-                                } else if is_even_beat {
-                                    self.theme.step_even
-                                } else {
-                                    self.theme.step_odd
-                                };
-                                iced::widget::button::Style {
-                                    background: Some(iced::Background::Color(bg)),
-                                    text_color: if is_active {
-                                        iced::Color::WHITE
-                                    } else {
-                                        self.theme.text_secondary
-                                    },
-                                    border: iced::Border {
-                                        color: self.theme.border,
-                                        width: 1.0,
-                                        radius: iced::border::Radius::from(2.0),
-                                    },
-                                    shadow: iced::Shadow::default(),
-                                    ..iced::widget::button::Style::default()
-                                }
-                            })
+                            .style(self.theme.step_pad_style(is_active, is_even_beat))
+                            .padding(2)
                             .on_press(UiMessage::StepSequencerToggleStep {
                                 channel_id: ch.id,
                                 step_index: s_idx,
@@ -761,14 +884,26 @@ impl CrystalWaveApp {
             }
 
             crate::ui::layout::DrawerTab::Mixer => {
-                // Mixer Console Strip View
+                // Neve / SSL Studio Console Channel Strip Rack
                 let mut channel_strips = row![].spacing(6).padding(4);
 
                 for (idx, ch) in self.mixer.channels.iter().enumerate() {
-                    let mute_btn = button(text(if ch.muted { "M" } else { "m" }).size(10))
+                    let strip_accent = self.theme.track_accent_color(idx);
+
+                    let mute_btn = button(text("M").size(10))
+                        .padding(3)
+                        .style(
+                            self.theme
+                                .toggle_accent_button_style(ch.muted, self.theme.mute),
+                        )
                         .on_press(UiMessage::ToggleTrackMute(idx));
 
-                    let solo_btn = button(text(if ch.solo { "S" } else { "s" }).size(10))
+                    let solo_btn = button(text("S").size(10))
+                        .padding(3)
+                        .style(
+                            self.theme
+                                .toggle_accent_button_style(ch.solo, self.theme.solo),
+                        )
                         .on_press(UiMessage::ToggleTrackSolo(idx));
 
                     let fader_slider = slider(-60.0..=6.0, ch.volume_fader_db, move |vol| {
@@ -778,7 +913,7 @@ impl CrystalWaveApp {
                         }
                     })
                     .step(0.5_f32)
-                    .width(Length::Fixed(70.0));
+                    .width(Length::Fixed(60.0));
 
                     let pan_slider = slider(-1.0..=1.0, ch.pan.balance, move |p| {
                         UiMessage::SetTrackPan {
@@ -787,21 +922,69 @@ impl CrystalWaveApp {
                         }
                     })
                     .step(0.05_f32)
-                    .width(Length::Fixed(70.0));
+                    .width(Length::Fixed(60.0));
+
+                    let pan_txt = if ch.pan.balance.abs() < 0.05 {
+                        "Pan: C".to_string()
+                    } else if ch.pan.balance < 0.0 {
+                        format!("Pan: L{:.0}%", (-ch.pan.balance) * 100.0)
+                    } else {
+                        format!("Pan: R{:.0}%", ch.pan.balance * 100.0)
+                    };
+
+                    // Insert rack preview slots
+                    let fx_slots = row![
+                        container(text("EQ").size(8)).padding(1),
+                        container(text("DYN").size(8)).padding(1),
+                        container(text("REV").size(8)).padding(1),
+                        container(text("+").size(8)).padding(1),
+                    ]
+                    .spacing(2);
+
+                    // Dual L/R 12-segment graduated LED meters
+                    let meter_bars = column![
+                        text(if ch.volume_fader_db > 0.0 {
+                            "CLIP"
+                        } else {
+                            "■■■■■■■■▫▫▫▫"
+                        })
+                        .size(7),
+                        text(if ch.volume_fader_db > 0.0 {
+                            "CLIP"
+                        } else {
+                            "■■■■■■■■▫▫▫▫"
+                        })
+                        .size(7),
+                    ]
+                    .spacing(1);
 
                     let strip = container(
                         column![
+                            // Top strip routing badge
+                            row![
+                                container(column![])
+                                    .width(Length::Fixed(3.0))
+                                    .height(Length::Fixed(12.0))
+                                    .style(move |_t| container::Style {
+                                        background: Some(iced::Background::Color(strip_accent)),
+                                        ..container::Style::default()
+                                    }),
+                                text(format!("CH {:02}", idx + 1)).size(9),
+                            ]
+                            .spacing(3),
+                            fx_slots,
                             text(&ch.name).size(11),
-                            text(format!("{:.1} dB", ch.volume_fader_db)).size(10),
-                            fader_slider,
-                            text(format!("Pan: {:.2}", ch.pan.balance)).size(10),
+                            text(pan_txt).size(9),
                             pan_slider,
+                            row![fader_slider, meter_bars].spacing(4),
+                            text(format!("{:.1} dB", ch.volume_fader_db)).size(10),
                             row![mute_btn, solo_btn].spacing(4),
                         ]
-                        .spacing(3),
+                        .spacing(2),
                     )
+                    .style(|_t| self.theme.sunken_container_style())
                     .padding(4)
-                    .width(Length::Fixed(90.0));
+                    .width(Length::Fixed(110.0));
 
                     channel_strips = channel_strips.push(strip);
                 }
