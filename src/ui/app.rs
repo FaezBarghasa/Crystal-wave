@@ -33,6 +33,8 @@ pub struct CrystalWaveApp {
     pub snap_grid: crate::ui::canvas_timeline::SnapGrid,
     pub timeline_scroll_y: f32,
     pub timeline_scroll_x: f32,
+    pub piano_roll_scroll_y: f32,
+    pub piano_roll_selected_channel: usize,
     pub marquee_selection: Option<(u64, u64, usize, usize)>,
     pub command_palette_open: bool,
     pub command_query: String,
@@ -149,6 +151,8 @@ impl CrystalWaveApp {
             snap_grid: crate::ui::canvas_timeline::SnapGrid::Sixteenth,
             timeline_scroll_y: 0.0,
             timeline_scroll_x: 0.0,
+            piano_roll_scroll_y: 872.0, // Center C4 (key 60) in default viewport
+            piano_roll_selected_channel: 0,
             marquee_selection: None,
             command_palette_open: false,
             command_query: String::new(),
@@ -1058,6 +1062,41 @@ impl CrystalWaveApp {
                 self.piano_roll_notes.retain(|n| n.id != id);
                 self.dirty = true;
             }
+            UiMessage::PianoRollMoveNote {
+                id,
+                delta_ticks,
+                delta_key,
+            } => {
+                if let Some(note) = self.piano_roll_notes.iter_mut().find(|n| n.id == id) {
+                    let new_key = ((note.key as i16) + (delta_key as i16)).clamp(0, 127) as u8;
+                    let new_start = ((note.start_tick as i64) + delta_ticks).max(0) as u64;
+                    note.key = new_key;
+                    note.start_tick = new_start;
+                    self.dirty = true;
+                }
+            }
+            UiMessage::PianoRollResizeNote { id, delta_ticks } => {
+                if let Some(note) = self.piano_roll_notes.iter_mut().find(|n| n.id == id) {
+                    let new_len = ((note.length_ticks as i64) + delta_ticks).max(60) as u64;
+                    note.length_ticks = new_len;
+                    self.dirty = true;
+                }
+            }
+            UiMessage::PianoRollToggleSlide(id) => {
+                if let Some(note) = self.piano_roll_notes.iter_mut().find(|n| n.id == id) {
+                    note.is_slide = !note.is_slide;
+                    self.dirty = true;
+                }
+            }
+            UiMessage::PianoRollSelectKey(key) => {
+                use crate::instruments::VirtualInstrument;
+                self.audio_scheduler
+                    .synth
+                    .note_on(key, (0.8 * 65535.0) as u16);
+            }
+            UiMessage::PianoRollSetScrollY(y) => {
+                self.piano_roll_scroll_y = y.max(0.0);
+            }
             UiMessage::StepSequencerToggleStep {
                 channel_id,
                 step_index,
@@ -1184,5 +1223,75 @@ impl CrystalWaveApp {
         }
         self.workspace.selected_track_id = 0;
         self.dirty = false;
+    }
+
+    /// Constructs the 2D Piano Roll Canvas Program with active notes and polyphonic ghost notes
+    pub fn piano_roll_canvas_program(
+        &self,
+    ) -> crate::ui::canvas_piano_roll::PianoRollCanvasProgram {
+        let active_notes: Vec<crate::ui::canvas_piano_roll::PianoRollNoteDisplay> = self
+            .piano_roll_notes
+            .iter()
+            .filter(|n| n.channel_id == self.piano_roll_selected_channel)
+            .map(|n| crate::ui::canvas_piano_roll::PianoRollNoteDisplay {
+                id: n.id,
+                channel_id: n.channel_id,
+                key: n.key,
+                start_tick: n.start_tick,
+                length_ticks: n.length_ticks,
+                velocity: n.velocity,
+                is_slide: n.is_slide,
+            })
+            .collect();
+
+        let mut ghost_notes = Vec::new();
+
+        // 1. Ghost notes from other piano roll channels
+        for n in self
+            .piano_roll_notes
+            .iter()
+            .filter(|n| n.channel_id != self.piano_roll_selected_channel)
+        {
+            let ch_name = self
+                .channel_rack
+                .channels
+                .get(n.channel_id)
+                .map_or_else(|| format!("Ch {}", n.channel_id), |c| c.name.clone());
+            ghost_notes.push(crate::ui::canvas_piano_roll::GhostNoteDisplay {
+                key: n.key,
+                start_tick: n.start_tick,
+                length_ticks: n.length_ticks,
+                channel_name: ch_name,
+            });
+        }
+
+        // 2. Ghost notes from background channel rack step patterns
+        for (ch_idx, ch) in self.channel_rack.channels.iter().enumerate() {
+            if ch_idx != self.piano_roll_selected_channel {
+                for (step_idx, step) in ch.steps.iter().enumerate() {
+                    if step.active {
+                        let step_ticks = 240u64; // 16th note subdivision
+                        let pitch = (60i16 + step.pitch_semitones as i16).clamp(0, 127) as u8;
+                        ghost_notes.push(crate::ui::canvas_piano_roll::GhostNoteDisplay {
+                            key: pitch,
+                            start_tick: (step_idx as u64) * step_ticks,
+                            length_ticks: step_ticks,
+                            channel_name: ch.name.clone(),
+                        });
+                    }
+                }
+            }
+        }
+
+        crate::ui::canvas_piano_roll::PianoRollCanvasProgram::new(
+            self.playhead_tick,
+            self.arrangement.horizontal_zoom,
+            self.piano_roll_scroll_y,
+        )
+        .with_notes(active_notes)
+        .with_ghost_notes(ghost_notes)
+        .with_snap(self.snap_grid)
+        .with_theme(self.theme.preset == crate::ui::theme::ThemePreset::FlDarkOrange)
+        .with_channel_id(self.piano_roll_selected_channel)
     }
 }

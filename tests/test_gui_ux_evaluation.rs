@@ -321,22 +321,24 @@ fn test_phase2_canvas_ghost_drag_interaction() {
             Crystal_wave::timeline::track::TrackType::Software,
         ]);
 
-    program.clips.push(Crystal_wave::ui::canvas_timeline::TimelineClipDisplay {
-        id: 1,
-        track_index: 0,
-        start_tick: 0,
-        length_ticks: 3840,
-        name: "Audio Take 1".to_string(),
-        color_rgb: [80, 120, 220],
-        muted: false,
-        looped: false,
-        fade_in_ticks: 0,
-        fade_out_ticks: 0,
-        kind: Crystal_wave::ui::canvas_timeline::ClipVisualKind::Audio {
-            waveform_peaks: Vec::new(),
-        },
-        is_selected: false,
-    });
+    program
+        .clips
+        .push(Crystal_wave::ui::canvas_timeline::TimelineClipDisplay {
+            id: 1,
+            track_index: 0,
+            start_tick: 0,
+            length_ticks: 3840,
+            name: "Audio Take 1".to_string(),
+            color_rgb: [80, 120, 220],
+            muted: false,
+            looped: false,
+            fade_in_ticks: 0,
+            fade_out_ticks: 0,
+            kind: Crystal_wave::ui::canvas_timeline::ClipVisualKind::Audio {
+                waveform_peaks: Vec::new(),
+            },
+            is_selected: false,
+        });
 
     let mut state = Crystal_wave::ui::canvas_timeline::CanvasInteractionState::default();
     let bounds = iced::Rectangle::new(iced::Point::ORIGIN, iced::Size::new(1000.0, 400.0));
@@ -346,10 +348,14 @@ fn test_phase2_canvas_ghost_drag_interaction() {
     let press_event = iced::widget::canvas::Event::Mouse(iced::mouse::Event::ButtonPressed(
         iced::mouse::Button::Left,
     ));
-    let _ = <ArrangementCanvasProgram as iced::widget::canvas::Program<
-        UiMessage,
-        iced::Theme,
-    >>::update(&program, &mut state, &press_event, bounds, cursor_down);
+    let _ =
+        <ArrangementCanvasProgram as iced::widget::canvas::Program<UiMessage, iced::Theme>>::update(
+            &program,
+            &mut state,
+            &press_event,
+            bounds,
+            cursor_down,
+        );
 
     assert!(state.dragged_clip.is_some());
     assert!(state.live_drag.is_some());
@@ -359,18 +365,19 @@ fn test_phase2_canvas_ghost_drag_interaction() {
     let move_event = iced::widget::canvas::Event::Mouse(iced::mouse::Event::CursorMoved {
         position: iced::Point::new(20.0, 140.0),
     });
-    let _ = <ArrangementCanvasProgram as iced::widget::canvas::Program<
-        UiMessage,
-        iced::Theme,
-    >>::update(
-        &program,
-        &mut state,
-        &move_event,
-        bounds,
-        cursor_move_trk1,
-    );
+    let _ =
+        <ArrangementCanvasProgram as iced::widget::canvas::Program<UiMessage, iced::Theme>>::update(
+            &program,
+            &mut state,
+            &move_event,
+            bounds,
+            cursor_move_trk1,
+        );
 
-    let preview_trk1 = state.live_drag.as_ref().expect("must have live drag preview");
+    let preview_trk1 = state
+        .live_drag
+        .as_ref()
+        .expect("must have live drag preview");
     assert_eq!(preview_trk1.target_track, 1);
     // Audio clip on Software track must be flagged as invalid drop
     assert!(!preview_trk1.is_valid_drop);
@@ -380,18 +387,19 @@ fn test_phase2_canvas_ghost_drag_interaction() {
     let move_event2 = iced::widget::canvas::Event::Mouse(iced::mouse::Event::CursorMoved {
         position: iced::Point::new(20.0, 75.0),
     });
-    let _ = <ArrangementCanvasProgram as iced::widget::canvas::Program<
-        UiMessage,
-        iced::Theme,
-    >>::update(
-        &program,
-        &mut state,
-        &move_event2,
-        bounds,
-        cursor_move_trk0,
-    );
+    let _ =
+        <ArrangementCanvasProgram as iced::widget::canvas::Program<UiMessage, iced::Theme>>::update(
+            &program,
+            &mut state,
+            &move_event2,
+            bounds,
+            cursor_move_trk0,
+        );
 
-    let preview_trk0 = state.live_drag.as_ref().expect("must have live drag preview");
+    let preview_trk0 = state
+        .live_drag
+        .as_ref()
+        .expect("must have live drag preview");
     assert_eq!(preview_trk0.target_track, 0);
     // Audio clip on Audio track is valid
     assert!(preview_trk0.is_valid_drop);
@@ -459,5 +467,203 @@ fn test_phase2_track_type_compatibility_drop_rejection() {
     assert!(
         trk2_has_reg1,
         "Compatible audio region must successfully move to Track 2!"
+    );
+}
+
+#[test]
+fn test_phase3_piano_roll_canvas_coordinate_projections() {
+    use Crystal_wave::ui::canvas_piano_roll::{
+        KEY_HEIGHT, KEYBOARD_WIDTH, PianoRollCanvasProgram, is_black_key, midi_key_to_name,
+    };
+
+    let program = PianoRollCanvasProgram::new(0, 1.0, 872.0);
+
+    // 1. Black key validation
+    assert!(!is_black_key(60)); // C4 (White)
+    assert!(is_black_key(61)); // C#4 (Black)
+    assert!(!is_black_key(62)); // D4 (White)
+    assert!(is_black_key(63)); // D#4 (Black)
+    assert!(!is_black_key(64)); // E4 (White)
+    assert!(!is_black_key(65)); // F4 (White)
+    assert!(is_black_key(66)); // F#4 (Black)
+
+    // 2. Note naming
+    assert_eq!(midi_key_to_name(60), "C4");
+    assert_eq!(midi_key_to_name(61), "C#4");
+    assert_eq!(midi_key_to_name(72), "C5");
+    assert_eq!(midi_key_to_name(48), "C3");
+
+    // 3. Time projections
+    let tick_0_x = program.tick_to_x(0);
+    assert_eq!(tick_0_x, KEYBOARD_WIDTH);
+    let tick_960_x = program.tick_to_x(960);
+    assert_eq!(tick_960_x, KEYBOARD_WIDTH + 80.0);
+    assert_eq!(program.x_to_tick(tick_960_x), 960);
+
+    // 4. Pitch vertical projections
+    let y_c4 = program.key_to_y(60);
+    let expected_c4_y = ((127 - 60) as f32 * KEY_HEIGHT) - 872.0;
+    assert_eq!(y_c4, expected_c4_y);
+    assert_eq!(program.y_to_key(y_c4), 60);
+}
+
+#[test]
+fn test_phase3_piano_roll_2d_mouse_interactions() {
+    use Crystal_wave::ui::canvas_piano_roll::{
+        KEYBOARD_WIDTH, PianoRollCanvasProgram, PianoRollInteractionState, PianoRollNoteDisplay,
+    };
+    use iced::widget::canvas::Program;
+
+    let mut program = PianoRollCanvasProgram::new(0, 1.0, 872.0);
+    program.notes.push(PianoRollNoteDisplay {
+        id: 10,
+        channel_id: 0,
+        key: 60, // C4
+        start_tick: 0,
+        length_ticks: 960,
+        velocity: 0.8,
+        is_slide: false,
+    });
+
+    let mut state = PianoRollInteractionState::default();
+    let bounds = iced::Rectangle::new(iced::Point::ORIGIN, iced::Size::new(1000.0, 500.0));
+
+    // 1. Click Left Keyboard Sidebar -> Emits PianoRollSelectKey
+    let kb_cursor = iced::mouse::Cursor::Available(iced::Point::new(
+        KEYBOARD_WIDTH - 10.0,
+        program.key_to_y(60) + 4.0,
+    ));
+    let kb_press = iced::widget::canvas::Event::Mouse(iced::mouse::Event::ButtonPressed(
+        iced::mouse::Button::Left,
+    ));
+    let action = <PianoRollCanvasProgram as Program<UiMessage, iced::Theme>>::update(
+        &program, &mut state, &kb_press, bounds, kb_cursor,
+    );
+    assert!(action.is_some());
+
+    // 2. Mouse down on note 10 body (C4, x = KEYBOARD_WIDTH + 10.0, y = key_to_y(60) + 4.0)
+    let note_cursor_down = iced::mouse::Cursor::Available(iced::Point::new(
+        KEYBOARD_WIDTH + 10.0,
+        program.key_to_y(60) + 4.0,
+    ));
+    let note_press = iced::widget::canvas::Event::Mouse(iced::mouse::Event::ButtonPressed(
+        iced::mouse::Button::Left,
+    ));
+    let _ = <PianoRollCanvasProgram as Program<UiMessage, iced::Theme>>::update(
+        &program,
+        &mut state,
+        &note_press,
+        bounds,
+        note_cursor_down,
+    );
+    assert!(state.active_drag.is_some());
+    assert!(state.live_preview.is_some());
+
+    // 3. Move cursor to D4 (key 62) and tick 960 (x = KEYBOARD_WIDTH + 80.0)
+    let move_cursor = iced::mouse::Cursor::Available(iced::Point::new(
+        KEYBOARD_WIDTH + 80.0,
+        program.key_to_y(62) + 4.0,
+    ));
+    let move_event = iced::widget::canvas::Event::Mouse(iced::mouse::Event::CursorMoved {
+        position: iced::Point::new(KEYBOARD_WIDTH + 80.0, program.key_to_y(62) + 4.0),
+    });
+    let _ = <PianoRollCanvasProgram as Program<UiMessage, iced::Theme>>::update(
+        &program,
+        &mut state,
+        &move_event,
+        bounds,
+        move_cursor,
+    );
+    let preview = state.live_preview.as_ref().expect("must have preview");
+    assert_eq!(preview.target_key, 62);
+    assert_eq!(preview.delta_semitones, 2);
+
+    // 4. Release mouse -> emits PianoRollMoveNote
+    let release_event = iced::widget::canvas::Event::Mouse(iced::mouse::Event::ButtonReleased(
+        iced::mouse::Button::Left,
+    ));
+    let release_action = <PianoRollCanvasProgram as Program<UiMessage, iced::Theme>>::update(
+        &program,
+        &mut state,
+        &release_event,
+        bounds,
+        move_cursor,
+    );
+    assert!(release_action.is_some());
+
+    // 5. Right Click Note -> Emits PianoRollDeleteNote
+    let right_click = iced::widget::canvas::Event::Mouse(iced::mouse::Event::ButtonPressed(
+        iced::mouse::Button::Right,
+    ));
+    let del_action = <PianoRollCanvasProgram as Program<UiMessage, iced::Theme>>::update(
+        &program,
+        &mut state,
+        &right_click,
+        bounds,
+        note_cursor_down,
+    );
+    assert!(del_action.is_some());
+}
+
+#[test]
+fn test_phase3_piano_roll_app_reducer_actions() {
+    let mut driver = UiSessionDriver::new(48000.0);
+
+    // Initial note 1 is C4 (key 60) at start_tick 0 with length 960
+    let note1_orig = driver
+        .app
+        .piano_roll_notes
+        .iter()
+        .find(|n| n.id == 1)
+        .unwrap();
+    assert_eq!(note1_orig.key, 60);
+    assert_eq!(note1_orig.start_tick, 0);
+
+    // 1. Move Note 1 (+2 semitones to D4, +960 ticks)
+    driver.dispatch(UiMessage::PianoRollMoveNote {
+        id: 1,
+        delta_ticks: 960,
+        delta_key: 2,
+    });
+    let note1_moved = driver
+        .app
+        .piano_roll_notes
+        .iter()
+        .find(|n| n.id == 1)
+        .unwrap();
+    assert_eq!(note1_moved.key, 62);
+    assert_eq!(note1_moved.start_tick, 960);
+
+    // 2. Resize Note 1 (+480 ticks)
+    driver.dispatch(UiMessage::PianoRollResizeNote {
+        id: 1,
+        delta_ticks: 480,
+    });
+    let note1_resized = driver
+        .app
+        .piano_roll_notes
+        .iter()
+        .find(|n| n.id == 1)
+        .unwrap();
+    assert_eq!(note1_resized.length_ticks, 960 + 480);
+
+    // 3. Toggle Slide on Note 1
+    assert!(!note1_resized.is_slide);
+    driver.dispatch(UiMessage::PianoRollToggleSlide(1));
+    let note1_slide = driver
+        .app
+        .piano_roll_notes
+        .iter()
+        .find(|n| n.id == 1)
+        .unwrap();
+    assert!(note1_slide.is_slide);
+
+    // 4. Polyphonic Ghost note synthesis test
+    let pr_program = driver.app.piano_roll_canvas_program();
+    assert!(!pr_program.notes.is_empty());
+    // Channels from channel rack (808 kick, clap, hat, bass) produce ghost notes
+    assert!(
+        !pr_program.ghost_notes.is_empty(),
+        "Ghost notes should be populated from background channels!"
     );
 }

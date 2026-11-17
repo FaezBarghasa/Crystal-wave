@@ -1,4 +1,5 @@
 pub mod app;
+pub mod canvas_piano_roll;
 pub mod canvas_timeline;
 pub mod layout;
 pub mod message;
@@ -8,6 +9,9 @@ pub mod theme;
 pub mod view;
 
 pub use app::CrystalWaveApp;
+pub use canvas_piano_roll::{
+    GhostNoteDisplay, PianoRollCanvasProgram, PianoRollNoteDisplay, view_canvas_piano_roll,
+};
 pub use canvas_timeline::{ArrangementCanvasProgram, SnapGrid, WaveformPeak, view_canvas_timeline};
 pub use layout::{DockPosition, DrawerTab, LayoutState, PanelId, PanelState};
 pub use message::UiMessage;

@@ -146,6 +146,18 @@ pub enum UiMessage {
         length_ticks: u64,
     },
     PianoRollDeleteNote(usize),
+    PianoRollMoveNote {
+        id: usize,
+        delta_ticks: i64,
+        delta_key: i8,
+    },
+    PianoRollResizeNote {
+        id: usize,
+        delta_ticks: i64,
+    },
+    PianoRollToggleSlide(usize),
+    PianoRollSelectKey(u8),
+    PianoRollSetScrollY(f32),
     StepSequencerToggleStep {
         channel_id: usize,
         step_index: usize,

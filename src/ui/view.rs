@@ -857,44 +857,12 @@ impl CrystalWaveApp {
                 ]
                 .spacing(6);
 
-                let keys_col = column![
-                    text("C5 - [ Lead ]").size(10),
-                    text("B4 - [ Ghost ]").size(10),
-                    text("A4 - [ Bass ]").size(10),
-                    text("G4 - [ Chord ]").size(10),
-                    text("F4 - [ Ghost ]").size(10),
-                    text("E4 - [ Pad ]").size(10),
-                    text("D4 - [ Note ]").size(10),
-                    text("C4 - [ Root ]").size(10),
-                ]
-                .spacing(2)
-                .width(Length::Fixed(110.0));
-
-                let mut notes_col = column![].spacing(3);
-                for note in &self.piano_roll_notes {
-                    let slide_tag = if note.is_slide { " [Slide]" } else { "" };
-                    let del_btn =
-                        button(text("✕").size(9)).on_press(UiMessage::PianoRollDeleteNote(note.id));
-
-                    notes_col = notes_col.push(
-                        row![
-                            text(format!(
-                                "Note {}: Key {} ({}..{}) Vel: {:.0}%{}",
-                                note.id,
-                                note.key,
-                                note.start_tick,
-                                note.start_tick + note.length_ticks,
-                                note.velocity * 100.0,
-                                slide_tag
-                            ))
-                            .size(10),
-                            del_btn,
-                        ]
-                        .spacing(6),
-                    );
-                }
-                let grid_content = container(scrollable(notes_col)).padding(4);
-                let roll_body = row![keys_col, grid_content].spacing(8);
+                let roll_canvas = crate::ui::canvas_piano_roll::view_canvas_piano_roll(
+                    self.piano_roll_canvas_program(),
+                );
+                let roll_body = container(roll_canvas)
+                    .width(Length::Fill)
+                    .height(Length::Fill);
 
                 column![roll_header, roll_body].spacing(4).into()
             }
