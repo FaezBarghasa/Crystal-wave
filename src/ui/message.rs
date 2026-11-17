@@ -23,6 +23,7 @@ pub enum UiMessage {
     TransportToggleLoop,
     SetPlayhead(u64),
     SetTempoBpm(f32),
+    SetSwing(f32),
     SetTimeSignature(u8, u8),
     SetMasterTuning(f32),
 
@@ -44,6 +45,23 @@ pub enum UiMessage {
     ToggleTrackMute(usize),
     ToggleTrackSolo(usize),
     ResetAutoMute(usize),
+    SelectMixerTrack(usize),
+    SetTrackStereoSeparation {
+        track_id: usize,
+        separation: f32,
+    },
+    ToggleTrackPhaseInvert(usize),
+    ToggleTrackSwapChannels(usize),
+    ToggleInsertSlotBypass {
+        track_id: usize,
+        slot_id: usize,
+    },
+    SetInsertSlotMix {
+        track_id: usize,
+        slot_id: usize,
+        mix: f32,
+    },
+    ToggleMasterSoftClipper,
 
     // Real-Time Telemetry & Periodic Ticks
     TelemetryReceived(TelemetryBatch),

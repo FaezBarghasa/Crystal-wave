@@ -18,7 +18,9 @@ pub use automation_map::{
 pub use automation_object::{AutomationNode, AutomationShape, FloatingAutomationObject};
 pub use automation_preview::AutomationPreviewManager;
 pub use aux_bus::{AuxBus, MAX_BUSES};
-pub use channel_strip::{ChannelPan, ChannelStrip, ChannelStripState, PanMode};
+pub use channel_strip::{
+    ChannelPan, ChannelStrip, ChannelStripState, InsertSlot, NUM_INSERT_SLOTS, PanMode,
+};
 pub use cue_matrix::{ChannelCueSend, CueMatrix, CueMix, MAX_CUE_MIXES};
 pub use meter::LevelMeter;
 pub use mixing_engine::{MAX_CHANNELS, MixingEngine, VcaFader};

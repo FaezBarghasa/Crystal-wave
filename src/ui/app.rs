@@ -37,6 +37,7 @@ pub struct CrystalWaveApp {
     pub piano_roll_scroll_y: f32,
     pub piano_roll_selected_channel: usize,
     pub marquee_selection: Option<(u64, u64, usize, usize)>,
+    pub selected_mixer_track: usize,
     pub command_palette_open: bool,
     pub command_query: String,
 }
@@ -162,6 +163,7 @@ impl CrystalWaveApp {
             piano_roll_scroll_y: 872.0, // Center C4 (key 60) in default viewport
             piano_roll_selected_channel: 0,
             marquee_selection: None,
+            selected_mixer_track: 0,
             command_palette_open: false,
             command_query: String::new(),
         }
@@ -266,6 +268,18 @@ impl CrystalWaveApp {
                 if let Some(ref mut worker) = self.audio_worker {
                     worker.set_tempo(safe_bpm);
                 }
+            }
+            UiMessage::SetSwing(swing) => {
+                let safe_swing = if swing.is_finite() {
+                    swing.clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
+                self.audio_scheduler.set_swing(safe_swing);
+                if let Some(ref mut worker) = self.audio_worker {
+                    worker.set_swing(safe_swing);
+                }
+                self.dirty = true;
             }
             UiMessage::SetTimeSignature(num, den) => {
                 let safe_num = num.clamp(1, 32);
@@ -383,6 +397,76 @@ impl CrystalWaveApp {
                 } else if let Some(strip) = self.mixer.channels.get_mut(track_id) {
                     strip.meter.reset_auto_mute();
                 }
+                self.dirty = true;
+            }
+            UiMessage::SelectMixerTrack(track_id) => {
+                self.selected_mixer_track = track_id;
+            }
+            UiMessage::SetTrackStereoSeparation {
+                track_id,
+                separation,
+            } => {
+                let safe_sep = if separation.is_finite() {
+                    separation.clamp(-1.0, 1.0)
+                } else {
+                    0.0
+                };
+                if track_id == 9999 {
+                    self.mixer.master_strip.set_stereo_separation(safe_sep);
+                } else if let Some(strip) = self.mixer.channels.get_mut(track_id) {
+                    strip.set_stereo_separation(safe_sep);
+                }
+                self.dirty = true;
+            }
+            UiMessage::ToggleTrackPhaseInvert(track_id) => {
+                if track_id == 9999 {
+                    self.mixer.master_strip.toggle_phase_invert();
+                } else if let Some(strip) = self.mixer.channels.get_mut(track_id) {
+                    strip.toggle_phase_invert();
+                }
+                self.dirty = true;
+            }
+            UiMessage::ToggleTrackSwapChannels(track_id) => {
+                if track_id == 9999 {
+                    self.mixer.master_strip.toggle_swap_channels();
+                } else if let Some(strip) = self.mixer.channels.get_mut(track_id) {
+                    strip.toggle_swap_channels();
+                }
+                self.dirty = true;
+            }
+            UiMessage::ToggleInsertSlotBypass { track_id, slot_id } => {
+                if slot_id < crate::mixing::NUM_INSERT_SLOTS {
+                    if track_id == 9999 {
+                        let bypassed = !self.mixer.master_strip.slots[slot_id].bypassed;
+                        self.mixer.master_strip.set_slot_bypassed(slot_id, bypassed);
+                    } else if let Some(strip) = self.mixer.channels.get_mut(track_id) {
+                        let bypassed = !strip.slots[slot_id].bypassed;
+                        strip.set_slot_bypassed(slot_id, bypassed);
+                    }
+                    self.dirty = true;
+                }
+            }
+            UiMessage::SetInsertSlotMix {
+                track_id,
+                slot_id,
+                mix,
+            } => {
+                let safe_mix = if mix.is_finite() {
+                    mix.clamp(0.0, 1.0)
+                } else {
+                    1.0
+                };
+                if slot_id < crate::mixing::NUM_INSERT_SLOTS {
+                    if track_id == 9999 {
+                        self.mixer.master_strip.set_slot_mix(slot_id, safe_mix);
+                    } else if let Some(strip) = self.mixer.channels.get_mut(track_id) {
+                        strip.set_slot_mix(slot_id, safe_mix);
+                    }
+                    self.dirty = true;
+                }
+            }
+            UiMessage::ToggleMasterSoftClipper => {
+                self.mixer.master_soft_clipper_enabled = !self.mixer.master_soft_clipper_enabled;
                 self.dirty = true;
             }
 
@@ -839,6 +923,9 @@ impl CrystalWaveApp {
                 self.dirty = true;
             }
             UiMessage::ChannelRackSetTargetMixerTrack { channel_id, track } => {
+                if track > 0 {
+                    let _ = self.mixer.ensure_channel_exists(track - 1);
+                }
                 self.channel_rack
                     .set_channel_target_mixer_track(channel_id, track);
                 self.dirty = true;

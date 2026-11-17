@@ -61,3 +61,25 @@ fn test_audio_worker_realtime_decoupling_and_telemetry() {
     assert!(!worker.is_playing());
     assert_eq!(worker.playhead_frame(), 0);
 }
+
+#[test]
+fn test_audio_scheduler_fl_studio_odd_sixteenth_swing_math() {
+    let mut scheduler = Crystal_wave::audio::TimelineAudioScheduler::new(44100.0, 120.0);
+    assert_eq!(scheduler.swing_amount, 0.0);
+
+    // With 0 swing, odd and even ticks are unchanged
+    assert_eq!(scheduler.apply_swing_to_tick(0), 0);
+    assert_eq!(scheduler.apply_swing_to_tick(240), 240);
+    assert_eq!(scheduler.apply_swing_to_tick(480), 480);
+
+    // Set 50% swing (0.50): delta = 0.5 * 120 = 60 ticks
+    scheduler.set_swing(0.5);
+    assert_eq!(scheduler.apply_swing_to_tick(0), 0); // step 0 (even): unchanged
+    assert_eq!(scheduler.apply_swing_to_tick(240), 300); // step 1 (odd): 240 + 60 = 300
+    assert_eq!(scheduler.apply_swing_to_tick(480), 480); // step 2 (even): unchanged
+    assert_eq!(scheduler.apply_swing_to_tick(720), 780); // step 3 (odd): 720 + 60 = 780
+
+    // Set 100% swing (1.0): delta = 1.0 * 120 = 120 ticks
+    scheduler.set_swing(1.0);
+    assert_eq!(scheduler.apply_swing_to_tick(240), 360); // step 1 (odd): 240 + 120 = 360
+}

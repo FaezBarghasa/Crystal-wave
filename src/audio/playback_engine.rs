@@ -11,6 +11,7 @@ pub const PPQN: f64 = 960.0;
 pub struct TimelineAudioScheduler {
     pub sample_rate: f32,
     pub tempo_bpm: f32,
+    pub swing_amount: f32,
     pub synth: PolyphonicSynth,
     track_buffer_l: Vec<f32>,
     track_buffer_r: Vec<f32>,
@@ -37,6 +38,7 @@ impl TimelineAudioScheduler {
         Self {
             sample_rate: safe_sr,
             tempo_bpm: safe_bpm,
+            swing_amount: 0.0,
             synth,
             track_buffer_l: vec![0.0; 2048],
             track_buffer_r: vec![0.0; 2048],
@@ -46,6 +48,28 @@ impl TimelineAudioScheduler {
     pub fn set_tempo(&mut self, bpm: f32) {
         if bpm.is_finite() && bpm > 10.0 {
             self.tempo_bpm = bpm;
+        }
+    }
+
+    pub fn set_swing(&mut self, swing: f32) {
+        if swing.is_finite() {
+            self.swing_amount = swing.clamp(0.0, 1.0);
+        }
+    }
+
+    /// Calculate swing-adjusted scheduled tick for 16th-note steps
+    pub fn apply_swing_to_tick(&self, tick: u64) -> u64 {
+        if self.swing_amount <= 0.0 {
+            return tick;
+        }
+        let step_ticks = 240u64; // 16th note at 960 PPQN
+        let step_index = tick / step_ticks;
+        if step_index % 2 == 1 {
+            // Odd sixteenth note step: delay by swing_amount * 120 ticks
+            let delay_ticks = (self.swing_amount * 120.0) as u64;
+            tick + delay_ticks
+        } else {
+            tick
         }
     }
 

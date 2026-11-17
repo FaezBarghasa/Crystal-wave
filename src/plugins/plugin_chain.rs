@@ -50,6 +50,12 @@ impl PluginChain {
         }
     }
 
+    pub fn set_mix(&mut self, slot_id: usize, mix: f32) {
+        if let Some(slot) = self.slots.get_mut(slot_id) {
+            slot.mix = mix.clamp(0.0, 1.0);
+        }
+    }
+
     pub fn total_latency_samples(&self) -> usize {
         self.slots
             .iter()

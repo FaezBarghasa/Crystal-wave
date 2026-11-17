@@ -1,6 +1,6 @@
 use crate::ui::app::CrystalWaveApp;
 use crate::ui::message::{MenuCommand, UiMessage};
-use iced::widget::{button, column, container, row, scrollable, slider, text, text_input};
+use iced::widget::{Space, button, column, container, row, scrollable, slider, text, text_input};
 use iced::{Color, Element, Length};
 
 impl CrystalWaveApp {
@@ -940,11 +940,171 @@ impl CrystalWaveApp {
             }
 
             crate::ui::layout::DrawerTab::Mixer => {
-                // Neve / SSL Studio Console Channel Strip Rack
+                // FL Studio 24 Studio Mixing Console (125 Inserts + Master Strip + 10-Slot FX Inspector)
+                let selected_id = self.selected_mixer_track;
+                let is_master_selected = selected_id == 9999;
+                let active_strip = if is_master_selected {
+                    &self.mixer.master_strip
+                } else {
+                    self.mixer
+                        .channels
+                        .get(selected_id)
+                        .unwrap_or(&self.mixer.master_strip)
+                };
+
+                // 1. Pinned Master Output Strip (Left)
+                let m_ch = &self.mixer.master_strip;
+                let m_selected = is_master_selected;
+                let m_border_color = if m_selected {
+                    Color::from_rgb8(0xff, 0x88, 0x00) // Citrus Orange neon highlight
+                } else {
+                    Color::from_rgb8(0x3a, 0x22, 0x22)
+                };
+
+                let m_header_btn = button(
+                    row![
+                        container(column![])
+                            .width(Length::Fixed(3.0))
+                            .height(Length::Fixed(12.0))
+                            .style(|_t| container::Style {
+                                background: Some(iced::Background::Color(Color::from_rgb8(
+                                    0xe7, 0x4c, 0x3c,
+                                ))),
+                                ..container::Style::default()
+                            }),
+                        text("MASTER").size(10),
+                    ]
+                    .spacing(4),
+                )
+                .padding(2)
+                .style(self.theme.button_style(m_selected))
+                .on_press(UiMessage::SelectMixerTrack(9999));
+
+                let m_phase_btn = button(text("Ø").size(9))
+                    .padding(2)
+                    .style(self.theme.toggle_accent_button_style(
+                        m_ch.phase_invert,
+                        Color::from_rgb8(0x38, 0xef, 0x7d),
+                    ))
+                    .on_press(UiMessage::ToggleTrackPhaseInvert(9999));
+
+                let m_swap_btn = button(text("⇄").size(9))
+                    .padding(2)
+                    .style(self.theme.toggle_accent_button_style(
+                        m_ch.swap_channels,
+                        Color::from_rgb8(0x00, 0xf2, 0xfe),
+                    ))
+                    .on_press(UiMessage::ToggleTrackSwapChannels(9999));
+
+                let m_clipper_btn = button(text("CLIP").size(9))
+                    .padding(2)
+                    .style(self.theme.toggle_accent_button_style(
+                        self.mixer.master_soft_clipper_enabled,
+                        Color::from_rgb8(0x38, 0xef, 0x7d),
+                    ))
+                    .on_press(UiMessage::ToggleMasterSoftClipper);
+
+                let m_mute_btn = button(text("M").size(10))
+                    .padding(3)
+                    .style(
+                        self.theme
+                            .toggle_accent_button_style(m_ch.muted, self.theme.mute),
+                    )
+                    .on_press(UiMessage::ToggleTrackMute(9999));
+
+                let m_fader = slider(-60.0..=6.0, m_ch.volume_fader_db, |v| {
+                    UiMessage::SetTrackFader {
+                        track_id: 9999,
+                        volume_db: v,
+                    }
+                })
+                .step(0.5_f32)
+                .width(Length::Fixed(60.0));
+
+                let m_meters = column![
+                    render_led_meter(
+                        m_ch.meter.peak_db,
+                        m_ch.meter.rms_db,
+                        m_ch.meter.peak_hold_db,
+                        m_ch.meter.auto_mute_tripped,
+                    ),
+                    render_led_meter(
+                        m_ch.meter.rms_db,
+                        m_ch.meter.rms_db,
+                        m_ch.meter.peak_hold_db,
+                        m_ch.meter.auto_mute_tripped,
+                    ),
+                ]
+                .spacing(2);
+
+                let m_strip = container(
+                    column![
+                        m_header_btn,
+                        row![m_phase_btn, m_swap_btn, m_clipper_btn].spacing(2),
+                        text("Stereo Out").size(10),
+                        row![m_fader, m_meters].spacing(4),
+                        text(format!("{:.1} dB", m_ch.volume_fader_db)).size(10),
+                        m_mute_btn,
+                    ]
+                    .spacing(3),
+                )
+                .style(move |_t| container::Style {
+                    background: Some(iced::Background::Color(Color::from_rgb8(0x13, 0x14, 0x18))),
+                    border: iced::Border {
+                        color: m_border_color,
+                        width: if m_selected { 2.0 } else { 1.0 },
+                        radius: 4.0.into(),
+                    },
+                    text_color: Some(Color::from_rgb8(0xec, 0xf0, 0xf1)),
+                    ..container::Style::default()
+                })
+                .padding(4)
+                .width(Length::Fixed(112.0));
+
+                // 2. Scrollable Insert Channel Strips
                 let mut channel_strips = row![].spacing(6).padding(4);
 
                 for (idx, ch) in self.mixer.channels.iter().enumerate() {
+                    let is_selected = selected_id == idx;
                     let strip_accent = self.theme.track_accent_color(idx);
+                    let strip_border_color = if is_selected {
+                        Color::from_rgb8(0xff, 0x88, 0x00)
+                    } else {
+                        Color::from_rgb8(0x23, 0x27, 0x30)
+                    };
+
+                    let header_btn = button(
+                        row![
+                            container(column![])
+                                .width(Length::Fixed(3.0))
+                                .height(Length::Fixed(12.0))
+                                .style(move |_t| container::Style {
+                                    background: Some(iced::Background::Color(strip_accent)),
+                                    ..container::Style::default()
+                                }),
+                            text(format!("CH {:02}", idx + 1)).size(9),
+                        ]
+                        .spacing(3),
+                    )
+                    .padding(2)
+                    .style(self.theme.button_style(is_selected))
+                    .on_press(UiMessage::SelectMixerTrack(idx));
+
+                    let phase_btn = button(text("Ø").size(9))
+                        .padding(2)
+                        .style(self.theme.toggle_accent_button_style(
+                            ch.phase_invert,
+                            Color::from_rgb8(0x38, 0xef, 0x7d),
+                        ))
+                        .on_press(UiMessage::ToggleTrackPhaseInvert(idx));
+
+                    let swap_btn = button(text("⇄").size(9))
+                        .padding(2)
+                        .style(self.theme.toggle_accent_button_style(
+                            ch.swap_channels,
+                            Color::from_rgb8(0x00, 0xf2, 0xfe),
+                        ))
+                        .on_press(UiMessage::ToggleTrackSwapChannels(idx));
 
                     let mute_btn = button(text("M").size(10))
                         .padding(3)
@@ -988,16 +1148,6 @@ impl CrystalWaveApp {
                         format!("Pan: R{:.0}%", ch.pan.balance * 100.0)
                     };
 
-                    // Insert rack preview slots
-                    let fx_slots = row![
-                        container(text("EQ").size(8)).padding(1),
-                        container(text("DYN").size(8)).padding(1),
-                        container(text("REV").size(8)).padding(1),
-                        container(text("+").size(8)).padding(1),
-                    ]
-                    .spacing(2);
-
-                    // Dual L/R 12-segment graduated LED meters with true peak decibel telemetry
                     let meter_bars = column![
                         render_led_meter(
                             ch.meter.peak_db,
@@ -1016,20 +1166,9 @@ impl CrystalWaveApp {
 
                     let strip = container(
                         column![
-                            // Top strip routing badge
-                            row![
-                                container(column![])
-                                    .width(Length::Fixed(3.0))
-                                    .height(Length::Fixed(12.0))
-                                    .style(move |_t| container::Style {
-                                        background: Some(iced::Background::Color(strip_accent)),
-                                        ..container::Style::default()
-                                    }),
-                                text(format!("CH {:02}", idx + 1)).size(9),
-                            ]
-                            .spacing(3),
-                            fx_slots,
-                            text(&ch.name).size(11),
+                            header_btn,
+                            row![phase_btn, swap_btn].spacing(2),
+                            text(ch.name.clone()).size(11),
                             text(pan_txt).size(9),
                             pan_slider,
                             row![fader_slider, meter_bars].spacing(4),
@@ -1038,74 +1177,222 @@ impl CrystalWaveApp {
                         ]
                         .spacing(2),
                     )
-                    .style(|_t| self.theme.sunken_container_style())
+                    .style(move |_t| container::Style {
+                        background: Some(iced::Background::Color(Color::from_rgb8(
+                            0x13, 0x14, 0x18,
+                        ))),
+                        border: iced::Border {
+                            color: strip_border_color,
+                            width: if is_selected { 2.0 } else { 1.0 },
+                            radius: 4.0.into(),
+                        },
+                        text_color: Some(Color::from_rgb8(0xec, 0xf0, 0xf1)),
+                        ..container::Style::default()
+                    })
                     .padding(4)
                     .width(Length::Fixed(110.0));
 
                     channel_strips = channel_strips.push(strip);
                 }
 
-                // Dedicated Master Output Strip
-                let m_ch = &self.mixer.master_strip;
-                let m_fader = slider(-60.0..=6.0, m_ch.volume_fader_db, |v| {
-                    UiMessage::SetTrackFader {
-                        track_id: 9999,
-                        volume_db: v,
+                // 3. Dedicated 10-Slot Insert FX Rack Inspector
+                let target_track_id = if is_master_selected {
+                    9999
+                } else {
+                    selected_id
+                };
+                let target_title = if is_master_selected {
+                    "MASTER".to_string()
+                } else {
+                    format!("CH {:02}: {}", selected_id + 1, active_strip.name)
+                };
+
+                let mut slots_col = column![].spacing(3);
+                for (s_idx, slot) in active_strip.slots.iter().enumerate() {
+                    let is_active = !slot.bypassed;
+                    let led_color = if is_active {
+                        Color::from_rgb8(0x38, 0xef, 0x7d) // Neon Green active LED
+                    } else {
+                        Color::from_rgb8(0x55, 0x55, 0x55) // Dim bypassed LED
+                    };
+
+                    let led_btn = button(text(if is_active { "●" } else { "○" }).size(11))
+                        .padding(1)
+                        .style(move |_t, _status| button::Style {
+                            background: None,
+                            text_color: led_color,
+                            ..button::Style::default()
+                        })
+                        .on_press(UiMessage::ToggleInsertSlotBypass {
+                            track_id: target_track_id,
+                            slot_id: s_idx,
+                        });
+
+                    let slot_label = text(format!("{}. {}", s_idx + 1, slot.name)).size(10);
+                    let mix_slider =
+                        slider(0.0..=1.0, slot.mix, move |m| UiMessage::SetInsertSlotMix {
+                            track_id: target_track_id,
+                            slot_id: s_idx,
+                            mix: m,
+                        })
+                        .step(0.01_f32)
+                        .width(Length::Fixed(55.0));
+
+                    let mix_pct = text(format!("{:.0}%", slot.mix * 100.0)).size(8);
+
+                    let slot_row = container(
+                        row![
+                            led_btn,
+                            container(slot_label).width(Length::Fixed(100.0)),
+                            mix_slider,
+                            mix_pct,
+                        ]
+                        .spacing(3)
+                        .align_y(iced::Alignment::Center),
+                    )
+                    .padding(2)
+                    .style(|_t| container::Style {
+                        background: Some(iced::Background::Color(Color::from_rgb8(
+                            0x18, 0x1a, 0x22,
+                        ))),
+                        border: iced::Border {
+                            color: Color::from_rgb8(0x28, 0x2c, 0x37),
+                            width: 1.0,
+                            radius: 3.0.into(),
+                        },
+                        text_color: Some(Color::from_rgb8(0xd0, 0xd4, 0xdc)),
+                        ..container::Style::default()
+                    });
+
+                    slots_col = slots_col.push(slot_row);
+                }
+
+                // Stereo separation readout
+                let sep_val = active_strip.stereo_separation;
+                let sep_txt = if sep_val < -0.05 {
+                    format!("Sep: {:.0}% Wide", (-sep_val) * 100.0)
+                } else if sep_val > 0.05 {
+                    format!("Mono: {:.0}% Merged", sep_val * 100.0)
+                } else {
+                    "100% Normal Stereo".to_string()
+                };
+
+                let sep_slider = slider(-1.0..=1.0, sep_val, move |s| {
+                    UiMessage::SetTrackStereoSeparation {
+                        track_id: target_track_id,
+                        separation: s,
                     }
                 })
-                .step(0.5_f32)
-                .width(Length::Fixed(60.0));
-
-                let m_meters = column![
-                    render_led_meter(
-                        m_ch.meter.peak_db,
-                        m_ch.meter.rms_db,
-                        m_ch.meter.peak_hold_db,
-                        m_ch.meter.auto_mute_tripped,
-                    ),
-                    render_led_meter(
-                        m_ch.meter.rms_db,
-                        m_ch.meter.rms_db,
-                        m_ch.meter.peak_hold_db,
-                        m_ch.meter.auto_mute_tripped,
-                    ),
-                ]
-                .spacing(2);
-
-                let m_strip = container(
-                    column![
-                        row![
-                            container(column![])
-                                .width(Length::Fixed(3.0))
-                                .height(Length::Fixed(12.0))
-                                .style(|_t| container::Style {
-                                    background: Some(iced::Background::Color(Color::from_rgb8(
-                                        0xe7, 0x4c, 0x3c
-                                    ))),
-                                    ..container::Style::default()
-                                }),
-                            text("MASTER").size(9),
-                        ]
-                        .spacing(3),
-                        row![
-                            container(text("LIMITER").size(8)).padding(1),
-                            container(text("TRUE PEAK").size(8)).padding(1),
-                        ]
-                        .spacing(2),
-                        text("Stereo Out").size(11),
-                        text("Bus 0").size(9),
-                        row![m_fader, m_meters].spacing(4),
-                        text(format!("{:.1} dB", m_ch.volume_fader_db)).size(10),
-                    ]
-                    .spacing(2),
-                )
-                .style(|_t| self.theme.sunken_container_style())
-                .padding(4)
+                .step(0.05_f32)
                 .width(Length::Fixed(110.0));
 
+                let insp_phase_btn = button(
+                    text(if active_strip.phase_invert {
+                        "Ø [INV]"
+                    } else {
+                        "Ø [NORM]"
+                    })
+                    .size(9),
+                )
+                .padding(3)
+                .style(self.theme.toggle_accent_button_style(
+                    active_strip.phase_invert,
+                    Color::from_rgb8(0x38, 0xef, 0x7d),
+                ))
+                .on_press(UiMessage::ToggleTrackPhaseInvert(target_track_id));
+
+                let insp_swap_btn = button(
+                    text(if active_strip.swap_channels {
+                        "⇄ [SWAP]"
+                    } else {
+                        "⇄ [NORM]"
+                    })
+                    .size(9),
+                )
+                .padding(3)
+                .style(self.theme.toggle_accent_button_style(
+                    active_strip.swap_channels,
+                    Color::from_rgb8(0x00, 0xf2, 0xfe),
+                ))
+                .on_press(UiMessage::ToggleTrackSwapChannels(target_track_id));
+
+                let mut inspector_footer = column![
+                    row![
+                        text("STEREO SEPARATION").size(9),
+                        sep_slider,
+                        text(sep_txt).size(9)
+                    ]
+                    .spacing(4),
+                    row![insp_phase_btn, insp_swap_btn].spacing(4),
+                ]
+                .spacing(3);
+
+                if is_master_selected {
+                    let clipper_btn = button(
+                        text(if self.mixer.master_soft_clipper_enabled {
+                            "SOFT CLIPPER (-0.1 dBFS): [ACTIVE]"
+                        } else {
+                            "SOFT CLIPPER: [BYPASSED]"
+                        })
+                        .size(9),
+                    )
+                    .padding(3)
+                    .style(self.theme.toggle_accent_button_style(
+                        self.mixer.master_soft_clipper_enabled,
+                        Color::from_rgb8(0x38, 0xef, 0x7d),
+                    ))
+                    .on_press(UiMessage::ToggleMasterSoftClipper);
+
+                    inspector_footer = inspector_footer.push(clipper_btn);
+                }
+
+                let fx_inspector = container(
+                    column![
+                        container(
+                            row![
+                                text("INSERT FX RACK").size(10),
+                                Space::new().width(Length::Fill),
+                                text(target_title).size(10),
+                            ]
+                            .spacing(4),
+                        )
+                        .padding(3)
+                        .style(|_t| self.theme.machined_capsule_style()),
+                        slots_col,
+                        inspector_footer,
+                    ]
+                    .spacing(4),
+                )
+                .style(|_t| container::Style {
+                    background: Some(iced::Background::Color(Color::from_rgb8(0x11, 0x12, 0x16))),
+                    border: iced::Border {
+                        color: Color::from_rgb8(0x2d, 0x31, 0x3d),
+                        width: 1.0,
+                        radius: 4.0.into(),
+                    },
+                    text_color: Some(Color::from_rgb8(0xec, 0xf0, 0xf1)),
+                    ..container::Style::default()
+                })
+                .padding(4)
+                .width(Length::Fixed(240.0));
+
                 column![
-                    text("Logic Pro / FL Studio 256-Bus Topological Mixing Console").size(11),
-                    row![scrollable(channel_strips), m_strip].spacing(8),
+                    row![
+                        text("FL Studio 24 Studio Mixer Console (125 Inserts + Master Strip)")
+                            .size(11),
+                        Space::new().width(Length::Fill),
+                        text(format!(
+                            "Target: [{}]",
+                            if is_master_selected {
+                                "Master".to_string()
+                            } else {
+                                format!("CH {:02}", selected_id + 1)
+                            }
+                        ))
+                        .size(10),
+                    ]
+                    .spacing(6),
+                    row![m_strip, scrollable(channel_strips), fx_inspector].spacing(8),
                 ]
                 .spacing(4)
                 .into()

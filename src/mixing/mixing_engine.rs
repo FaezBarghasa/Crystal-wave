@@ -3,6 +3,9 @@ use crate::mixing::aux_bus::{AuxBus, MAX_BUSES};
 use crate::mixing::channel_strip::ChannelStrip;
 
 pub const MAX_CHANNELS: usize = 1000;
+pub const FL_STUDIO_MAX_INSERT_TRACKS: usize = 125;
+pub const MASTER_CLIPPER_CEILING_DB: f32 = -0.1;
+pub const MASTER_CLIPPER_THRESH_DB: f32 = -2.0;
 
 #[derive(Debug, Clone)]
 pub struct VcaFader {
@@ -39,6 +42,7 @@ pub struct MixingEngine {
     pub vca_faders: Vec<VcaFader>,
     pub master_fader_db: f32,
     pub master_strip: ChannelStrip,
+    pub master_soft_clipper_enabled: bool,
     pub sample_rate: f32,
     pub pdc_enabled: bool,
     pub channel_latencies_samples: Vec<usize>,
@@ -70,6 +74,7 @@ impl MixingEngine {
             vca_faders: Vec::new(),
             master_fader_db: 0.0,
             master_strip,
+            master_soft_clipper_enabled: true,
             sample_rate,
             pdc_enabled: true,
             channel_latencies_samples: Vec::new(),
@@ -88,6 +93,32 @@ impl MixingEngine {
         self.channels.push(ChannelStrip::new(id, name));
         self.channel_latencies_samples.push(0);
         Ok(id)
+    }
+
+    /// Ensure that an insert channel strip exists up to `track_id`, dynamically allocating insert strips as needed
+    pub fn ensure_channel_exists(&mut self, track_id: usize) -> Result<()> {
+        if track_id >= MAX_CHANNELS {
+            return Err(LogicError::DspError(format!(
+                "Track ID {track_id} exceeds maximum channel limit ({MAX_CHANNELS})"
+            )));
+        }
+        while self.channels.len() <= track_id {
+            let next_id = self.channels.len();
+            let name = format!("Insert {}", next_id + 1);
+            self.add_channel(name)?;
+        }
+        Ok(())
+    }
+
+    /// Populate up to `count` FL Studio style insert mixer channels (e.g. 125 tracks)
+    pub fn init_fl_insert_tracks(&mut self, count: usize) -> Result<()> {
+        let target = count.min(MAX_CHANNELS);
+        while self.channels.len() < target {
+            let next_id = self.channels.len();
+            let name = format!("Insert {}", next_id + 1);
+            self.add_channel(name)?;
+        }
+        Ok(())
     }
 
     pub fn add_vca(&mut self, name: impl Into<String>) -> usize {
@@ -243,8 +274,37 @@ impl MixingEngine {
             }
         }
 
-        // 4. Process Master Strip Inserts, Fader Gain, Limiter and Meter Ballistics
+        // 4. Process Master Strip Inserts, Fader Gain, Polarity, Stereo Separation & Meter Ballistics
         self.master_strip
             .process_block(&mut master_left[..len], &mut master_right[..len], 1.0);
+
+        // 5. Apply Master Soft Clipper (strict -0.1 dBFS ceiling saturation)
+        if self.master_soft_clipper_enabled {
+            Self::apply_soft_clipper(&mut master_left[..len], &mut master_right[..len]);
+        }
+    }
+
+    /// Clean-room Fruity Soft Clipper: Smooth hyperbolic saturation curve with strict -0.1 dBFS ceiling
+    pub fn apply_soft_clipper(left: &mut [f32], right: &mut [f32]) {
+        let ceiling = 10.0f32.powf(MASTER_CLIPPER_CEILING_DB / 20.0);
+        let thresh = 10.0f32.powf(MASTER_CLIPPER_THRESH_DB / 20.0);
+        let range = ceiling - thresh;
+        let len = left.len().min(right.len());
+
+        for i in 0..len {
+            let mut l = left[i];
+            let mut r = right[i];
+            for sample in [&mut l, &mut r] {
+                let x = *sample;
+                let abs_x = x.abs();
+                if abs_x > thresh {
+                    let excess = abs_x - thresh;
+                    let sat = thresh + range * (excess / range).tanh();
+                    *sample = sat.copysign(x);
+                }
+            }
+            left[i] = l;
+            right[i] = r;
+        }
     }
 }
