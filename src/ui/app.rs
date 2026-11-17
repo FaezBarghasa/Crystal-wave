@@ -969,27 +969,38 @@ impl CrystalWaveApp {
                         .get(new_track_id)
                         .map(|t| t.track_type);
 
-                    // Track Type Compatibility Validation:
-                    // Audio regions can only go to Audio / Aux tracks.
-                    // Midi / Pattern regions can only go to Software / Midi / Drum tracks.
-                    let is_compatible = matches!(
-                        (&reg.kind, dest_type),
-                        (
-                            crate::timeline::region::RegionKind::Audio { .. },
-                            Some(
-                                crate::timeline::track::TrackType::Audio
-                                    | crate::timeline::track::TrackType::Aux,
-                            ),
-                        ) | (
-                            crate::timeline::region::RegionKind::Midi { .. }
-                                | crate::timeline::region::RegionKind::Pattern { .. },
-                            Some(
-                                crate::timeline::track::TrackType::Software
-                                    | crate::timeline::track::TrackType::Midi
-                                    | crate::timeline::track::TrackType::Drum,
-                            ),
-                        )
+                    let is_fl = matches!(
+                        self.theme.preset,
+                        crate::ui::theme::ThemePreset::FlDarkOrange
+                            | crate::ui::theme::ThemePreset::FlStudioModern
                     );
+
+                    // Track Type Compatibility Validation:
+                    // In FL Studio mode or for Automation clips, free-form coexistence allows any clip on any lane!
+                    // In Logic Pro mode, strict track typing is enforced.
+                    let is_compatible = is_fl
+                        || matches!(
+                            reg.kind,
+                            crate::timeline::region::RegionKind::Automation { .. }
+                        )
+                        || matches!(
+                            (&reg.kind, dest_type),
+                            (
+                                crate::timeline::region::RegionKind::Audio { .. },
+                                Some(
+                                    crate::timeline::track::TrackType::Audio
+                                        | crate::timeline::track::TrackType::Aux,
+                                ),
+                            ) | (
+                                crate::timeline::region::RegionKind::Midi { .. }
+                                    | crate::timeline::region::RegionKind::Pattern { .. },
+                                Some(
+                                    crate::timeline::track::TrackType::Software
+                                        | crate::timeline::track::TrackType::Midi
+                                        | crate::timeline::track::TrackType::Drum,
+                                ),
+                            )
+                        );
 
                     let final_track_id = if is_compatible {
                         new_track_id
@@ -1252,9 +1263,89 @@ impl CrystalWaveApp {
                         transpose_semitones: 0.0,
                         reversed: false,
                         fade: Default::default(),
-                        kind: RegionKind::Midi { clip_id: new_id },
+                        kind: RegionKind::Pattern { pattern_id: new_id },
                     });
                     self.dirty = true;
+                }
+            }
+            UiMessage::TimelineAddAutomationClip {
+                track_id,
+                start_tick,
+                length_ticks,
+                parameter_target,
+            } => {
+                let max_id = self
+                    .arrangement
+                    .timeline
+                    .tracks
+                    .iter()
+                    .flat_map(|t| t.regions.iter())
+                    .map(|r| r.id)
+                    .max()
+                    .unwrap_or(0);
+                let new_id = max_id + 1;
+                if let Some(trk) = self.arrangement.timeline.tracks.get_mut(track_id) {
+                    let initial_points = vec![
+                        crate::timeline::region::AutomationPoint::new(0, 0.2, 0.0),
+                        crate::timeline::region::AutomationPoint::new(length_ticks / 2, 0.8, 0.5),
+                        crate::timeline::region::AutomationPoint::new(length_ticks, 0.5, -0.5),
+                    ];
+                    trk.regions.push(Region {
+                        id: new_id,
+                        track_id,
+                        name: format!("Auto: {}", parameter_target),
+                        start_tick,
+                        length_ticks,
+                        anchor_offset_ticks: 0,
+                        muted: false,
+                        looped: false,
+                        loop_length_ticks: None,
+                        gain_db: 0.0,
+                        transpose_semitones: 0.0,
+                        reversed: false,
+                        fade: Default::default(),
+                        kind: RegionKind::Automation {
+                            parameter_target,
+                            min_value: 0.0,
+                            max_value: 1.0,
+                            points: initial_points,
+                        },
+                    });
+                    self.dirty = true;
+                }
+            }
+            UiMessage::TimelineSetAutomationTension {
+                clip_id,
+                segment_index,
+                tension,
+            } => {
+                for trk in &mut self.arrangement.timeline.tracks {
+                    if let Some(reg) = trk.regions.iter_mut().find(|r| r.id == clip_id) {
+                        if let RegionKind::Automation { points, .. } = &mut reg.kind {
+                            if let Some(pt) = points.get_mut(segment_index) {
+                                pt.tension = tension.clamp(-1.0, 1.0);
+                                self.dirty = true;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            UiMessage::TimelineSetAutomationNode {
+                clip_id,
+                node_index,
+                value,
+            } => {
+                for trk in &mut self.arrangement.timeline.tracks {
+                    if let Some(reg) = trk.regions.iter_mut().find(|r| r.id == clip_id) {
+                        if let RegionKind::Automation { points, .. } = &mut reg.kind {
+                            if let Some(pt) = points.get_mut(node_index) {
+                                pt.value = value.clamp(0.0, 1.0);
+                                self.dirty = true;
+                            }
+                        }
+                        break;
+                    }
                 }
             }
             UiMessage::SelectDrawerTab(tab) => {
@@ -1501,6 +1592,8 @@ impl CrystalWaveApp {
                 start_tick: n.start_tick,
                 length_ticks: n.length_ticks,
                 velocity: n.velocity,
+                pan: n.pan,
+                fine_pitch_cents: n.fine_pitch_cents,
                 is_slide: n.is_slide,
             })
             .collect();

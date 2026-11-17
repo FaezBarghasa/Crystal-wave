@@ -16,6 +16,8 @@ pub enum SmartToolZone {
     FadeOut,
     GrabMove,
     SelectRange,
+    AutomationTension(usize),
+    AutomationNode(usize),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -40,6 +42,23 @@ pub enum ClipVisualKind {
         notes: Vec<(u64, u8, u64)>, // (rel_start_tick, pitch 0..127, length_ticks)
     },
     Pattern,
+    Automation {
+        parameter_target: String,
+        points: Vec<(u64, f32, f32)>, // (tick_offset, normalized_val 0..1, tension -1..1)
+    },
+}
+
+/// Evaluates FL Studio Hermite spline tension curvature for normalized progression u in [0, 1]
+pub fn evaluate_spline_tension(u: f32, tension: f32) -> f32 {
+    let u = u.clamp(0.0, 1.0);
+    let t = tension.clamp(-1.0, 1.0);
+    if t > 0.0 {
+        u.powf(1.0 + t * 3.0)
+    } else if t < 0.0 {
+        1.0 - (1.0 - u).powf(1.0 - t * 3.0)
+    } else {
+        u
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -313,19 +332,57 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                         let h_clip = LANE_HEIGHT - 8.0;
 
                         // Smart Tool Zone Resolution
-                        let zone = if cursor_pos.x - x_start < 8.0 {
-                            SmartToolZone::TrimStart
-                        } else if x_end - cursor_pos.x < 8.0 {
-                            SmartToolZone::TrimEnd
-                        } else if cursor_pos.y - y_clip < 14.0 && cursor_pos.x - x_start < 16.0 {
-                            SmartToolZone::FadeIn
-                        } else if cursor_pos.y - y_clip < 14.0 && x_end - cursor_pos.x < 16.0 {
-                            SmartToolZone::FadeOut
-                        } else if cursor_pos.y > y_clip + (h_clip * 0.45) {
-                            SmartToolZone::GrabMove
-                        } else {
-                            SmartToolZone::SelectRange
-                        };
+                        let mut auto_zone = None;
+                        if let ClipVisualKind::Automation { points, .. } = &clip.kind {
+                            // Check if cursor is near an automation node
+                            for (idx, p) in points.iter().enumerate() {
+                                let px = self.tick_to_x(clip.start_tick + p.0, bounds.width);
+                                let py = (y_clip + h_clip) - p.1 * (h_clip - 4.0) - 2.0;
+                                let dist_sq = (cursor_pos.x - px).powi(2) + (cursor_pos.y - py).powi(2);
+                                if dist_sq <= 64.0 {
+                                    auto_zone = Some(SmartToolZone::AutomationNode(idx));
+                                    break;
+                                }
+                            }
+
+                            // If not a node, check if cursor is near a midpoint tension handle
+                            if auto_zone.is_none() {
+                                for i in 0..points.len().saturating_sub(1) {
+                                    let p0 = &points[i];
+                                    let p1 = &points[i + 1];
+                                    let t0 = clip.start_tick + p0.0;
+                                    let t1 = clip.start_tick + p1.0;
+                                    let x0 = self.tick_to_x(t0, bounds.width);
+                                    let x1 = self.tick_to_x(t1, bounds.width);
+                                    let y0 = (y_clip + h_clip) - p0.1 * (h_clip - 4.0) - 2.0;
+                                    let y1 = (y_clip + h_clip) - p1.1 * (h_clip - 4.0) - 2.0;
+                                    let mid_prog = evaluate_spline_tension(0.5, p0.2);
+                                    let mx = x0 + (x1 - x0) * 0.5;
+                                    let my = y0 + (y1 - y0) * mid_prog;
+                                    let dist_sq = (cursor_pos.x - mx).powi(2) + (cursor_pos.y - my).powi(2);
+                                    if dist_sq <= 64.0 {
+                                        auto_zone = Some(SmartToolZone::AutomationTension(i));
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        let zone = auto_zone.unwrap_or_else(|| {
+                            if cursor_pos.x - x_start < 8.0 {
+                                SmartToolZone::TrimStart
+                            } else if x_end - cursor_pos.x < 8.0 {
+                                SmartToolZone::TrimEnd
+                            } else if cursor_pos.y - y_clip < 14.0 && cursor_pos.x - x_start < 16.0 {
+                                SmartToolZone::FadeIn
+                            } else if cursor_pos.y - y_clip < 14.0 && x_end - cursor_pos.x < 16.0 {
+                                SmartToolZone::FadeOut
+                            } else if cursor_pos.y > y_clip + (h_clip * 0.45) {
+                                SmartToolZone::GrabMove
+                            } else {
+                                SmartToolZone::SelectRange
+                            }
+                        });
 
                         let offset_ticks = target_tick.saturating_sub(clip.start_tick);
                         state.dragged_clip = Some((
@@ -438,6 +495,29 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                                 fade_out_ticks: Some(fade_ticks),
                             }));
                         }
+                        SmartToolZone::AutomationTension(seg_idx) => {
+                            let y_clip = RULER_HEIGHT + (orig_trk as f32 * LANE_HEIGHT) + 4.0;
+                            let h_clip = LANE_HEIGHT - 8.0;
+                            let mid_y = y_clip + h_clip * 0.5;
+                            let tension =
+                                ((mid_y - cursor_pos.y) / (h_clip * 0.35)).clamp(-1.0, 1.0);
+                            return Some(Action::publish(UiMessage::TimelineSetAutomationTension {
+                                clip_id,
+                                segment_index: seg_idx,
+                                tension,
+                            }));
+                        }
+                        SmartToolZone::AutomationNode(node_idx) => {
+                            let y_clip = RULER_HEIGHT + (orig_trk as f32 * LANE_HEIGHT) + 4.0;
+                            let h_clip = LANE_HEIGHT - 8.0;
+                            let value =
+                                ((y_clip + h_clip - cursor_pos.y) / (h_clip - 4.0)).clamp(0.0, 1.0);
+                            return Some(Action::publish(UiMessage::TimelineSetAutomationNode {
+                                clip_id,
+                                node_index: node_idx,
+                                value,
+                            }));
+                        }
                         SmartToolZone::SelectRange => {}
                     }
                 }
@@ -467,7 +547,9 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                         .map(|c| matches!(c.kind, ClipVisualKind::Audio { .. }))
                         .unwrap_or(true);
 
-                    let is_compatible = if let Some(&dest_type) = self.track_types.get(target_trk) {
+                    let is_compatible = if self.is_fl_theme {
+                        true // FL Studio Free-Form Playlist Track Coexistence
+                    } else if let Some(&dest_type) = self.track_types.get(target_trk) {
                         if is_audio {
                             matches!(
                                 dest_type,
@@ -532,6 +614,17 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                                     is_valid_drop: true,
                                 });
                             }
+                        }
+                        SmartToolZone::AutomationTension(_) | SmartToolZone::AutomationNode(_) => {
+                            state.live_drag = Some(LiveDragPreview {
+                                clip_id,
+                                zone,
+                                target_track: orig_trk,
+                                target_start_tick: orig_start,
+                                target_length_ticks: orig_len,
+                                delta_ticks: 0,
+                                is_valid_drop: true,
+                            });
                         }
                         _ => {}
                     }
@@ -714,7 +807,7 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                     && y + h > RULER_HEIGHT
                     && y < bounds.height
                 {
-                    let (base_color, glyph) = match clip.kind {
+                    let (base_color, glyph) = match &clip.kind {
                         ClipVisualKind::Audio { .. } => (
                             Color::from_rgb8(
                                 clip.color_rgb[0].clamp(20, 180),
@@ -730,6 +823,10 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                         ClipVisualKind::Pattern => (
                             Color::from_rgb8(0x5c, 0x2b, 0x8c), // Logic Electric Purple
                             "⊞",
+                        ),
+                        ClipVisualKind::Automation { .. } => (
+                            Color::from_rgb8(0xd3, 0x54, 0x00), // FL Studio Warm Copper / Amber
+                            "📈",
                         ),
                     };
 
@@ -885,6 +982,126 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                                     Size::new(step_w - 2.0, 8.0),
                                     step_color,
                                 );
+                            }
+                        }
+                        ClipVisualKind::Automation {
+                            parameter_target: _,
+                            points,
+                        } => {
+                            if points.len() >= 2 {
+                                let curve_steps = 20;
+                                let mut poly_points =
+                                    Vec::with_capacity(points.len() * curve_steps + 2);
+                                let base_y = body_y + body_h;
+
+                                let p_first = &points[0];
+                                let x_first = (self
+                                    .tick_to_x(clip.start_tick + p_first.0, bounds.width))
+                                .clamp(x_start, x_end);
+                                poly_points.push(Point::new(x_first, base_y));
+
+                                for i in 0..points.len().saturating_sub(1) {
+                                    let p0 = &points[i];
+                                    let p1 = &points[i + 1];
+                                    let t0 = clip.start_tick + p0.0;
+                                    let t1 = clip.start_tick + p1.0;
+                                    let x0 = self.tick_to_x(t0, bounds.width);
+                                    let x1 = self.tick_to_x(t1, bounds.width);
+                                    let y0 = (body_y + body_h) - p0.1 * (body_h - 4.0) - 2.0;
+                                    let y1 = (body_y + body_h) - p1.1 * (body_h - 4.0) - 2.0;
+                                    let tension = p0.2;
+
+                                    for step in 0..=curve_steps {
+                                        let u = step as f32 / curve_steps as f32;
+                                        let progress = evaluate_spline_tension(u, tension);
+                                        let curr_x = x0 + (x1 - x0) * u;
+                                        let curr_y = y0 + (y1 - y0) * progress;
+                                        poly_points.push(Point::new(curr_x, curr_y));
+                                    }
+                                }
+
+                                let p_last = points.last().unwrap();
+                                let x_last = (self
+                                    .tick_to_x(clip.start_tick + p_last.0, bounds.width))
+                                .clamp(x_start, x_end);
+                                poly_points.push(Point::new(x_last, base_y));
+
+                                let poly_path = Path::new(|p| {
+                                    if let Some(first) = poly_points.first() {
+                                        p.move_to(*first);
+                                        for pt in &poly_points[1..] {
+                                            p.line_to(*pt);
+                                        }
+                                        p.close();
+                                    }
+                                });
+                                frame.fill(&poly_path, Color::from_rgba8(255, 140, 0, 0.22));
+
+                                // Sharp spline curve line
+                                let line_path = Path::new(|p| {
+                                    if poly_points.len() > 2 {
+                                        p.move_to(poly_points[1]);
+                                        for pt in &poly_points[2..poly_points.len() - 1] {
+                                            p.line_to(*pt);
+                                        }
+                                    }
+                                });
+                                frame.stroke(
+                                    &line_path,
+                                    Stroke::default()
+                                        .with_color(Color::from_rgb8(255, 190, 70))
+                                        .with_width(2.0),
+                                );
+
+                                // Node circles and midpoint tension handles
+                                for i in 0..points.len().saturating_sub(1) {
+                                    let p0 = &points[i];
+                                    let p1 = &points[i + 1];
+                                    let t0 = clip.start_tick + p0.0;
+                                    let t1 = clip.start_tick + p1.0;
+                                    let x0 = self.tick_to_x(t0, bounds.width);
+                                    let x1 = self.tick_to_x(t1, bounds.width);
+                                    let y0 = (body_y + body_h) - p0.1 * (body_h - 4.0) - 2.0;
+                                    let y1 = (body_y + body_h) - p1.1 * (body_h - 4.0) - 2.0;
+                                    let tension = p0.2;
+
+                                    // White node circle at p0
+                                    let node_circ = Path::circle(Point::new(x0, y0), 3.5);
+                                    frame.fill(&node_circ, Color::WHITE);
+                                    frame.stroke(
+                                        &node_circ,
+                                        Stroke::default()
+                                            .with_color(Color::from_rgb8(20, 20, 25))
+                                            .with_width(1.0),
+                                    );
+
+                                    // Midpoint round tension handle
+                                    let mid_prog = evaluate_spline_tension(0.5, tension);
+                                    let mid_x = x0 + (x1 - x0) * 0.5;
+                                    let mid_y_pt = y0 + (y1 - y0) * mid_prog;
+                                    let handle_circ =
+                                        Path::circle(Point::new(mid_x, mid_y_pt), 3.0);
+                                    frame.fill(&handle_circ, Color::from_rgb8(255, 120, 0));
+                                    frame.stroke(
+                                        &handle_circ,
+                                        Stroke::default()
+                                            .with_color(Color::WHITE)
+                                            .with_width(1.0),
+                                    );
+                                }
+                                if let Some(last_p) = points.last() {
+                                    let x_l =
+                                        self.tick_to_x(clip.start_tick + last_p.0, bounds.width);
+                                    let y_l = (body_y + body_h) - last_p.1 * (body_h - 4.0) - 2.0;
+                                    let node_circ = Path::circle(Point::new(x_l, y_l), 3.5);
+                                    frame.fill(&node_circ, Color::WHITE);
+                                    frame.stroke(
+                                        &node_circ,
+                                        Stroke::default()
+                                            .with_color(Color::from_rgb8(20, 20, 25))
+                                            .with_width(1.0),
+                                    );
+                                }
                             }
                         }
                     }
@@ -1066,19 +1283,58 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                 format!("{} ticks", drag.delta_ticks)
             };
 
-            let hud_label = if drag.is_valid_drop {
-                format!(
-                    "Track {} | Bar {}.{} | {}",
-                    drag.target_track + 1,
-                    bar,
-                    beat,
-                    delta_txt
-                )
-            } else {
-                format!(
-                    "Track {} | 🚫 Incompatible Track Type",
-                    drag.target_track + 1
-                )
+            let hud_label = match drag.zone {
+                SmartToolZone::AutomationTension(seg) => {
+                    let cursor_y = state
+                        .last_cursor_pos
+                        .map(|p| p.y)
+                        .unwrap_or(ghost_y + ghost_h * 0.5);
+                    let tension =
+                        ((ghost_y + ghost_h * 0.5 - cursor_y) / (ghost_h * 0.35)).clamp(-1.0, 1.0);
+                    let shape = if tension > 0.05 {
+                        "Convex"
+                    } else if tension < -0.05 {
+                        "Concave"
+                    } else {
+                        "Linear"
+                    };
+                    format!(
+                        "Spline Seg {} | Tension: {:+.2} ({})",
+                        seg + 1,
+                        tension,
+                        shape
+                    )
+                }
+                SmartToolZone::AutomationNode(idx) => {
+                    let cursor_y = state
+                        .last_cursor_pos
+                        .map(|p| p.y)
+                        .unwrap_or(ghost_y + ghost_h * 0.5);
+                    let val = ((ghost_y + ghost_h - cursor_y) / (ghost_h - 4.0)).clamp(0.0, 1.0);
+                    format!(
+                        "Auto Node {} | Value: {:.1}% | Bar {}.{}",
+                        idx + 1,
+                        val * 100.0,
+                        bar,
+                        beat
+                    )
+                }
+                _ => {
+                    if drag.is_valid_drop {
+                        format!(
+                            "Track {} | Bar {}.{} | {}",
+                            drag.target_track + 1,
+                            bar,
+                            beat,
+                            delta_txt
+                        )
+                    } else {
+                        format!(
+                            "Track {} | 🚫 Incompatible Track Type",
+                            drag.target_track + 1
+                        )
+                    }
+                }
             };
 
             let hud_x = snap_x.clamp(4.0, (bounds.width - 200.0).max(4.0));

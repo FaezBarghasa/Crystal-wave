@@ -14,7 +14,7 @@ pub use hybrid_pattern::{HybridTimelineManager, Pattern, PatternInstance, Patter
 pub use loop_region::{LoopRegion, RecordingOverdubMode};
 pub use marker::{Marker, MarkerType};
 pub use quantize_mode::{MusicalScale, QuantizeMode};
-pub use region::{FadeCurve, Region, RegionFade, RegionKind};
+pub use region::{AutomationPoint, FadeCurve, Region, RegionFade, RegionKind};
 pub use snapping_mode::{SnapStyle, SnappingMode};
 pub use swing::SwingAmount;
 pub use track::{

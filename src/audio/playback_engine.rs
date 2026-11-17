@@ -264,6 +264,10 @@ impl TimelineAudioScheduler {
                                 let s = (2.0 * PI * freq * t).sin() * 0.22;
                                 (s, s)
                             }
+                            RegionKind::Automation { .. } => {
+                                // Automation clips control DAW parameters; no direct raw tone generation
+                                (0.0, 0.0)
+                            }
                         };
 
                         let net_mult = fade_mult * region_linear_gain;
@@ -354,6 +358,7 @@ impl TimelineAudioScheduler {
 
             // 3. Route into Mixer Channel Strip and Calculate Ballistics
             if has_audio_on_track || trk_idx < mixer.channels.len() {
+                let _ = mixer.ensure_channel_exists(trk_idx);
                 mixer.route_channel_audio(
                     trk_idx,
                     &self.track_buffer_l[..len],

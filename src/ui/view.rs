@@ -700,6 +700,20 @@ impl CrystalWaveApp {
                         crate::timeline::region::RegionKind::Pattern { .. } => {
                             crate::ui::canvas_timeline::ClipVisualKind::Pattern
                         }
+                        crate::timeline::region::RegionKind::Automation {
+                            parameter_target,
+                            points,
+                            ..
+                        } => {
+                            let pts = points
+                                .iter()
+                                .map(|p| (p.tick_offset, p.value, p.tension))
+                                .collect();
+                            crate::ui::canvas_timeline::ClipVisualKind::Automation {
+                                parameter_target: parameter_target.clone(),
+                                points: pts,
+                            }
+                        }
                     };
 
                     canvas_program

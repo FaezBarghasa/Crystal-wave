@@ -170,6 +170,22 @@ pub enum UiMessage {
         length_ticks: u64,
         name: String,
     },
+    TimelineAddAutomationClip {
+        track_id: usize,
+        start_tick: u64,
+        length_ticks: u64,
+        parameter_target: String,
+    },
+    TimelineSetAutomationTension {
+        clip_id: usize,
+        segment_index: usize,
+        tension: f32,
+    },
+    TimelineSetAutomationNode {
+        clip_id: usize,
+        node_index: usize,
+        value: f32,
+    },
     SelectDrawerTab(crate::ui::layout::DrawerTab),
     TogglePanelDock(crate::ui::layout::PanelId),
     DetachPanelToWindow(crate::ui::layout::PanelId),

@@ -29,6 +29,23 @@ impl Default for RegionFade {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct AutomationPoint {
+    pub tick_offset: u64,
+    pub value: f32,   // Normalized 0.0 to 1.0
+    pub tension: f32, // -1.0 to 1.0 (FL Studio tension parameter)
+}
+
+impl AutomationPoint {
+    pub fn new(tick_offset: u64, value: f32, tension: f32) -> Self {
+        Self {
+            tick_offset,
+            value: value.clamp(0.0, 1.0),
+            tension: tension.clamp(-1.0, 1.0),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum RegionKind {
     Audio {
         file_path: Option<String>,
@@ -40,6 +57,12 @@ pub enum RegionKind {
     },
     Pattern {
         pattern_id: usize,
+    },
+    Automation {
+        parameter_target: String,
+        min_value: f32,
+        max_value: f32,
+        points: Vec<AutomationPoint>,
     },
 }
 
@@ -141,5 +164,53 @@ impl Region {
     pub fn set_loop(&mut self, looped: bool, loop_length_ticks: Option<u64>) {
         self.looped = looped;
         self.loop_length_ticks = loop_length_ticks;
+    }
+
+    /// Evaluates the automation parameter value at `tick_offset` relative to the region start
+    pub fn evaluate_automation(&self, tick_offset: u64) -> Option<f32> {
+        if let RegionKind::Automation {
+            min_value,
+            max_value,
+            points,
+            ..
+        } = &self.kind
+        {
+            if points.is_empty() {
+                return Some(*min_value);
+            }
+            if tick_offset <= points[0].tick_offset {
+                let norm = points[0].value;
+                return Some(min_value + (max_value - min_value) * norm);
+            }
+            if tick_offset >= points[points.len() - 1].tick_offset {
+                let norm = points[points.len() - 1].value;
+                return Some(min_value + (max_value - min_value) * norm);
+            }
+
+            for i in 0..points.len().saturating_sub(1) {
+                let p0 = &points[i];
+                let p1 = &points[i + 1];
+                if tick_offset >= p0.tick_offset && tick_offset <= p1.tick_offset {
+                    let seg_len = (p1.tick_offset - p0.tick_offset) as f32;
+                    if seg_len <= 0.0 {
+                        let norm = p0.value;
+                        return Some(min_value + (max_value - min_value) * norm);
+                    }
+                    let u = ((tick_offset - p0.tick_offset) as f32) / seg_len;
+                    let progress = if p0.tension > 0.0 {
+                        u.powf(1.0 + p0.tension * 3.0)
+                    } else if p0.tension < 0.0 {
+                        1.0 - (1.0 - u).powf(1.0 - p0.tension * 3.0)
+                    } else {
+                        u
+                    };
+                    let norm = p0.value + (p1.value - p0.value) * progress;
+                    return Some(min_value + (max_value - min_value) * norm);
+                }
+            }
+            Some(*min_value)
+        } else {
+            None
+        }
     }
 }
