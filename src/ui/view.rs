@@ -1,7 +1,7 @@
 use crate::ui::app::CrystalWaveApp;
 use crate::ui::message::{MenuCommand, UiMessage};
 use iced::widget::{button, column, container, row, scrollable, slider, text, text_input};
-use iced::{Element, Length};
+use iced::{Color, Element, Length};
 
 impl CrystalWaveApp {
     pub fn view(&self) -> Element<'_, UiMessage> {
@@ -925,22 +925,22 @@ impl CrystalWaveApp {
                     ]
                     .spacing(2);
 
-                    // Dual L/R 12-segment graduated LED meters
+                    // Dual L/R 12-segment graduated LED meters with true peak decibel telemetry
                     let meter_bars = column![
-                        text(if ch.volume_fader_db > 0.0 {
-                            "CLIP"
-                        } else {
-                            "■■■■■■■■▫▫▫▫"
-                        })
-                        .size(7),
-                        text(if ch.volume_fader_db > 0.0 {
-                            "CLIP"
-                        } else {
-                            "■■■■■■■■▫▫▫▫"
-                        })
-                        .size(7),
+                        render_led_meter(
+                            ch.meter.peak_db,
+                            ch.meter.rms_db,
+                            ch.meter.peak_hold_db,
+                            ch.meter.auto_mute_tripped,
+                        ),
+                        render_led_meter(
+                            ch.meter.rms_db,
+                            ch.meter.rms_db,
+                            ch.meter.peak_hold_db,
+                            ch.meter.auto_mute_tripped,
+                        ),
                     ]
-                    .spacing(1);
+                    .spacing(2);
 
                     let strip = container(
                         column![
@@ -999,14 +999,54 @@ impl CrystalWaveApp {
 
     /// Studio Telemetry Status Bar (Bottom 20px)
     fn view_status_bar(&self) -> Element<'_, UiMessage> {
+        let (xruns, host_name, buffer_str) = if let Some(drv) = &self.audio_driver {
+            let xruns = drv
+                .underrun_count
+                .load(std::sync::atomic::Ordering::Relaxed);
+            let host = if drv.host_name.is_empty() {
+                "ALSA / PIPEWIRE".to_string()
+            } else {
+                drv.host_name.to_uppercase()
+            };
+            let buffer_ms = (128.0 / (drv.sample_rate as f32).max(1.0)) * 1000.0;
+            (
+                xruns,
+                host,
+                format!("BUFFER: 128 spl ({:.1} ms)", buffer_ms),
+            )
+        } else {
+            (
+                0,
+                "ALSA / PIPEWIRE".to_string(),
+                format!(
+                    "BUFFER: 128 spl ({:.1} ms)",
+                    (128.0 / self.mixer.sample_rate.max(1.0)) * 1000.0
+                ),
+            )
+        };
+
+        let master_peak_str = if let Some(m_ch) = self.mixer.channels.first() {
+            if m_ch.meter.auto_mute_tripped {
+                "PEAK: AUTO-MUTE TRIPPED (+12 dBFS)".to_string()
+            } else if m_ch.meter.peak_db > 0.0 {
+                format!("PEAK: +{:.1} dBFS (CLIP)", m_ch.meter.peak_db)
+            } else if m_ch.meter.peak_db > -90.0 {
+                format!("PEAK: {:.1} dBFS", m_ch.meter.peak_db)
+            } else {
+                "PEAK: -inf dBFS".to_string()
+            }
+        } else {
+            "PEAK: -inf dBFS".to_string()
+        };
+
         let left_telemetry = row![
             text("● ENGINE: ACTIVE").size(9),
             text("|").size(9),
             text(format!("RATE: {:.1} kHz", self.mixer.sample_rate / 1000.0)).size(9),
             text("|").size(9),
-            text("BUFFER: 128 spl (2.6 ms)").size(9),
+            text(buffer_str).size(9),
             text("|").size(9),
-            text("XRUNS: 0").size(9),
+            text(format!("XRUNS: {}", xruns)).size(9),
         ]
         .spacing(6);
 
@@ -1018,11 +1058,11 @@ impl CrystalWaveApp {
         .spacing(6);
 
         let right_env = row![
-            text("BACKEND: PIPEWIRE / ALSA").size(9),
+            text(format!("BACKEND: {}", host_name)).size(9),
             text("|").size(9),
             text("HOST: LINUX (COSMIC)").size(9),
             text("|").size(9),
-            text("PEAK: -0.1 dBFS").size(9),
+            text(master_peak_str).size(9),
         ]
         .spacing(6);
 
@@ -1111,4 +1151,92 @@ impl CrystalWaveApp {
         .width(Length::Fixed(440.0))
         .into()
     }
+}
+
+/// 12-segment graduated LED ladder meter with peak hold and clip overload indicator
+pub fn render_led_meter<'a>(
+    peak_db: f32,
+    _rms_db: f32,
+    peak_hold_db: f32,
+    auto_mute_tripped: bool,
+) -> Element<'a, UiMessage> {
+    const THRESHOLDS: [f32; 12] = [
+        -60.0, -48.0, -36.0, -24.0, -18.0, -14.0, -12.0, -9.0, -6.0, -3.0, -1.0, 0.0,
+    ];
+
+    let mut segments = row![].spacing(1);
+
+    for (i, &thresh) in THRESHOLDS.iter().enumerate() {
+        let is_lit = peak_db >= thresh || (auto_mute_tripped && i == 11);
+        let next_thresh = THRESHOLDS.get(i + 1).copied().unwrap_or(100.0);
+        let is_peak_hold = peak_hold_db >= thresh && peak_hold_db < next_thresh;
+
+        let seg_color = match i {
+            0..=6 => {
+                if is_lit || is_peak_hold {
+                    Color::from_rgb8(0x2e, 0xcc, 0x71) // Active Green (-60 to -12 dBFS)
+                } else {
+                    Color::from_rgb8(0x13, 0x2e, 0x1d) // Dim Green
+                }
+            }
+            7..=9 => {
+                if is_lit || is_peak_hold {
+                    Color::from_rgb8(0xf3, 0x9c, 0x12) // Active Amber (-9 to -3 dBFS)
+                } else {
+                    Color::from_rgb8(0x38, 0x24, 0x0a) // Dim Amber
+                }
+            }
+            10 => {
+                if is_lit || is_peak_hold {
+                    Color::from_rgb8(0xe6, 0x64, 0x14) // Active Orange (-1 dBFS)
+                } else {
+                    Color::from_rgb8(0x38, 0x1a, 0x08) // Dim Orange
+                }
+            }
+            _ => {
+                if is_lit || is_peak_hold || auto_mute_tripped || peak_db > 0.0 {
+                    Color::from_rgb8(0xe7, 0x4c, 0x3c) // Active Red (0 dBFS / CLIP)
+                } else {
+                    Color::from_rgb8(0x38, 0x14, 0x14) // Dim Red
+                }
+            }
+        };
+
+        let seg_box = container(column![])
+            .width(Length::Fixed(3.0))
+            .height(Length::Fixed(5.0))
+            .style(move |_t| container::Style {
+                background: Some(iced::Background::Color(seg_color)),
+                border: iced::Border {
+                    radius: 1.0.into(),
+                    ..Default::default()
+                },
+                ..container::Style::default()
+            });
+
+        segments = segments.push(seg_box);
+    }
+
+    let readout_text = if auto_mute_tripped {
+        text("MUTE")
+            .size(8)
+            .color(Color::from_rgb8(0xe7, 0x4c, 0x3c))
+    } else if peak_db > 0.0 {
+        text(format!("+{:.1}", peak_db))
+            .size(8)
+            .color(Color::from_rgb8(0xe7, 0x4c, 0x3c))
+    } else if peak_db > -60.0 {
+        text(format!("{:.1}", peak_db))
+            .size(8)
+            .color(Color::from_rgb8(0xba, 0xbe, 0xc6))
+    } else {
+        text("-inf")
+            .size(8)
+            .color(Color::from_rgb8(0x5a, 0x5e, 0x66))
+    };
+
+    row![segments, readout_text]
+        .spacing(3)
+        .align_y(iced::Alignment::Center)
+        .into()
 }

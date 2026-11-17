@@ -320,51 +320,50 @@ impl<Theme> canvas::Program<UiMessage, Theme> for PianoRollCanvasProgram {
 
             // Cursor Moved: Update live preview during drag or resize
             canvas::Event::Mouse(mouse::Event::CursorMoved { .. }) => {
-                if let Some((note_id, mode)) = state.active_drag {
-                    if let Some(note) = self.notes.iter().find(|n| n.id == note_id) {
-                        match mode {
-                            PianoRollDragMode::MoveNote {
-                                orig_key,
-                                orig_start,
-                                offset_ticks,
-                            } => {
-                                let cand_key = self.y_to_key(cursor_pos.y);
-                                let cand_tick_raw = self.x_to_tick(cursor_pos.x);
-                                let cand_start_raw =
-                                    (cand_tick_raw as i64 - offset_ticks as i64).max(0) as u64;
-                                let cand_start =
-                                    self.snap.snap(cand_start_raw, self.horizontal_zoom);
-                                let delta_semitones = cand_key as i8 - orig_key as i8;
-                                let delta_ticks = cand_start as i64 - orig_start as i64;
+                if let Some((note_id, mode)) = state.active_drag
+                    && let Some(note) = self.notes.iter().find(|n| n.id == note_id)
+                {
+                    match mode {
+                        PianoRollDragMode::MoveNote {
+                            orig_key,
+                            orig_start,
+                            offset_ticks,
+                        } => {
+                            let cand_key = self.y_to_key(cursor_pos.y);
+                            let cand_tick_raw = self.x_to_tick(cursor_pos.x);
+                            let cand_start_raw =
+                                (cand_tick_raw as i64 - offset_ticks as i64).max(0) as u64;
+                            let cand_start = self.snap.snap(cand_start_raw, self.horizontal_zoom);
+                            let delta_semitones = cand_key as i8 - orig_key as i8;
+                            let delta_ticks = cand_start as i64 - orig_start as i64;
 
-                                state.live_preview = Some(PianoRollLiveDrag {
-                                    note_id,
-                                    mode,
-                                    target_key: cand_key,
-                                    target_start_tick: cand_start,
-                                    target_length_ticks: note.length_ticks,
-                                    delta_semitones,
-                                    delta_ticks,
-                                });
-                                return Some(Action::request_redraw());
-                            }
-                            PianoRollDragMode::ResizeNote { orig_len } => {
-                                let cand_end_raw = self.x_to_tick(cursor_pos.x);
-                                let cand_end = self.snap.snap(cand_end_raw, self.horizontal_zoom);
-                                let cand_len = cand_end.saturating_sub(note.start_tick).max(60);
-                                let delta_ticks = cand_len as i64 - orig_len as i64;
+                            state.live_preview = Some(PianoRollLiveDrag {
+                                note_id,
+                                mode,
+                                target_key: cand_key,
+                                target_start_tick: cand_start,
+                                target_length_ticks: note.length_ticks,
+                                delta_semitones,
+                                delta_ticks,
+                            });
+                            return Some(Action::request_redraw());
+                        }
+                        PianoRollDragMode::ResizeNote { orig_len } => {
+                            let cand_end_raw = self.x_to_tick(cursor_pos.x);
+                            let cand_end = self.snap.snap(cand_end_raw, self.horizontal_zoom);
+                            let cand_len = cand_end.saturating_sub(note.start_tick).max(60);
+                            let delta_ticks = cand_len as i64 - orig_len as i64;
 
-                                state.live_preview = Some(PianoRollLiveDrag {
-                                    note_id,
-                                    mode,
-                                    target_key: note.key,
-                                    target_start_tick: note.start_tick,
-                                    target_length_ticks: cand_len,
-                                    delta_semitones: 0,
-                                    delta_ticks,
-                                });
-                                return Some(Action::request_redraw());
-                            }
+                            state.live_preview = Some(PianoRollLiveDrag {
+                                note_id,
+                                mode,
+                                target_key: note.key,
+                                target_start_tick: note.start_tick,
+                                target_length_ticks: cand_len,
+                                delta_semitones: 0,
+                                delta_ticks,
+                            });
+                            return Some(Action::request_redraw());
                         }
                     }
                 }
@@ -569,7 +568,7 @@ impl<Theme> canvas::Program<UiMessage, Theme> for PianoRollCanvasProgram {
             let is_being_dragged = state
                 .live_preview
                 .as_ref()
-                .map_or(false, |p| p.note_id == note.id);
+                .is_some_and(|p| p.note_id == note.id);
 
             let nx = self.tick_to_x(note.start_tick);
             let nw = self.length_to_w(note.length_ticks).max(4.0);

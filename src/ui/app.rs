@@ -668,10 +668,22 @@ impl CrystalWaveApp {
                         if sel_id < self.mixer.channels.len() {
                             self.mixer.channels.remove(sel_id);
                         }
+                        // Cascade re-indexing across surviving tracks and their regions
+                        for (new_idx, track) in
+                            self.arrangement.timeline.tracks.iter_mut().enumerate()
+                        {
+                            track.id = new_idx;
+                            for reg in &mut track.regions {
+                                reg.track_id = new_idx;
+                            }
+                        }
                         self.workspace.selected_track_id = self
                             .workspace
                             .selected_track_id
                             .min(self.arrangement.timeline.tracks.len().saturating_sub(1));
+                        self.inspector.selected_track_id = self.workspace.selected_track_id;
+                        self.arrangement.selected_track_index =
+                            Some(self.workspace.selected_track_id);
                     }
                     self.dirty = true;
                 }

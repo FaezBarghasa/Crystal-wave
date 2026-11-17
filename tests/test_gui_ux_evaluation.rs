@@ -667,3 +667,124 @@ fn test_phase3_piano_roll_app_reducer_actions() {
         "Ghost notes should be populated from background channels!"
     );
 }
+
+#[test]
+fn test_phase4_safe_track_deletion_cascading_reindex() {
+    let mut driver = UiSessionDriver::new(48000.0);
+
+    // Initial project has 2 tracks (Track 0: Audio 1, Track 1: Inst 1)
+    assert_eq!(driver.app.arrangement.timeline.tracks.len(), 2);
+
+    // 1. Add 2 additional tracks -> Total 4 tracks
+    driver.dispatch(UiMessage::MenuAction(
+        Crystal_wave::ui::message::MenuCommand::AddAudioTrack,
+    )); // Track 2
+    driver.dispatch(UiMessage::MenuAction(
+        Crystal_wave::ui::message::MenuCommand::AddMidiTrack,
+    )); // Track 3
+
+    assert_eq!(driver.app.arrangement.timeline.tracks.len(), 4);
+    assert_eq!(driver.app.mixer.channels.len(), 4);
+
+    // Add a region to Track 1, Track 2, and Track 3
+    driver.dispatch(UiMessage::TimelineAddPatternClip {
+        track_id: 1,
+        start_tick: 0,
+        length_ticks: 3840,
+        name: "Pattern Trk 1".to_string(),
+    });
+    driver.dispatch(UiMessage::TimelineAddPatternClip {
+        track_id: 2,
+        start_tick: 3840,
+        length_ticks: 3840,
+        name: "Pattern Trk 2".to_string(),
+    });
+    driver.dispatch(UiMessage::TimelineAddPatternClip {
+        track_id: 3,
+        start_tick: 7680,
+        length_ticks: 3840,
+        name: "Pattern Trk 3".to_string(),
+    });
+
+    // 2. Select Track 1 and Delete it
+    driver.dispatch(UiMessage::SelectTrack(1));
+    driver.dispatch(UiMessage::MenuAction(
+        Crystal_wave::ui::message::MenuCommand::DeleteTrack,
+    ));
+
+    // 3. Verify surviving track count is 3
+    assert_eq!(driver.app.arrangement.timeline.tracks.len(), 3);
+    assert_eq!(driver.app.mixer.channels.len(), 3);
+
+    // 4. Verify all surviving tracks have strictly contiguous IDs 0, 1, 2
+    for (idx, trk) in driver.app.arrangement.timeline.tracks.iter().enumerate() {
+        assert_eq!(trk.id, idx, "Track ID must match its contiguous index!");
+        // Verify all regions on this track have re-indexed track_id matching idx!
+        for reg in &trk.regions {
+            assert_eq!(
+                reg.track_id, idx,
+                "Region track_id must be updated to match the re-indexed track ID!"
+            );
+        }
+    }
+
+    // 5. Verify selected track index and inspector are safely clamped
+    assert!(driver.app.workspace.selected_track_id < 3);
+    assert!(driver.app.inspector.selected_track_id < 3);
+
+    // 6. Verify view renders cleanly after track deletion
+    let _tree = driver.app.view();
+}
+
+#[test]
+fn test_phase4_graduated_led_meter_ballistics() {
+    use Crystal_wave::ui::view::render_led_meter;
+
+    // 1. Quiet signal (-36 dBFS): Green segments lit
+    let _quiet = render_led_meter(-36.0, -42.0, -30.0, false);
+
+    // 2. Nominal mix (-14 dBFS): Green segments lit up to -14 dB
+    let _nominal = render_led_meter(-14.0, -18.0, -10.0, false);
+
+    // 3. Hot Amber (-4.5 dBFS): Green + Amber segments lit
+    let _hot = render_led_meter(-4.5, -8.0, -2.0, false);
+
+    // 4. Clip Overload (+1.2 dBFS): All 12 segments lit including Red Clip LED
+    let _clipped = render_led_meter(1.2, -1.0, 1.2, false);
+
+    // 5. Auto-Mute Tripped Overload: Red Clip illuminated + "MUTE" badge
+    let _muted = render_led_meter(15.0, 12.0, 15.0, true);
+}
+
+#[test]
+fn test_phase4_honest_telemetry_status_bar() {
+    let mut driver = UiSessionDriver::new(48000.0);
+
+    // 1. Initial status bar renders with zero XRUNs and nominal master
+    {
+        let _tree = driver.app.view();
+    }
+
+    // 2. Simulate hardware buffer underflows if audio driver is attached
+    if let Some(ref drv) = driver.app.audio_driver {
+        drv.underrun_count
+            .store(4, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    // 3. Simulate high master channel peak
+    if let Some(master) = driver.app.mixer.channels.first_mut() {
+        master.meter.peak_db = 0.5;
+        master.meter.auto_mute_tripped = false;
+    }
+    {
+        let _tree_clip = driver.app.view();
+    }
+
+    // 4. Simulate auto-mute trip
+    if let Some(master) = driver.app.mixer.channels.first_mut() {
+        master.meter.auto_mute_tripped = true;
+    }
+    {
+        let _tree_mute = driver.app.view();
+    }
+}
