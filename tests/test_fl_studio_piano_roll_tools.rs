@@ -121,15 +121,7 @@ fn test_audio_scheduler_slide_note_processing() {
     let mut out_r = [0.0f32; 512];
 
     // Process first block (starting at 0 ticks): base note generates audio
-    scheduler.process_block(
-        &tracks,
-        &notes,
-        &mut mixer,
-        0,
-        512,
-        &mut out_l,
-        &mut out_r,
-    );
+    scheduler.process_block(&tracks, &notes, &mut mixer, 0, 512, &mut out_l, &mut out_r);
 
     let energy: f32 = out_l.iter().map(|s| s.abs()).sum();
     assert!(energy > 0.0, "Synthesizer output must not be silent");

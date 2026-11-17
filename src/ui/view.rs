@@ -922,9 +922,10 @@ impl CrystalWaveApp {
                 let btn_arp_up = button(text("Arp ↑").size(10)).on_press(
                     UiMessage::PianoRollArpeggiate(crate::fl_studio::piano_roll::ArpDirection::Up),
                 );
-                let btn_arp_down = button(text("Arp ↓").size(10)).on_press(
-                    UiMessage::PianoRollArpeggiate(crate::fl_studio::piano_roll::ArpDirection::Down),
-                );
+                let btn_arp_down =
+                    button(text("Arp ↓").size(10)).on_press(UiMessage::PianoRollArpeggiate(
+                        crate::fl_studio::piano_roll::ArpDirection::Down,
+                    ));
                 let btn_add_c4 =
                     button(text("+ Note C4").size(10)).on_press(UiMessage::PianoRollAddNote {
                         channel_id: 0,
@@ -955,13 +956,13 @@ impl CrystalWaveApp {
                     _ => crate::fl_studio::piano_roll::MusicalScale::Chromatic,
                 };
 
-                let btn_scale = button(
-                    text(format!("Scale: {}", self.piano_roll_scale.label())).size(10),
-                )
-                .style(self.theme.button_style(
-                    self.piano_roll_scale != crate::fl_studio::piano_roll::MusicalScale::Chromatic,
-                ))
-                .on_press(UiMessage::PianoRollSetScale(next_scale));
+                let btn_scale =
+                    button(text(format!("Scale: {}", self.piano_roll_scale.label())).size(10))
+                        .style(self.theme.button_style(
+                            self.piano_roll_scale
+                                != crate::fl_studio::piano_roll::MusicalScale::Chromatic,
+                        ))
+                        .on_press(UiMessage::PianoRollSetScale(next_scale));
 
                 let btn_vel = button(text("VEL").size(9))
                     .style(self.theme.button_style(

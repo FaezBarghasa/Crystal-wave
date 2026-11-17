@@ -918,9 +918,14 @@ impl<Theme> canvas::Program<UiMessage, Theme> for PianoRollCanvasProgram {
             });
 
             // Center baseline for bi-polar parameters (Pan, Pitch)
-            if self.event_target == EventLaneTarget::Pan || self.event_target == EventLaneTarget::Pitch {
+            if self.event_target == EventLaneTarget::Pan
+                || self.event_target == EventLaneTarget::Pitch
+            {
                 let mid_y = lane_y + (lane_h * 0.5);
-                let mid_line = Path::line(Point::new(KEYBOARD_WIDTH, mid_y), Point::new(bounds.width, mid_y));
+                let mid_line = Path::line(
+                    Point::new(KEYBOARD_WIDTH, mid_y),
+                    Point::new(bounds.width, mid_y),
+                );
                 frame.stroke(
                     &mid_line,
                     Stroke::default()
@@ -940,24 +945,41 @@ impl<Theme> canvas::Program<UiMessage, Theme> for PianoRollCanvasProgram {
                 let (stem_y_top, stem_y_bottom, node_val_str) = match self.event_target {
                     EventLaneTarget::Velocity => {
                         let h = (note.velocity * stem_usable_h).clamp(2.0, stem_usable_h);
-                        (lane_y + lane_h - h - 4.0, lane_y + lane_h - 4.0, format!("{:.0}%", note.velocity * 100.0))
+                        (
+                            lane_y + lane_h - h - 4.0,
+                            lane_y + lane_h - 4.0,
+                            format!("{:.0}%", note.velocity * 100.0),
+                        )
                     }
                     EventLaneTarget::Pan => {
                         let mid_y = lane_y + (lane_h * 0.5);
-                        let offset = (note.pan * (stem_usable_h * 0.5)).clamp(-stem_usable_h * 0.5, stem_usable_h * 0.5);
+                        let offset = (note.pan * (stem_usable_h * 0.5))
+                            .clamp(-stem_usable_h * 0.5, stem_usable_h * 0.5);
                         let top = mid_y - offset;
-                        (top, mid_y, if note.pan.abs() < 0.05 { "C".to_string() } else if note.pan < 0.0 { format!("L{:.0}", -note.pan * 100.0) } else { format!("R{:.0}", note.pan * 100.0) })
+                        (
+                            top,
+                            mid_y,
+                            if note.pan.abs() < 0.05 {
+                                "C".to_string()
+                            } else if note.pan < 0.0 {
+                                format!("L{:.0}", -note.pan * 100.0)
+                            } else {
+                                format!("R{:.0}", note.pan * 100.0)
+                            },
+                        )
                     }
                     EventLaneTarget::Pitch => {
                         let mid_y = lane_y + (lane_h * 0.5);
-                        let offset = ((note.fine_pitch_cents / 100.0) * (stem_usable_h * 0.5)).clamp(-stem_usable_h * 0.5, stem_usable_h * 0.5);
+                        let offset = ((note.fine_pitch_cents / 100.0) * (stem_usable_h * 0.5))
+                            .clamp(-stem_usable_h * 0.5, stem_usable_h * 0.5);
                         let top = mid_y - offset;
                         (top, mid_y, format!("{:+.0}c", note.fine_pitch_cents))
                     }
                 };
 
                 // Vertical stem line
-                let stem_line = Path::line(Point::new(nx, stem_y_bottom), Point::new(nx, stem_y_top));
+                let stem_line =
+                    Path::line(Point::new(nx, stem_y_bottom), Point::new(nx, stem_y_top));
                 frame.stroke(
                     &stem_line,
                     Stroke::default()

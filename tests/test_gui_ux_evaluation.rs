@@ -522,6 +522,8 @@ fn test_phase3_piano_roll_2d_mouse_interactions() {
         start_tick: 0,
         length_ticks: 960,
         velocity: 0.8,
+        pan: 0.0,
+        fine_pitch_cents: 0.0,
         is_slide: false,
     });
 

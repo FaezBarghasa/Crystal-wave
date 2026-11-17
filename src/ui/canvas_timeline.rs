@@ -338,7 +338,8 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                             for (idx, p) in points.iter().enumerate() {
                                 let px = self.tick_to_x(clip.start_tick + p.0, bounds.width);
                                 let py = (y_clip + h_clip) - p.1 * (h_clip - 4.0) - 2.0;
-                                let dist_sq = (cursor_pos.x - px).powi(2) + (cursor_pos.y - py).powi(2);
+                                let dist_sq =
+                                    (cursor_pos.x - px).powi(2) + (cursor_pos.y - py).powi(2);
                                 if dist_sq <= 64.0 {
                                     auto_zone = Some(SmartToolZone::AutomationNode(idx));
                                     break;
@@ -359,7 +360,8 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                                     let mid_prog = evaluate_spline_tension(0.5, p0.2);
                                     let mx = x0 + (x1 - x0) * 0.5;
                                     let my = y0 + (y1 - y0) * mid_prog;
-                                    let dist_sq = (cursor_pos.x - mx).powi(2) + (cursor_pos.y - my).powi(2);
+                                    let dist_sq =
+                                        (cursor_pos.x - mx).powi(2) + (cursor_pos.y - my).powi(2);
                                     if dist_sq <= 64.0 {
                                         auto_zone = Some(SmartToolZone::AutomationTension(i));
                                         break;
@@ -368,21 +370,21 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                             }
                         }
 
-                        let zone = auto_zone.unwrap_or_else(|| {
-                            if cursor_pos.x - x_start < 8.0 {
-                                SmartToolZone::TrimStart
-                            } else if x_end - cursor_pos.x < 8.0 {
-                                SmartToolZone::TrimEnd
-                            } else if cursor_pos.y - y_clip < 14.0 && cursor_pos.x - x_start < 16.0 {
-                                SmartToolZone::FadeIn
-                            } else if cursor_pos.y - y_clip < 14.0 && x_end - cursor_pos.x < 16.0 {
-                                SmartToolZone::FadeOut
-                            } else if cursor_pos.y > y_clip + (h_clip * 0.45) {
-                                SmartToolZone::GrabMove
-                            } else {
-                                SmartToolZone::SelectRange
-                            }
-                        });
+                        let zone = if let Some(az) = auto_zone {
+                            az
+                        } else if cursor_pos.x - x_start < 8.0 {
+                            SmartToolZone::TrimStart
+                        } else if x_end - cursor_pos.x < 8.0 {
+                            SmartToolZone::TrimEnd
+                        } else if cursor_pos.y - y_clip < 14.0 && cursor_pos.x - x_start < 16.0 {
+                            SmartToolZone::FadeIn
+                        } else if cursor_pos.y - y_clip < 14.0 && x_end - cursor_pos.x < 16.0 {
+                            SmartToolZone::FadeOut
+                        } else if cursor_pos.y > y_clip + (h_clip * 0.45) {
+                            SmartToolZone::GrabMove
+                        } else {
+                            SmartToolZone::SelectRange
+                        };
 
                         let offset_ticks = target_tick.saturating_sub(clip.start_tick);
                         state.dragged_clip = Some((
@@ -501,11 +503,13 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                             let mid_y = y_clip + h_clip * 0.5;
                             let tension =
                                 ((mid_y - cursor_pos.y) / (h_clip * 0.35)).clamp(-1.0, 1.0);
-                            return Some(Action::publish(UiMessage::TimelineSetAutomationTension {
-                                clip_id,
-                                segment_index: seg_idx,
-                                tension,
-                            }));
+                            return Some(Action::publish(
+                                UiMessage::TimelineSetAutomationTension {
+                                    clip_id,
+                                    segment_index: seg_idx,
+                                    tension,
+                                },
+                            ));
                         }
                         SmartToolZone::AutomationNode(node_idx) => {
                             let y_clip = RULER_HEIGHT + (orig_trk as f32 * LANE_HEIGHT) + 4.0;
@@ -1084,9 +1088,7 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                                     frame.fill(&handle_circ, Color::from_rgb8(255, 120, 0));
                                     frame.stroke(
                                         &handle_circ,
-                                        Stroke::default()
-                                            .with_color(Color::WHITE)
-                                            .with_width(1.0),
+                                        Stroke::default().with_color(Color::WHITE).with_width(1.0),
                                     );
                                 }
                                 if let Some(last_p) = points.last() {

@@ -1321,11 +1321,11 @@ impl CrystalWaveApp {
             } => {
                 for trk in &mut self.arrangement.timeline.tracks {
                     if let Some(reg) = trk.regions.iter_mut().find(|r| r.id == clip_id) {
-                        if let RegionKind::Automation { points, .. } = &mut reg.kind {
-                            if let Some(pt) = points.get_mut(segment_index) {
-                                pt.tension = tension.clamp(-1.0, 1.0);
-                                self.dirty = true;
-                            }
+                        if let RegionKind::Automation { points, .. } = &mut reg.kind
+                            && let Some(pt) = points.get_mut(segment_index)
+                        {
+                            pt.tension = tension.clamp(-1.0, 1.0);
+                            self.dirty = true;
                         }
                         break;
                     }
@@ -1338,11 +1338,11 @@ impl CrystalWaveApp {
             } => {
                 for trk in &mut self.arrangement.timeline.tracks {
                     if let Some(reg) = trk.regions.iter_mut().find(|r| r.id == clip_id) {
-                        if let RegionKind::Automation { points, .. } = &mut reg.kind {
-                            if let Some(pt) = points.get_mut(node_index) {
-                                pt.value = value.clamp(0.0, 1.0);
-                                self.dirty = true;
-                            }
+                        if let RegionKind::Automation { points, .. } = &mut reg.kind
+                            && let Some(pt) = points.get_mut(node_index)
+                        {
+                            pt.value = value.clamp(0.0, 1.0);
+                            self.dirty = true;
                         }
                         break;
                     }

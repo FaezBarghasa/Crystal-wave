@@ -323,8 +323,8 @@ impl TimelineAudioScheduler {
                                 if curr_frame < slide_start_f {
                                     base_freq
                                 } else if curr_frame >= slide_start_f && curr_frame < slide_end_f {
-                                    let alpha = (curr_frame - slide_start_f) as f32
-                                        / slide_len_f as f32;
+                                    let alpha =
+                                        (curr_frame - slide_start_f) as f32 / slide_len_f as f32;
                                     base_freq * (target_freq / base_freq).powf(alpha)
                                 } else {
                                     target_freq
@@ -337,16 +337,8 @@ impl TimelineAudioScheduler {
                             let env = (t / 0.01).min(1.0) * (-t * 1.5).exp().max(0.1);
                             let note_sample = (2.0 * PI * freq * t).sin() * 0.25 * vel * env;
 
-                            let pan_l = if note.pan <= 0.0 {
-                                1.0
-                            } else {
-                                1.0 - note.pan
-                            };
-                            let pan_r = if note.pan >= 0.0 {
-                                1.0
-                            } else {
-                                1.0 + note.pan
-                            };
+                            let pan_l = if note.pan <= 0.0 { 1.0 } else { 1.0 - note.pan };
+                            let pan_r = if note.pan >= 0.0 { 1.0 } else { 1.0 + note.pan };
 
                             self.track_buffer_l[i] += note_sample * pan_l;
                             self.track_buffer_r[i] += note_sample * pan_r;

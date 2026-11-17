@@ -1,5 +1,5 @@
 use Crystal_wave::timeline::region::{AutomationPoint, Region, RegionKind};
-use Crystal_wave::timeline::track::{Track, TrackType};
+use Crystal_wave::timeline::track::TrackType;
 use Crystal_wave::ui::app::CrystalWaveApp;
 use Crystal_wave::ui::canvas_timeline::{ArrangementCanvasProgram, evaluate_spline_tension};
 use Crystal_wave::ui::message::UiMessage;
@@ -73,7 +73,7 @@ fn test_hermite_spline_tension_evaluation() {
 #[test]
 fn test_region_automation_curve_evaluation() {
     let points = vec![
-        AutomationPoint::new(0, 0.0, 0.5),    // start at 0% with convex tension
+        AutomationPoint::new(0, 0.0, 0.5), // start at 0% with convex tension
         AutomationPoint::new(1920, 1.0, 0.0), // peak at 100% linear
         AutomationPoint::new(3840, 0.2, -0.5), // drop to 20% with concave tension
     ];
@@ -105,15 +105,11 @@ fn test_region_automation_curve_evaluation() {
     assert!((val_0 - 20.0).abs() < 1e-3);
 
     // At offset 1920 -> min_value + (max - min)*1.0 = 20000.0 Hz
-    let val_1920 = region
-        .evaluate_automation(1920)
-        .expect("Must return value");
+    let val_1920 = region.evaluate_automation(1920).expect("Must return value");
     assert!((val_1920 - 20000.0).abs() < 1e-3);
 
     // At offset 3840 -> min_value + (max - min)*0.2 = 20 + 19980*0.2 = 4016.0 Hz
-    let val_3840 = region
-        .evaluate_automation(3840)
-        .expect("Must return value");
+    let val_3840 = region.evaluate_automation(3840).expect("Must return value");
     assert!((val_3840 - 4016.0).abs() < 1.0);
 
     // Midpoint between 0 and 1920 (tick 960): convex curve should be below linear mid
@@ -128,7 +124,7 @@ fn test_region_automation_curve_evaluation() {
 #[test]
 fn test_free_form_track_coexistence_and_interaction() {
     let mut app = CrystalWaveApp::new(44100.0);
-    app.set_theme(ThemePreset::FlStudioModern);
+    app.update(UiMessage::SetThemePreset(ThemePreset::FlStudioModern));
 
     // Ensure we have at least 2 tracks (Track 0: Audio, Track 1: Software)
     assert!(app.arrangement.timeline.tracks.len() >= 2);
