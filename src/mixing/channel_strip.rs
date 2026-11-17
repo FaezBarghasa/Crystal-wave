@@ -188,6 +188,20 @@ impl ChannelStrip {
         }
     }
 
+    /// Assigns a registered plugin to a specific insert slot
+    pub fn assign_plugin_to_slot(
+        &mut self,
+        slot_id: usize,
+        plugin_id: u32,
+        name: impl Into<String>,
+    ) {
+        if slot_id < NUM_INSERT_SLOTS {
+            self.slots[slot_id].plugin_id = Some(plugin_id);
+            self.slots[slot_id].name = name.into();
+            self.slots[slot_id].bypassed = false;
+        }
+    }
+
     pub fn linear_gain(&self) -> f32 {
         if self.muted || self.volume_fader_db <= -96.0 || self.meter.auto_mute_tripped {
             0.0

@@ -92,6 +92,30 @@ pub enum UiMessage {
     ToggleFlMixer,
     ToggleFlBrowser,
     ToggleFlPatcher,
+    ToggleFlPluginPicker,
+
+    // FL Studio Browser & Sample Audition
+    BrowserSetSearchQuery(String),
+    BrowserSelectTab(crate::fl_studio::browser::BrowserTab),
+    BrowserAuditionSample(usize),
+    BrowserStopAudition,
+    BrowserDropSampleToPlaylist {
+        sample_id: usize,
+        track_id: usize,
+        start_tick: u64,
+    },
+
+    // FL Studio Visual Plugin Picker
+    PluginPickerSetSearch(String),
+    PluginPickerSelectCategory(Option<crate::plugins::plugin_descriptor::PluginCategory>),
+    PluginPickerLoadPlugin {
+        plugin_id: u32,
+        is_generator: bool,
+    },
+    OpenPluginPickerForSlot {
+        track_id: usize,
+        slot_id: usize,
+    },
 
     // FL Studio Channel Rack Step Sequencer & Drag-and-Drop
     ChannelRackToggleStep {

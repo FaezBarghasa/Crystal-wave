@@ -9,7 +9,7 @@ pub mod playlist;
 pub mod soft_clipper;
 
 pub use automation_clip::{AutomationClip, SplineNode};
-pub use browser::{FlBrowser, SampleEntry};
+pub use browser::{BrowserTab, FlBrowser, PluginCatalogItem, PresetEntry, SampleEntry};
 pub use channel_rack::{ChannelRack, RackChannel, StepProperties};
 pub use gross_beat::{GrossBeatEngine, GrossBeatTimePreset, GrossBeatVolumePreset};
 pub use history::{FlHistoryManager, HistoryAction, MAX_HISTORY_STEPS};
@@ -30,6 +30,7 @@ pub struct FlWindowManager {
     pub browser_visible: bool,      // Alt+F8 shortcut in FL Studio
     pub patcher_visible: bool,
     pub history_visible: bool,
+    pub plugin_picker_visible: bool, // Visual Plugin Picker grid modal
 }
 
 impl Default for FlWindowManager {
@@ -42,6 +43,7 @@ impl Default for FlWindowManager {
             browser_visible: true,
             patcher_visible: false,
             history_visible: false,
+            plugin_picker_visible: false,
         }
     }
 }
@@ -77,5 +79,9 @@ impl FlWindowManager {
 
     pub fn toggle_history(&mut self) {
         self.history_visible = !self.history_visible;
+    }
+
+    pub fn toggle_plugin_picker(&mut self) {
+        self.plugin_picker_visible = !self.plugin_picker_visible;
     }
 }

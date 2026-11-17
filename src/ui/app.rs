@@ -43,6 +43,9 @@ pub struct CrystalWaveApp {
     pub selected_mixer_track: usize,
     pub command_palette_open: bool,
     pub command_query: String,
+    pub plugin_picker_search: String,
+    pub plugin_picker_category: Option<crate::plugins::plugin_descriptor::PluginCategory>,
+    pub plugin_picker_target_slot: Option<(usize, usize)>,
 }
 
 impl Default for CrystalWaveApp {
@@ -172,6 +175,9 @@ impl CrystalWaveApp {
             selected_mixer_track: 0,
             command_palette_open: false,
             command_query: String::new(),
+            plugin_picker_search: String::new(),
+            plugin_picker_category: None,
+            plugin_picker_target_slot: None,
         }
     }
 
@@ -911,6 +917,62 @@ impl CrystalWaveApp {
             }
             UiMessage::ToggleFlPatcher => {
                 self.fl_windows.toggle_patcher();
+            }
+            UiMessage::ToggleFlPluginPicker => {
+                self.fl_windows.toggle_plugin_picker();
+            }
+            UiMessage::BrowserSetSearchQuery(q) => {
+                self.browser.search_query = q;
+            }
+            UiMessage::BrowserSelectTab(tab) => {
+                self.browser.active_tab = tab;
+            }
+            UiMessage::BrowserAuditionSample(id) => {
+                self.browser.start_preview(id);
+            }
+            UiMessage::BrowserStopAudition => {
+                self.browser.stop_preview();
+            }
+            UiMessage::BrowserDropSampleToPlaylist {
+                sample_id,
+                track_id,
+                start_tick,
+            } => {
+                let _ = self.browser.drop_to_playlist(
+                    &mut self.arrangement.timeline.tracks,
+                    sample_id,
+                    track_id,
+                    start_tick,
+                    1920,
+                );
+                self.dirty = true;
+            }
+            UiMessage::PluginPickerSetSearch(q) => {
+                self.plugin_picker_search = q;
+            }
+            UiMessage::PluginPickerSelectCategory(cat) => {
+                self.plugin_picker_category = cat;
+            }
+            UiMessage::OpenPluginPickerForSlot { track_id, slot_id } => {
+                self.plugin_picker_target_slot = Some((track_id, slot_id));
+                self.fl_windows.plugin_picker_visible = true;
+            }
+            UiMessage::PluginPickerLoadPlugin {
+                plugin_id,
+                is_generator,
+            } => {
+                if let Some(item) = self.browser.plugins.iter().find(|p| p.id == plugin_id) {
+                    if is_generator {
+                        let _ = self.channel_rack.add_channel(item.name.clone());
+                    } else if let Some((trk_id, slot_id)) = self.plugin_picker_target_slot {
+                        let _ = self.mixer.ensure_channel_exists(trk_id);
+                        if let Some(strip) = self.mixer.channels.get_mut(trk_id) {
+                            strip.assign_plugin_to_slot(slot_id, plugin_id, item.name.clone());
+                        }
+                    }
+                }
+                self.fl_windows.plugin_picker_visible = false;
+                self.dirty = true;
             }
 
             UiMessage::ChannelRackToggleStep {
