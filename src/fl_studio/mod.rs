@@ -14,7 +14,9 @@ pub use channel_rack::{ChannelRack, RackChannel, StepProperties};
 pub use gross_beat::{GrossBeatEngine, GrossBeatTimePreset, GrossBeatVolumePreset};
 pub use history::{FlHistoryManager, HistoryAction, MAX_HISTORY_STEPS};
 pub use patcher::{FlPatcher, PatcherCable, PatcherMacroKnob, PatcherNode, PatcherNodeKind};
-pub use piano_roll::{FlPianoRollNote, FlPianoRollTools, GhostNote};
+pub use piano_roll::{
+    ArpDirection, EventLaneTarget, FlPianoRollNote, FlPianoRollTools, GhostNote, MusicalScale,
+};
 pub use playlist::{FlPattern, FlPlaylist, PlaylistItem, PlaylistTrackLane};
 pub use soft_clipper::FruitySoftClipper;
 

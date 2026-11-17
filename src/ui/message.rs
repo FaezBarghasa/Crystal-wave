@@ -144,6 +144,15 @@ pub enum UiMessage {
     PianoRollFlipHorizontal,
     PianoRollFlipVertical,
     PianoRollQuickChop,
+    PianoRollArpeggiate(crate::fl_studio::piano_roll::ArpDirection),
+    PianoRollSetScale(crate::fl_studio::piano_roll::MusicalScale),
+    PianoRollSetScaleRoot(u8),
+    PianoRollSetEventTarget(crate::fl_studio::piano_roll::EventLaneTarget),
+    PianoRollSetNoteProperty {
+        note_id: usize,
+        property: crate::fl_studio::piano_roll::EventLaneTarget,
+        value: f32,
+    },
 
     // UI/UX Fusion Upgrades
     SetThemePreset(crate::ui::theme::ThemePreset),

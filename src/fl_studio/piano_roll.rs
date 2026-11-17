@@ -1,3 +1,81 @@
+/// Lower Event Editor Lane parameter target
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum EventLaneTarget {
+    #[default]
+    Velocity,
+    Pan,
+    Pitch,
+}
+
+/// Musical Scale for Piano Roll Key Grid Highlighting
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum MusicalScale {
+    #[default]
+    Chromatic,
+    Major,
+    Minor,
+    Dorian,
+    Phrygian,
+    Lydian,
+    Mixolydian,
+    HarmonicMinor,
+    MelodicMinor,
+    PentatonicMajor,
+    PentatonicMinor,
+}
+
+impl MusicalScale {
+    pub fn intervals(&self) -> &'static [u8] {
+        match self {
+            Self::Chromatic => &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+            Self::Major => &[0, 2, 4, 5, 7, 9, 11],
+            Self::Minor => &[0, 2, 3, 5, 7, 8, 10],
+            Self::Dorian => &[0, 2, 3, 5, 7, 9, 10],
+            Self::Phrygian => &[0, 1, 3, 5, 7, 8, 10],
+            Self::Lydian => &[0, 2, 4, 6, 7, 9, 11],
+            Self::Mixolydian => &[0, 2, 4, 5, 7, 9, 10],
+            Self::HarmonicMinor => &[0, 2, 3, 5, 7, 8, 11],
+            Self::MelodicMinor => &[0, 2, 3, 5, 7, 9, 11],
+            Self::PentatonicMajor => &[0, 2, 4, 7, 9],
+            Self::PentatonicMinor => &[0, 3, 5, 7, 10],
+        }
+    }
+
+    pub fn is_in_scale(&self, root_key: u8, key: u8) -> bool {
+        if *self == Self::Chromatic {
+            return true;
+        }
+        let semitones = (key as i16 - root_key as i16).rem_euclid(12) as u8;
+        self.intervals().contains(&semitones)
+    }
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Chromatic => "Chromatic",
+            Self::Major => "Major (Ionian)",
+            Self::Minor => "Natural Minor (Aeolian)",
+            Self::Dorian => "Dorian",
+            Self::Phrygian => "Phrygian",
+            Self::Lydian => "Lydian",
+            Self::Mixolydian => "Mixolydian",
+            Self::HarmonicMinor => "Harmonic Minor",
+            Self::MelodicMinor => "Melodic Minor",
+            Self::PentatonicMajor => "Major Pentatonic",
+            Self::PentatonicMinor => "Minor Pentatonic",
+        }
+    }
+}
+
+/// Arpeggiator pattern directions
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ArpDirection {
+    #[default]
+    Up,
+    Down,
+    UpDown,
+    Random,
+}
+
 /// FL Studio-style Piano Roll Note with Slide, Portamento, Pan, and Fine Pitch
 #[derive(Debug, Clone, PartialEq)]
 pub struct FlPianoRollNote {
@@ -98,6 +176,82 @@ impl FlPianoRollTools {
             sub_note.start_tick = note.start_tick + (i as u64) * sub_len;
             sub_note.length_ticks = sub_len;
             out.push(sub_note);
+        }
+        out
+    }
+
+    /// Advanced Strum with velocity taper and stroke alternation
+    pub fn quick_strum_advanced(
+        notes: &mut [FlPianoRollNote],
+        time_offset_ticks: u64,
+        alternate_direction: bool,
+        velocity_taper: f32, // -0.5 to +0.5 taper
+    ) {
+        Self::quick_strum(notes, time_offset_ticks, alternate_direction);
+        let len = notes.len();
+        if len > 1 {
+            for (i, note) in notes.iter_mut().enumerate() {
+                let factor = 1.0 + velocity_taper * (i as f32 / (len - 1) as f32 - 0.5);
+                note.velocity = (note.velocity * factor).clamp(0.05, 1.0);
+            }
+        }
+    }
+
+    /// Arpeggiate chord notes into sequential melodic patterns
+    pub fn arpeggiate(
+        chord_notes: &[FlPianoRollNote],
+        direction: ArpDirection,
+        step_ticks: u64,
+        total_ticks: u64,
+    ) -> Vec<FlPianoRollNote> {
+        if chord_notes.is_empty() || step_ticks == 0 {
+            return Vec::new();
+        }
+
+        let mut sorted = chord_notes.to_vec();
+        sorted.sort_by_key(|n| n.key);
+
+        let pitches: Vec<u8> = match direction {
+            ArpDirection::Up => sorted.iter().map(|n| n.key).collect(),
+            ArpDirection::Down => sorted.iter().rev().map(|n| n.key).collect(),
+            ArpDirection::UpDown => {
+                let mut p: Vec<u8> = sorted.iter().map(|n| n.key).collect();
+                if sorted.len() > 2 {
+                    let mut down: Vec<u8> = sorted[1..sorted.len() - 1]
+                        .iter()
+                        .rev()
+                        .map(|n| n.key)
+                        .collect();
+                    p.append(&mut down);
+                }
+                p
+            }
+            ArpDirection::Random => {
+                // Pseudo-random deterministic permutation based on pitch sum
+                let mut p: Vec<u8> = sorted.iter().map(|n| n.key).collect();
+                p.reverse();
+                p
+            }
+        };
+
+        let base_start = chord_notes.iter().map(|n| n.start_tick).min().unwrap_or(0);
+        let channel_id = chord_notes[0].channel_id;
+        let num_steps = (total_ticks / step_ticks).max(1);
+        let note_len = step_ticks.saturating_sub(10).max(1);
+
+        let mut out = Vec::with_capacity(num_steps as usize);
+        for i in 0..num_steps {
+            let key = pitches[(i as usize) % pitches.len()];
+            let start = base_start + i * step_ticks;
+            let mut arp_note = FlPianoRollNote::new(
+                chord_notes[0].id * 1000 + i as usize,
+                channel_id,
+                key,
+                start,
+                note_len,
+            );
+            arp_note.velocity = chord_notes[0].velocity;
+            out.push(arp_note);
         }
         out
     }

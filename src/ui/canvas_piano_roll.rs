@@ -8,6 +8,7 @@
 //! - Multi-channel Polyphonic Ghost Notes with calm-tech 28% opacity for harmonic cross-referencing
 //! - Live Ghost Dragging with snap guidelines and floating HUD telemetry pill
 
+use crate::fl_studio::piano_roll::{EventLaneTarget, MusicalScale};
 use crate::ui::canvas_timeline::SnapGrid;
 use crate::ui::message::UiMessage;
 use iced::mouse;
@@ -111,6 +112,10 @@ pub struct PianoRollCanvasProgram {
     pub notes: Vec<PianoRollNoteDisplay>,
     pub ghost_notes: Vec<GhostNoteDisplay>,
     pub is_fl_theme: bool,
+    pub scale: MusicalScale,
+    pub scale_root: u8,
+    pub event_target: EventLaneTarget,
+    pub event_lane_height: f32,
 }
 
 impl PianoRollCanvasProgram {
@@ -124,6 +129,10 @@ impl PianoRollCanvasProgram {
             notes: Vec::new(),
             ghost_notes: Vec::new(),
             is_fl_theme: false,
+            scale: MusicalScale::default(),
+            scale_root: 0,
+            event_target: EventLaneTarget::Velocity,
+            event_lane_height: 75.0,
         }
     }
 
@@ -149,6 +158,22 @@ impl PianoRollCanvasProgram {
 
     pub fn with_channel_id(mut self, channel_id: usize) -> Self {
         self.selected_channel_id = channel_id;
+        self
+    }
+
+    pub fn with_scale(mut self, scale: MusicalScale, root: u8) -> Self {
+        self.scale = scale;
+        self.scale_root = root;
+        self
+    }
+
+    pub fn with_event_target(mut self, target: EventLaneTarget) -> Self {
+        self.event_target = target;
+        self
+    }
+
+    pub fn with_event_lane_height(mut self, height: f32) -> Self {
+        self.event_lane_height = height.max(0.0);
         self
     }
 

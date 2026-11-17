@@ -36,6 +36,9 @@ pub struct CrystalWaveApp {
     pub timeline_scroll_x: f32,
     pub piano_roll_scroll_y: f32,
     pub piano_roll_selected_channel: usize,
+    pub piano_roll_scale: crate::fl_studio::piano_roll::MusicalScale,
+    pub piano_roll_scale_root: u8,
+    pub piano_roll_event_target: crate::fl_studio::piano_roll::EventLaneTarget,
     pub marquee_selection: Option<(u64, u64, usize, usize)>,
     pub selected_mixer_track: usize,
     pub command_palette_open: bool,
@@ -162,6 +165,9 @@ impl CrystalWaveApp {
             timeline_scroll_x: 0.0,
             piano_roll_scroll_y: 872.0, // Center C4 (key 60) in default viewport
             piano_roll_selected_channel: 0,
+            piano_roll_scale: crate::fl_studio::piano_roll::MusicalScale::default(),
+            piano_roll_scale_root: 0,
+            piano_roll_event_target: crate::fl_studio::piano_roll::EventLaneTarget::Velocity,
             marquee_selection: None,
             selected_mixer_track: 0,
             command_palette_open: false,
@@ -1115,6 +1121,58 @@ impl CrystalWaveApp {
                 }
                 self.piano_roll_notes = chopped_notes;
                 self.dirty = true;
+            }
+            UiMessage::PianoRollArpeggiate(direction) => {
+                if !self.piano_roll_notes.is_empty() {
+                    let total_ticks = self
+                        .piano_roll_notes
+                        .iter()
+                        .map(|n| n.start_tick + n.length_ticks)
+                        .max()
+                        .unwrap_or(960);
+                    let arped = crate::fl_studio::FlPianoRollTools::arpeggiate(
+                        &self.piano_roll_notes,
+                        direction,
+                        240, // 16th note step
+                        total_ticks,
+                    );
+                    if !arped.is_empty() {
+                        self.piano_roll_notes = arped;
+                    }
+                }
+                self.dirty = true;
+            }
+            UiMessage::PianoRollSetScale(scale) => {
+                self.piano_roll_scale = scale;
+                self.dirty = true;
+            }
+            UiMessage::PianoRollSetScaleRoot(root) => {
+                self.piano_roll_scale_root = root % 12;
+                self.dirty = true;
+            }
+            UiMessage::PianoRollSetEventTarget(target) => {
+                self.piano_roll_event_target = target;
+                self.dirty = true;
+            }
+            UiMessage::PianoRollSetNoteProperty {
+                note_id,
+                property,
+                value,
+            } => {
+                if let Some(note) = self.piano_roll_notes.iter_mut().find(|n| n.id == note_id) {
+                    match property {
+                        crate::fl_studio::piano_roll::EventLaneTarget::Velocity => {
+                            note.velocity = value.clamp(0.0, 1.0);
+                        }
+                        crate::fl_studio::piano_roll::EventLaneTarget::Pan => {
+                            note.pan = value.clamp(-1.0, 1.0);
+                        }
+                        crate::fl_studio::piano_roll::EventLaneTarget::Pitch => {
+                            note.fine_pitch_cents = value.clamp(-100.0, 100.0);
+                        }
+                    }
+                    self.dirty = true;
+                }
             }
 
             UiMessage::SetThemePreset(preset) => {

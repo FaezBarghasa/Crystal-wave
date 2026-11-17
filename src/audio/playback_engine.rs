@@ -277,35 +277,76 @@ impl TimelineAudioScheduler {
             // 2. Process Piano Roll Notes for Software Instrument / MIDI Tracks
             if track.track_type == TrackType::Software || track.track_type == TrackType::Midi {
                 for note in piano_roll_notes {
-                    if note.channel_id == trk_idx {
-                        let note_start_frame = self.tick_to_frame(note.start_tick);
-                        let note_len_frames = self.tick_to_frame(note.length_ticks).max(1);
-                        let note_end_frame = note_start_frame + note_len_frames;
+                    // FL Studio Slide notes do not generate independent voice; they modulate overlapping voices
+                    if note.is_slide || note.channel_id != trk_idx {
+                        continue;
+                    }
 
-                        if note_end_frame <= start_frame || note_start_frame >= end_frame {
-                            continue;
-                        }
+                    let note_start_frame = self.tick_to_frame(note.start_tick);
+                    let note_len_frames = self.tick_to_frame(note.length_ticks).max(1);
+                    let note_end_frame = note_start_frame + note_len_frames;
 
-                        let freq = 440.0 * 2.0f32.powf((note.key as f32 - 69.0) / 12.0);
-                        let vel = note.velocity.clamp(0.0, 1.0);
+                    if note_end_frame <= start_frame || note_start_frame >= end_frame {
+                        continue;
+                    }
 
-                        for i in 0..len {
-                            let curr_frame = start_frame + i as u64;
-                            if curr_frame >= note_start_frame && curr_frame < note_end_frame {
-                                let frame_in_note = curr_frame - note_start_frame;
-                                let t = frame_in_note as f32 / self.sample_rate;
+                    let base_pitch = note.key as f32 + (note.fine_pitch_cents / 100.0);
+                    let base_freq = 440.0 * 2.0f32.powf((base_pitch - 69.0) / 12.0);
+                    let vel = note.velocity.clamp(0.0, 1.0);
 
-                                // Note envelope: attack 10ms, decay
-                                let env = (t / 0.01).min(1.0) * (-t * 1.5).exp().max(0.1);
-                                let note_sample = (2.0 * PI * freq * t).sin() * 0.25 * vel * env;
+                    // Check for overlapping FL Studio slide notes on the same channel
+                    let overlapping_slide = piano_roll_notes.iter().find(|sn| {
+                        sn.is_slide
+                            && sn.channel_id == trk_idx
+                            && sn.start_tick < note.start_tick + note.length_ticks
+                            && sn.start_tick + sn.length_ticks > note.start_tick
+                    });
 
-                                let pan_l = if note.pan <= 0.0 { 1.0 } else { 1.0 - note.pan };
-                                let pan_r = if note.pan >= 0.0 { 1.0 } else { 1.0 + note.pan };
+                    for i in 0..len {
+                        let curr_frame = start_frame + i as u64;
+                        if curr_frame >= note_start_frame && curr_frame < note_end_frame {
+                            let frame_in_note = curr_frame - note_start_frame;
+                            let t = frame_in_note as f32 / self.sample_rate;
 
-                                self.track_buffer_l[i] += note_sample * pan_l;
-                                self.track_buffer_r[i] += note_sample * pan_r;
-                                has_audio_on_track = true;
-                            }
+                            // Calculate frequency with exponential glissando if slide note is active
+                            let freq = if let Some(slide) = overlapping_slide {
+                                let slide_start_f = self.tick_to_frame(slide.start_tick);
+                                let slide_len_f = self.tick_to_frame(slide.length_ticks).max(1);
+                                let slide_end_f = slide_start_f + slide_len_f;
+                                let target_freq =
+                                    440.0 * 2.0f32.powf((slide.key as f32 - 69.0) / 12.0);
+
+                                if curr_frame < slide_start_f {
+                                    base_freq
+                                } else if curr_frame >= slide_start_f && curr_frame < slide_end_f {
+                                    let alpha = (curr_frame - slide_start_f) as f32
+                                        / slide_len_f as f32;
+                                    base_freq * (target_freq / base_freq).powf(alpha)
+                                } else {
+                                    target_freq
+                                }
+                            } else {
+                                base_freq
+                            };
+
+                            // Note envelope: attack 10ms, decay
+                            let env = (t / 0.01).min(1.0) * (-t * 1.5).exp().max(0.1);
+                            let note_sample = (2.0 * PI * freq * t).sin() * 0.25 * vel * env;
+
+                            let pan_l = if note.pan <= 0.0 {
+                                1.0
+                            } else {
+                                1.0 - note.pan
+                            };
+                            let pan_r = if note.pan >= 0.0 {
+                                1.0
+                            } else {
+                                1.0 + note.pan
+                            };
+
+                            self.track_buffer_l[i] += note_sample * pan_l;
+                            self.track_buffer_r[i] += note_sample * pan_r;
+                            has_audio_on_track = true;
                         }
                     }
                 }
