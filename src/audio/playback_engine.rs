@@ -307,10 +307,15 @@ impl TimelineAudioScheduler {
         mixer.sum_buses(&mut master_out_l[..len], &mut master_out_r[..len]);
 
         // 5. Update Master Channel Strip Meter
-        if let Some(master_ch) = mixer.channels.get_mut(0) {
-            master_ch
-                .meter
-                .process_block(&mut master_out_l[..len], &mut master_out_r[..len]);
+        // If an explicit Master channel strip exists at master_channel_index, update it;
+        // avoid overwriting Track 0 when tracks share mixer indices.
+        if mixer.channels.len() > tracks.len() {
+            let master_idx = mixer.channels.len() - 1;
+            if let Some(master_ch) = mixer.channels.get_mut(master_idx) {
+                master_ch
+                    .meter
+                    .process_block(&mut master_out_l[..len], &mut master_out_r[..len]);
+            }
         }
     }
 }

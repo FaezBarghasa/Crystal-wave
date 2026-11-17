@@ -88,7 +88,9 @@ impl AudioHardwareDriver {
 
                     if to_read < needed {
                         data[to_read..].fill(0.0);
-                        underrun_counter.fetch_add(1, Ordering::Relaxed);
+                        if running_flag.load(Ordering::Relaxed) {
+                            underrun_counter.fetch_add(1, Ordering::Relaxed);
+                        }
                     }
                 },
                 err_fn,

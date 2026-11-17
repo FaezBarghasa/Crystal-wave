@@ -221,11 +221,11 @@ impl MixingEngine {
             }
         }
 
-        // 2. All remaining buses (target_bus == None or target_bus == Some(0)) accumulate into Bus 0 (Stereo Out)
+        // 2. All remaining buses with target_bus == Some(0) accumulate into Bus 0 (Stereo Out)
         let (bus0_slice, other_buses) = self.buses.split_at_mut(1);
         let bus0 = &mut bus0_slice[0];
         for bus in other_buses {
-            if bus.target_bus.unwrap_or(0) == 0 {
+            if bus.target_bus == Some(0) {
                 let gain = bus.linear_gain();
                 if gain > 0.0 && !bus.left_accumulator.is_empty() {
                     bus0.accumulate(&bus.left_accumulator, &bus.right_accumulator, gain);
