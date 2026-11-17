@@ -388,7 +388,8 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                     let target_tick = self.x_to_tick(cursor_pos.x, bounds.width);
                     match zone {
                         SmartToolZone::GrabMove => {
-                            let is_valid = preview.as_ref().map(|p| p.is_valid_drop).unwrap_or(true);
+                            let is_valid =
+                                preview.as_ref().map(|p| p.is_valid_drop).unwrap_or(true);
                             let target_trk = if is_valid {
                                 self.y_to_track(cursor_pos.y).unwrap_or(orig_trk)
                             } else {
@@ -468,9 +469,18 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
 
                     let is_compatible = if let Some(&dest_type) = self.track_types.get(target_trk) {
                         if is_audio {
-                            matches!(dest_type, crate::timeline::track::TrackType::Audio | crate::timeline::track::TrackType::Aux)
+                            matches!(
+                                dest_type,
+                                crate::timeline::track::TrackType::Audio
+                                    | crate::timeline::track::TrackType::Aux
+                            )
                         } else {
-                            matches!(dest_type, crate::timeline::track::TrackType::Software | crate::timeline::track::TrackType::Midi | crate::timeline::track::TrackType::Drum)
+                            matches!(
+                                dest_type,
+                                crate::timeline::track::TrackType::Software
+                                    | crate::timeline::track::TrackType::Midi
+                                    | crate::timeline::track::TrackType::Drum
+                            )
                         }
                     } else {
                         true
@@ -997,8 +1007,10 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
         // 4h. Live Drag Ghost Clip & Snap Guides
         if let Some(ref drag) = state.live_drag {
             let snap_x = self.tick_to_x(drag.target_start_tick, bounds.width);
-            let ghost_x_end =
-                self.tick_to_x(drag.target_start_tick + drag.target_length_ticks, bounds.width);
+            let ghost_x_end = self.tick_to_x(
+                drag.target_start_tick + drag.target_length_ticks,
+                bounds.width,
+            );
             let ghost_w = (ghost_x_end - snap_x).max(6.0);
             let ghost_y = self.track_to_y(drag.target_track) + 4.0;
             let ghost_h = LANE_HEIGHT - 8.0;
@@ -1063,7 +1075,10 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                     delta_txt
                 )
             } else {
-                format!("Track {} | 🚫 Incompatible Track Type", drag.target_track + 1)
+                format!(
+                    "Track {} | 🚫 Incompatible Track Type",
+                    drag.target_track + 1
+                )
             };
 
             let hud_x = snap_x.clamp(4.0, (bounds.width - 200.0).max(4.0));

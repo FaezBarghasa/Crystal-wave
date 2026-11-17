@@ -761,25 +761,24 @@ impl CrystalWaveApp {
                     // Track Type Compatibility Validation:
                     // Audio regions can only go to Audio / Aux tracks.
                     // Midi / Pattern regions can only go to Software / Midi / Drum tracks.
-                    let is_compatible = match (&reg.kind, dest_type) {
+                    let is_compatible = matches!(
+                        (&reg.kind, dest_type),
                         (
                             crate::timeline::region::RegionKind::Audio { .. },
                             Some(
                                 crate::timeline::track::TrackType::Audio
-                                | crate::timeline::track::TrackType::Aux,
+                                    | crate::timeline::track::TrackType::Aux,
                             ),
-                        ) => true,
-                        (
+                        ) | (
                             crate::timeline::region::RegionKind::Midi { .. }
-                            | crate::timeline::region::RegionKind::Pattern { .. },
+                                | crate::timeline::region::RegionKind::Pattern { .. },
                             Some(
                                 crate::timeline::track::TrackType::Software
-                                | crate::timeline::track::TrackType::Midi
-                                | crate::timeline::track::TrackType::Drum,
+                                    | crate::timeline::track::TrackType::Midi
+                                    | crate::timeline::track::TrackType::Drum,
                             ),
-                        ) => true,
-                        _ => false,
-                    };
+                        )
+                    );
 
                     let final_track_id = if is_compatible {
                         new_track_id

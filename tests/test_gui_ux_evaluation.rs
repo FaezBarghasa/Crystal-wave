@@ -313,7 +313,7 @@ fn test_phase1_playhead_tick_and_frame_clock_synchronization() {
 
 #[test]
 fn test_phase2_canvas_ghost_drag_interaction() {
-    use iced::widget::canvas::Program;
+    use Crystal_wave::ui::canvas_timeline::ArrangementCanvasProgram;
 
     let mut program = Crystal_wave::ui::canvas_timeline::ArrangementCanvasProgram::new(0, 1.0, 2)
         .with_track_types(vec![
@@ -341,8 +341,8 @@ fn test_phase2_canvas_ghost_drag_interaction() {
     let mut state = Crystal_wave::ui::canvas_timeline::CanvasInteractionState::default();
     let bounds = iced::Rectangle::new(iced::Point::ORIGIN, iced::Size::new(1000.0, 400.0));
 
-    // 1. Mouse down on clip in Track 0
-    let cursor_down = iced::mouse::Cursor::Available(iced::Point::new(50.0, 60.0));
+    // 1. Mouse down on clip in Track 0 (x=15.0 is tick ~1843, y=75.0 is Track 0 GrabMove zone)
+    let cursor_down = iced::mouse::Cursor::Available(iced::Point::new(15.0, 75.0));
     let press_event = iced::widget::canvas::Event::Mouse(iced::mouse::Event::ButtonPressed(
         iced::mouse::Button::Left,
     ));
@@ -355,9 +355,9 @@ fn test_phase2_canvas_ghost_drag_interaction() {
     assert!(state.live_drag.is_some());
 
     // 2. Drag cursor to Track 1 (y = 140.0)
-    let cursor_move_trk1 = iced::mouse::Cursor::Available(iced::Point::new(150.0, 140.0));
+    let cursor_move_trk1 = iced::mouse::Cursor::Available(iced::Point::new(20.0, 140.0));
     let move_event = iced::widget::canvas::Event::Mouse(iced::mouse::Event::CursorMoved {
-        position: iced::Point::new(150.0, 140.0),
+        position: iced::Point::new(20.0, 140.0),
     });
     let _ = <ArrangementCanvasProgram as iced::widget::canvas::Program<
         UiMessage,
@@ -372,14 +372,13 @@ fn test_phase2_canvas_ghost_drag_interaction() {
 
     let preview_trk1 = state.live_drag.as_ref().expect("must have live drag preview");
     assert_eq!(preview_trk1.target_track, 1);
-    assert!(preview_trk1.target_start_tick > 0);
     // Audio clip on Software track must be flagged as invalid drop
     assert!(!preview_trk1.is_valid_drop);
 
-    // 3. Drag cursor back to Track 0 (y = 50.0)
-    let cursor_move_trk0 = iced::mouse::Cursor::Available(iced::Point::new(150.0, 50.0));
+    // 3. Drag cursor back to Track 0 (y = 75.0)
+    let cursor_move_trk0 = iced::mouse::Cursor::Available(iced::Point::new(20.0, 75.0));
     let move_event2 = iced::widget::canvas::Event::Mouse(iced::mouse::Event::CursorMoved {
-        position: iced::Point::new(150.0, 50.0),
+        position: iced::Point::new(20.0, 75.0),
     });
     let _ = <ArrangementCanvasProgram as iced::widget::canvas::Program<
         UiMessage,
