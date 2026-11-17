@@ -21,5 +21,5 @@ pub use recording_engine::{AudioTrackBuffer, CircularAudioBuffer, RecordingEngin
 pub use stem_separator::{StemSeparationResult, StemSeparatorEngine, StemType};
 pub use take::Take;
 pub use worker::{
-    spawn_audio_worker, AudioWorkerCommand, AudioWorkerHandle, AudioWorkerSharedState,
+    AudioWorkerCommand, AudioWorkerHandle, AudioWorkerSharedState, spawn_audio_worker,
 };

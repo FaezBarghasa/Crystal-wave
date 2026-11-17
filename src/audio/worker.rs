@@ -3,7 +3,7 @@
 //! Completely decouples real-time audio block processing from the 60 Hz GUI tick,
 //! eliminating DAC starvation, audio glitching, and false-positive XRUNs.
 
-use rtrb::{Consumer, Producer, RingBuffer};
+use rtrb::{Producer, RingBuffer};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::thread::{self, JoinHandle};
@@ -28,8 +28,8 @@ pub struct AudioWorkerSharedState {
     pub is_playing: Arc<AtomicBool>,
     pub cpu_load_percent: Arc<AtomicU32>, // fixed-point: value * 10 (e.g. 25 = 2.5%)
     pub underruns: Arc<AtomicU64>,
-    pub tempo_bpm: Arc<AtomicU32>,        // fixed-point: bpm * 100 (e.g. 12000 = 120.00)
-    pub swing_percent: Arc<AtomicU32>,    // 0..100
+    pub tempo_bpm: Arc<AtomicU32>, // fixed-point: bpm * 100 (e.g. 12000 = 120.00)
+    pub swing_percent: Arc<AtomicU32>, // 0..100
 }
 
 impl Default for AudioWorkerSharedState {
@@ -81,7 +81,9 @@ impl AudioWorkerHandle {
 
     /// Update musical tempo
     pub fn set_tempo(&mut self, bpm: f32) {
-        let _ = self.command_producer.push(AudioWorkerCommand::SetTempo(bpm));
+        let _ = self
+            .command_producer
+            .push(AudioWorkerCommand::SetTempo(bpm));
         self.state
             .tempo_bpm
             .store((bpm * 100.0).max(100.0) as u32, Ordering::SeqCst);
@@ -89,7 +91,9 @@ impl AudioWorkerHandle {
 
     /// Update FL Studio swing parameter (0.0 to 1.0)
     pub fn set_swing(&mut self, swing: f32) {
-        let _ = self.command_producer.push(AudioWorkerCommand::SetSwing(swing));
+        let _ = self
+            .command_producer
+            .push(AudioWorkerCommand::SetSwing(swing));
         self.state
             .swing_percent
             .store((swing * 100.0).clamp(0.0, 100.0) as u32, Ordering::SeqCst);
@@ -176,10 +180,9 @@ pub fn spawn_audio_worker(
                                 .store((bpm * 100.0).max(100.0) as u32, Ordering::SeqCst);
                         }
                         AudioWorkerCommand::SetSwing(swing) => {
-                            worker_state.swing_percent.store(
-                                (swing * 100.0).clamp(0.0, 100.0) as u32,
-                                Ordering::SeqCst,
-                            );
+                            worker_state
+                                .swing_percent
+                                .store((swing * 100.0).clamp(0.0, 100.0) as u32, Ordering::SeqCst);
                         }
                         AudioWorkerCommand::Shutdown => {
                             return;
@@ -201,8 +204,8 @@ pub fn spawn_audio_worker(
 
                             for _ in 0..block_size {
                                 let sample = (local_phase.sin() * 0.1).clamp(-1.0, 1.0);
-                                local_phase = (local_phase + phase_inc)
-                                    % (2.0 * std::f32::consts::PI);
+                                local_phase =
+                                    (local_phase + phase_inc) % (2.0 * std::f32::consts::PI);
                                 let _ = prod.push(sample);
                                 let _ = prod.push(sample);
                             }

@@ -202,12 +202,18 @@ impl CrystalWaveApp {
             UiMessage::TransportPlay => {
                 self.is_playing = true;
                 self.is_recording = false;
+                if let Some(ref mut worker) = self.audio_worker {
+                    worker.play();
+                }
                 if let Some(ref mut driver) = self.audio_driver {
                     let _ = driver.resume();
                 }
             }
             UiMessage::TransportPause => {
                 self.is_playing = false;
+                if let Some(ref mut worker) = self.audio_worker {
+                    worker.pause();
+                }
                 if let Some(ref mut driver) = self.audio_driver {
                     let _ = driver.pause();
                 }
@@ -218,6 +224,9 @@ impl CrystalWaveApp {
                 self.playhead_tick = 0;
                 self.playhead_frame = 0;
                 self.arrangement.update_playhead_view(0);
+                if let Some(ref mut worker) = self.audio_worker {
+                    worker.stop();
+                }
                 if let Some(ref mut driver) = self.audio_driver {
                     let _ = driver.pause();
                 }
@@ -225,6 +234,12 @@ impl CrystalWaveApp {
             UiMessage::TransportRecord => {
                 self.is_playing = true;
                 self.is_recording = true;
+                if let Some(ref mut worker) = self.audio_worker {
+                    worker.play();
+                }
+                if let Some(ref mut driver) = self.audio_driver {
+                    let _ = driver.resume();
+                }
             }
             UiMessage::TransportToggleLoop => {
                 self.is_looping = !self.is_looping;
@@ -233,6 +248,9 @@ impl CrystalWaveApp {
             UiMessage::SetPlayhead(tick) => {
                 self.playhead_tick = tick;
                 self.playhead_frame = self.audio_scheduler.tick_to_frame(tick);
+                if let Some(ref mut worker) = self.audio_worker {
+                    worker.seek(self.playhead_frame);
+                }
                 self.arrangement.update_playhead_view(tick);
             }
 
@@ -245,6 +263,9 @@ impl CrystalWaveApp {
                 };
                 self.workspace.lcd_diagnostic.project_tempo_bpm = safe_bpm;
                 self.audio_scheduler.set_tempo(safe_bpm);
+                if let Some(ref mut worker) = self.audio_worker {
+                    worker.set_tempo(safe_bpm);
+                }
             }
             UiMessage::SetTimeSignature(num, den) => {
                 let safe_num = num.clamp(1, 32);
@@ -451,10 +472,18 @@ impl CrystalWaveApp {
                     let bpm = self.workspace.lcd_diagnostic.project_tempo_bpm;
                     self.audio_scheduler.set_tempo(bpm);
                     let block_size = 256; // 256 stereo frames = 512 samples
-                    let mut frames_processed = 0;
 
-                    // If audio hardware driver stream is active, feed the DAC ringbuffer with genuine timeline audio
-                    if let Some(ref mut prod) = self.audio_producer {
+                    if let Some(ref worker) = self.audio_worker {
+                        let frame = worker.playhead_frame();
+                        if frame > self.playhead_frame {
+                            self.playhead_frame = frame;
+                        } else {
+                            self.playhead_frame =
+                                self.playhead_frame.saturating_add(block_size as u64);
+                        }
+                        self.workspace.lcd_diagnostic.cpu_load_percent = worker.cpu_load();
+                    } else if let Some(ref mut prod) = self.audio_producer {
+                        let mut frames_processed = 0;
                         while prod.slots() >= block_size * 2 && frames_processed < 2048 {
                             let mut master_l = [0.0f32; 256];
                             let mut master_r = [0.0f32; 256];
@@ -479,40 +508,26 @@ impl CrystalWaveApp {
                             frames_processed += block_size;
                         }
 
-                        // If ringbuffer is saturated (e.g. headless test without active audio consumer thread),
-                        // ensure playback clock continues monotonic progression
                         if frames_processed == 0 {
-                            let mut master_l = [0.0f32; 256];
-                            let mut master_r = [0.0f32; 256];
-                            self.audio_scheduler.process_block(
-                                &self.arrangement.timeline.tracks,
-                                &self.piano_roll_notes,
-                                &mut self.mixer,
-                                self.playhead_frame,
-                                block_size,
-                                &mut master_l,
-                                &mut master_r,
-                            );
                             self.playhead_frame =
                                 self.playhead_frame.saturating_add(block_size as u64);
                         }
                     } else {
-                        // Headless / emulation mode without hardware audio stream
-                        let mut master_l = [0.0f32; 256];
-                        let mut master_r = [0.0f32; 256];
-
-                        self.audio_scheduler.process_block(
-                            &self.arrangement.timeline.tracks,
-                            &self.piano_roll_notes,
-                            &mut self.mixer,
-                            self.playhead_frame,
-                            block_size,
-                            &mut master_l,
-                            &mut master_r,
-                        );
-
                         self.playhead_frame = self.playhead_frame.saturating_add(block_size as u64);
                     }
+
+                    // Process meter ballistics and monitoring
+                    let mut master_l = [0.0f32; 256];
+                    let mut master_r = [0.0f32; 256];
+                    self.audio_scheduler.process_block(
+                        &self.arrangement.timeline.tracks,
+                        &self.piano_roll_notes,
+                        &mut self.mixer,
+                        self.playhead_frame,
+                        block_size,
+                        &mut master_l,
+                        &mut master_r,
+                    );
 
                     // Mathematically project exact hardware sample frames into timeline tick position
                     self.playhead_tick = self.audio_scheduler.frame_to_tick(self.playhead_frame);
@@ -524,6 +539,9 @@ impl CrystalWaveApp {
                         if self.playhead_tick >= loop_end && loop_end > loop_start {
                             self.playhead_tick = loop_start;
                             self.playhead_frame = self.audio_scheduler.tick_to_frame(loop_start);
+                            if let Some(ref mut worker) = self.audio_worker {
+                                worker.seek(self.playhead_frame);
+                            }
                         }
                     }
 
