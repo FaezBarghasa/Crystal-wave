@@ -215,3 +215,98 @@ fn test_gui_ux_anti_slop_and_contrast_tokens() {
     assert!(oled_graphite.background.is_some());
     assert!(oled_orange.background.is_some());
 }
+
+#[test]
+fn test_phase1_audio_scheduler_genuine_dsp_samples() {
+    let mut driver = UiSessionDriver::new(48000.0);
+    let mut master_l = [0.0f32; 512];
+    let mut master_r = [0.0f32; 512];
+
+    // Process a block at frame 0 (where Audio Take 1 is active on Track 0)
+    driver.app.audio_scheduler.process_block(
+        &driver.app.arrangement.timeline.tracks,
+        &driver.app.piano_roll_notes,
+        &mut driver.app.mixer,
+        0,
+        512,
+        &mut master_l,
+        &mut master_r,
+    );
+
+    // Verify non-zero genuine audio output was synthesized and summed
+    let sum_energy: f32 = master_l
+        .iter()
+        .chain(master_r.iter())
+        .map(|s| s.abs())
+        .sum();
+    assert!(
+        sum_energy > 0.05,
+        "Audio engine produced silence! Expected genuine audio energy, got sum_energy: {}",
+        sum_energy
+    );
+
+    // Verify channel meters registered signal
+    let ch0_peak = driver.app.mixer.channels[0].meter.peak_db;
+    assert!(
+        ch0_peak > -60.0,
+        "Channel 0 meter indicates silence: {:.1} dBFS",
+        ch0_peak
+    );
+}
+
+#[test]
+fn test_phase1_offline_bounce_produces_real_wav() {
+    let mut driver = UiSessionDriver::new(48000.0);
+
+    // Trigger full project bounce
+    driver.dispatch(UiMessage::MenuAction(
+        Crystal_wave::ui::message::MenuCommand::BounceWav,
+    ));
+
+    // Verify bounce file exists and inspect audio content with hound
+    let wav_path = std::path::Path::new("bounce_output.wav");
+    assert!(wav_path.exists(), "bounce_output.wav was not created!");
+
+    let mut reader = hound::WavReader::open(wav_path).expect("Failed to open bounce_output.wav");
+    let spec = reader.spec();
+    assert_eq!(spec.channels, 2);
+    assert_eq!(spec.sample_rate, 48000);
+    assert_eq!(spec.bits_per_sample, 24);
+
+    let sample_count = reader.duration();
+    assert!(
+        sample_count >= 48000,
+        "Bounce duration was too short: {} frames",
+        sample_count
+    );
+
+    // Assert that the bounced WAV contains genuine audio signal rather than silence
+    let samples: Vec<i32> = reader.samples::<i32>().map(|s| s.unwrap()).collect();
+    let has_non_zero = samples.iter().any(|&s| s != 0);
+    assert!(has_non_zero, "bounced WAV contains only digital zeroes!");
+}
+
+#[test]
+fn test_phase1_playhead_tick_and_frame_clock_synchronization() {
+    let mut driver = UiSessionDriver::new(48000.0);
+
+    // Verify mathematical conversion
+    let frame_at_bar1 = driver.app.audio_scheduler.tick_to_frame(3840);
+    assert_eq!(frame_at_bar1, 96000); // 48000 * 2.0s
+    let tick_round_trip = driver.app.audio_scheduler.frame_to_tick(frame_at_bar1);
+    assert_eq!(tick_round_trip, 3840);
+
+    // Verify transport advance
+    driver.dispatch(UiMessage::TransportPlay);
+    assert!(driver.app.is_playing);
+
+    driver.dispatch(UiMessage::Tick);
+    assert!(driver.app.playhead_frame >= 256);
+    assert!(driver.app.playhead_tick > 0);
+
+    // Verify transport stop resets both frame and tick
+    driver.dispatch(UiMessage::TransportStop);
+    assert_eq!(driver.app.playhead_frame, 0);
+    assert_eq!(driver.app.playhead_tick, 0);
+    assert!(!driver.app.is_playing);
+}

@@ -19,6 +19,8 @@ pub struct CrystalWaveApp {
     pub is_recording: bool,
     pub is_looping: bool,
     pub playhead_tick: u64,
+    pub playhead_frame: u64,
+    pub audio_scheduler: crate::audio::TimelineAudioScheduler,
     pub dirty: bool,
     pub plugin_registry: crate::plugins::PluginRegistry,
     pub fl_windows: crate::fl_studio::FlWindowManager,
@@ -114,6 +116,8 @@ impl CrystalWaveApp {
         channel_rack.toggle_step(bass_idx, 0);
         channel_rack.toggle_step(bass_idx, 6);
 
+        let audio_scheduler = crate::audio::TimelineAudioScheduler::new(sample_rate, 120.0);
+
         Self {
             workspace: WorkspaceState::default(),
             inspector: DualChannelInspector::new(0, 0),
@@ -125,6 +129,8 @@ impl CrystalWaveApp {
             is_recording: false,
             is_looping: false,
             playhead_tick: 0,
+            playhead_frame: 0,
+            audio_scheduler,
             dirty: false,
             plugin_registry: crate::plugins::PluginRegistry::new(),
             fl_windows: crate::fl_studio::FlWindowManager::new(),
@@ -198,6 +204,8 @@ impl CrystalWaveApp {
                 self.is_playing = false;
                 self.is_recording = false;
                 self.playhead_tick = 0;
+                self.playhead_frame = 0;
+                self.arrangement.update_playhead_view(0);
                 if let Some(ref mut driver) = self.audio_driver {
                     let _ = driver.pause();
                 }
@@ -212,6 +220,7 @@ impl CrystalWaveApp {
             }
             UiMessage::SetPlayhead(tick) => {
                 self.playhead_tick = tick;
+                self.playhead_frame = self.audio_scheduler.tick_to_frame(tick);
                 self.arrangement.update_playhead_view(tick);
             }
 
@@ -223,6 +232,7 @@ impl CrystalWaveApp {
                     120.0
                 };
                 self.workspace.lcd_diagnostic.project_tempo_bpm = safe_bpm;
+                self.audio_scheduler.set_tempo(safe_bpm);
             }
             UiMessage::SetTimeSignature(num, den) => {
                 let safe_num = num.clamp(1, 32);
@@ -394,27 +404,74 @@ impl CrystalWaveApp {
 
             UiMessage::Tick => {
                 if self.is_playing {
-                    self.playhead_tick = self.playhead_tick.saturating_add(48);
-                    self.arrangement.update_playhead_view(self.playhead_tick);
+                    let bpm = self.workspace.lcd_diagnostic.project_tempo_bpm;
+                    self.audio_scheduler.set_tempo(bpm);
+                    let block_size = 256; // 256 stereo frames = 512 samples
+                    let mut frames_processed = 0;
 
+                    // If audio hardware driver stream is active, feed the DAC ringbuffer with genuine timeline audio
                     if let Some(ref mut prod) = self.audio_producer {
-                        let mut frames_pushed = 0;
-                        while prod.slots() >= 256 && frames_pushed < 2048 {
-                            let mut left = [0.0f32; 128];
-                            let mut right = [0.0f32; 128];
-                            self.mixer.sum_buses(&mut left, &mut right);
-                            for i in 0..128 {
-                                let _ = prod.push(left[i]);
-                                let _ = prod.push(right[i]);
+                        while prod.slots() >= block_size * 2 && frames_processed < 2048 {
+                            let mut master_l = [0.0f32; 256];
+                            let mut master_r = [0.0f32; 256];
+
+                            self.audio_scheduler.process_block(
+                                &self.arrangement.timeline.tracks,
+                                &self.piano_roll_notes,
+                                &mut self.mixer,
+                                self.playhead_frame,
+                                block_size,
+                                &mut master_l,
+                                &mut master_r,
+                            );
+
+                            for i in 0..block_size {
+                                let _ = prod.push(master_l[i]);
+                                let _ = prod.push(master_r[i]);
                             }
-                            frames_pushed += 128;
+
+                            self.playhead_frame =
+                                self.playhead_frame.saturating_add(block_size as u64);
+                            frames_processed += block_size;
+                        }
+                    } else {
+                        // Headless / emulation mode without hardware audio stream
+                        let mut master_l = [0.0f32; 256];
+                        let mut master_r = [0.0f32; 256];
+
+                        self.audio_scheduler.process_block(
+                            &self.arrangement.timeline.tracks,
+                            &self.piano_roll_notes,
+                            &mut self.mixer,
+                            self.playhead_frame,
+                            block_size,
+                            &mut master_l,
+                            &mut master_r,
+                        );
+
+                        self.playhead_frame = self.playhead_frame.saturating_add(block_size as u64);
+                    }
+
+                    // Mathematically project exact hardware sample frames into timeline tick position
+                    self.playhead_tick = self.audio_scheduler.frame_to_tick(self.playhead_frame);
+
+                    // Seamless loop cycle boundary wrapping
+                    if self.arrangement.timeline.loop_region.enabled {
+                        let loop_end = self.arrangement.timeline.loop_region.end_tick;
+                        let loop_start = self.arrangement.timeline.loop_region.start_tick;
+                        if self.playhead_tick >= loop_end && loop_end > loop_start {
+                            self.playhead_tick = loop_start;
+                            self.playhead_frame = self.audio_scheduler.tick_to_frame(loop_start);
                         }
                     }
+
+                    self.arrangement.update_playhead_view(self.playhead_tick);
                 }
             }
 
             UiMessage::NewProject => {
                 self.playhead_tick = 0;
+                self.playhead_frame = 0;
                 self.is_playing = false;
                 self.dirty = false;
             }
@@ -424,6 +481,7 @@ impl CrystalWaveApp {
             UiMessage::MenuAction(cmd) => match cmd {
                 crate::ui::message::MenuCommand::NewProject => {
                     self.playhead_tick = 0;
+                    self.playhead_frame = 0;
                     self.is_playing = false;
                     self.dirty = false;
                     self.arrangement.timeline.tracks.clear();
@@ -463,15 +521,72 @@ impl CrystalWaveApp {
                     self.dirty = false;
                 }
                 crate::ui::message::MenuCommand::BounceWav => {
+                    let export_config = crate::bouncing::export_format::ExportFormatConfig {
+                        sample_rate: self.mixer.sample_rate,
+                        ..Default::default()
+                    };
+
                     let exporter = crate::bouncing::Exporter::new(
-                        crate::bouncing::export_format::ExportFormatConfig::default(),
+                        export_config,
                         crate::bouncing::bit_depth_converter::BitDepth::Bit24,
                         crate::bouncing::dithering::DitherType::None,
                     );
-                    let mut dummy_l = vec![0.0f32; 44100 * 2];
-                    let mut dummy_r = vec![0.0f32; 44100 * 2];
-                    self.mixer.sum_buses(&mut dummy_l, &mut dummy_r);
-                    if let Ok(wav_bytes) = exporter.export_stereo_wav(&dummy_l, &dummy_r, 44100.0) {
+
+                    // 1. Determine timeline extent from regions
+                    let max_end_tick = self
+                        .arrangement
+                        .timeline
+                        .tracks
+                        .iter()
+                        .flat_map(|t| t.regions.iter())
+                        .map(|r| r.start_tick + r.length_ticks)
+                        .max()
+                        .unwrap_or(3840 * 4);
+
+                    let (start_tick, end_tick) = if self.arrangement.timeline.loop_region.enabled {
+                        (
+                            self.arrangement.timeline.loop_region.start_tick,
+                            self.arrangement
+                                .timeline
+                                .loop_region
+                                .end_tick
+                                .max(self.arrangement.timeline.loop_region.start_tick + 960),
+                        )
+                    } else {
+                        (0, max_end_tick.max(3840))
+                    };
+
+                    let start_frame = self.audio_scheduler.tick_to_frame(start_tick);
+                    let end_frame = self.audio_scheduler.tick_to_frame(end_tick);
+                    let total_frames = (end_frame.saturating_sub(start_frame) as usize).max(512);
+
+                    let mut bounce_l = vec![0.0f32; total_frames];
+                    let mut bounce_r = vec![0.0f32; total_frames];
+
+                    // 2. High-speed offline rendering loop in blocks of 512 frames
+                    let block_size = 512;
+                    let mut cur_offset = 0;
+                    while cur_offset < total_frames {
+                        let chunk = block_size.min(total_frames - cur_offset);
+                        let cur_frame = start_frame + cur_offset as u64;
+
+                        self.audio_scheduler.process_block(
+                            &self.arrangement.timeline.tracks,
+                            &self.piano_roll_notes,
+                            &mut self.mixer,
+                            cur_frame,
+                            chunk,
+                            &mut bounce_l[cur_offset..cur_offset + chunk],
+                            &mut bounce_r[cur_offset..cur_offset + chunk],
+                        );
+
+                        cur_offset += chunk;
+                    }
+
+                    // 3. Export to stereo 24-bit WAV container
+                    if let Ok(wav_bytes) =
+                        exporter.export_stereo_wav(&bounce_l, &bounce_r, self.mixer.sample_rate)
+                    {
                         let _ = std::fs::write("bounce_output.wav", wav_bytes);
                     }
                     self.dirty = false;

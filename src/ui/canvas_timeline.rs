@@ -123,11 +123,23 @@ impl SnapGrid {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct LiveDragPreview {
+    pub clip_id: usize,
+    pub zone: SmartToolZone,
+    pub target_track: usize,
+    pub target_start_tick: u64,
+    pub target_length_ticks: u64,
+    pub delta_ticks: i64,
+    pub is_valid_drop: bool,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct CanvasInteractionState {
     pub is_scrubbing_playhead: bool,
     pub cycle_drag: Option<(CycleDragMode, u64, u64)>, // mode, start_anchor, end_anchor
     pub dragged_clip: Option<(usize, SmartToolZone, usize, u64, u64, u64)>, // clip_id, zone, orig_track, orig_start, orig_len, offset_ticks
+    pub live_drag: Option<LiveDragPreview>,
     pub marquee_drag: Option<(Point, Point)>, // start_anchor, current_anchor
     pub last_cursor_pos: Option<Point>,
 }
@@ -138,6 +150,7 @@ pub struct ArrangementCanvasProgram {
     pub visible_end_tick: u64,
     pub horizontal_zoom: f32,
     pub track_count: usize,
+    pub track_types: Vec<crate::timeline::track::TrackType>,
     pub loop_range: Option<(u64, u64)>,
     pub clips: Vec<TimelineClipDisplay>,
     pub selected_track_id: usize,
@@ -155,6 +168,7 @@ impl ArrangementCanvasProgram {
             visible_end_tick: TICKS_PER_BAR * 32,
             horizontal_zoom: horizontal_zoom.clamp(0.2, 10.0),
             track_count: track_count.max(1),
+            track_types: Vec::new(),
             loop_range: Some((0, TICKS_PER_BAR * 4)),
             clips: Vec::new(),
             selected_track_id: 0,
@@ -163,6 +177,11 @@ impl ArrangementCanvasProgram {
             marquee_selection: None,
             is_fl_theme: false,
         }
+    }
+
+    pub fn with_track_types(mut self, track_types: Vec<crate::timeline::track::TrackType>) -> Self {
+        self.track_types = track_types;
+        self
     }
 
     pub fn with_theme(mut self, is_fl_theme: bool) -> Self {
@@ -317,6 +336,15 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                             clip.length_ticks,
                             offset_ticks,
                         ));
+                        state.live_drag = Some(LiveDragPreview {
+                            clip_id: clip.id,
+                            zone,
+                            target_track: clip.track_index,
+                            target_start_tick: clip.start_tick,
+                            target_length_ticks: clip.length_ticks,
+                            delta_ticks: 0,
+                            is_valid_drop: true,
+                        });
                         state.is_scrubbing_playhead = false;
 
                         return Some(Action::publish(UiMessage::SelectRegion(clip.id)));
