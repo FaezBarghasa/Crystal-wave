@@ -793,18 +793,31 @@ impl CrystalWaveApp {
 
             UiMessage::ToggleFlChannelRack => {
                 self.fl_windows.toggle_channel_rack();
+                if self.fl_windows.channel_rack_visible {
+                    self.layout
+                        .set_drawer_tab(crate::ui::layout::DrawerTab::StepSequencer);
+                }
             }
             UiMessage::ToggleFlPianoRoll => {
                 self.fl_windows.toggle_piano_roll();
+                if self.fl_windows.piano_roll_visible {
+                    self.layout
+                        .set_drawer_tab(crate::ui::layout::DrawerTab::PianoRoll);
+                }
             }
             UiMessage::ToggleFlPlaylist => {
                 self.fl_windows.toggle_playlist();
             }
             UiMessage::ToggleFlMixer => {
                 self.fl_windows.toggle_mixer();
+                if self.fl_windows.mixer_visible {
+                    self.layout
+                        .set_drawer_tab(crate::ui::layout::DrawerTab::Mixer);
+                }
             }
             UiMessage::ToggleFlBrowser => {
                 self.fl_windows.toggle_browser();
+                self.layout.browser.visible = self.fl_windows.browser_visible;
             }
             UiMessage::ToggleFlPatcher => {
                 self.fl_windows.toggle_patcher();
@@ -815,6 +828,19 @@ impl CrystalWaveApp {
                 step_index,
             } => {
                 self.channel_rack.toggle_step(channel_id, step_index);
+                self.dirty = true;
+            }
+            UiMessage::ChannelRackSetVolume { channel_id, volume } => {
+                self.channel_rack.set_channel_volume(channel_id, volume);
+                self.dirty = true;
+            }
+            UiMessage::ChannelRackSetPan { channel_id, pan } => {
+                self.channel_rack.set_channel_pan(channel_id, pan);
+                self.dirty = true;
+            }
+            UiMessage::ChannelRackSetTargetMixerTrack { channel_id, track } => {
+                self.channel_rack
+                    .set_channel_target_mixer_track(channel_id, track);
                 self.dirty = true;
             }
 

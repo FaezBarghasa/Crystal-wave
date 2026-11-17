@@ -80,6 +80,18 @@ pub enum UiMessage {
         channel_id: usize,
         step_index: usize,
     },
+    ChannelRackSetVolume {
+        channel_id: usize,
+        volume: f32,
+    },
+    ChannelRackSetPan {
+        channel_id: usize,
+        pan: f32,
+    },
+    ChannelRackSetTargetMixerTrack {
+        channel_id: usize,
+        track: usize,
+    },
     ChannelRackDropSample {
         sample_id: usize,
     },

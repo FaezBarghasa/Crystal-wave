@@ -63,6 +63,18 @@ impl RackChannel {
             step.pan = pan.clamp(-1.0, 1.0);
         }
     }
+
+    pub fn set_volume(&mut self, vol: f32) {
+        self.volume = vol.clamp(0.0, 1.25);
+    }
+
+    pub fn set_pan(&mut self, pan: f32) {
+        self.pan = pan.clamp(-1.0, 1.0);
+    }
+
+    pub fn set_target_mixer_track(&mut self, track: usize) {
+        self.target_mixer_track = track;
+    }
 }
 
 pub struct ChannelRack {
@@ -83,6 +95,24 @@ impl ChannelRack {
         self.channels
             .push(RackChannel::new(id, name, self.step_count));
         id
+    }
+
+    pub fn set_channel_volume(&mut self, channel_id: usize, volume: f32) {
+        if let Some(ch) = self.channels.get_mut(channel_id) {
+            ch.set_volume(volume);
+        }
+    }
+
+    pub fn set_channel_pan(&mut self, channel_id: usize, pan: f32) {
+        if let Some(ch) = self.channels.get_mut(channel_id) {
+            ch.set_pan(pan);
+        }
+    }
+
+    pub fn set_channel_target_mixer_track(&mut self, channel_id: usize, track: usize) {
+        if let Some(ch) = self.channels.get_mut(channel_id) {
+            ch.set_target_mixer_track(track);
+        }
     }
 
     pub fn toggle_step(&mut self, channel_id: usize, step_index: usize) -> bool {

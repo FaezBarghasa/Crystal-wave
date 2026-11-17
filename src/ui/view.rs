@@ -60,7 +60,9 @@ impl CrystalWaveApp {
             })
             .size(11),
         )
+        .style(self.theme.button_style(self.fl_windows.playlist_visible))
         .on_press(UiMessage::ToggleFlPlaylist);
+
         let win_channel_rack = button(
             text(if self.fl_windows.channel_rack_visible {
                 "● Rack [F6]"
@@ -69,7 +71,12 @@ impl CrystalWaveApp {
             })
             .size(11),
         )
+        .style(
+            self.theme
+                .button_style(self.fl_windows.channel_rack_visible),
+        )
         .on_press(UiMessage::ToggleFlChannelRack);
+
         let win_piano_roll = button(
             text(if self.fl_windows.piano_roll_visible {
                 "● Piano Roll [F7]"
@@ -78,7 +85,9 @@ impl CrystalWaveApp {
             })
             .size(11),
         )
+        .style(self.theme.button_style(self.fl_windows.piano_roll_visible))
         .on_press(UiMessage::ToggleFlPianoRoll);
+
         let win_browser = button(
             text(if self.fl_windows.browser_visible {
                 "● Browser [F8]"
@@ -87,7 +96,9 @@ impl CrystalWaveApp {
             })
             .size(11),
         )
+        .style(self.theme.button_style(self.fl_windows.browser_visible))
         .on_press(UiMessage::ToggleFlBrowser);
+
         let win_mixer = button(
             text(if self.fl_windows.mixer_visible {
                 "● Mixer [F9]"
@@ -96,7 +107,9 @@ impl CrystalWaveApp {
             })
             .size(11),
         )
+        .style(self.theme.button_style(self.fl_windows.mixer_visible))
         .on_press(UiMessage::ToggleFlMixer);
+
         let win_patcher = button(
             text(if self.fl_windows.patcher_visible {
                 "● Patcher"
@@ -105,7 +118,9 @@ impl CrystalWaveApp {
             })
             .size(11),
         )
+        .style(self.theme.button_style(self.fl_windows.patcher_visible))
         .on_press(UiMessage::ToggleFlPatcher);
+
         let win_inspector = button(
             text(if self.workspace.inspector_open {
                 "● Inspect [I]"
@@ -114,9 +129,12 @@ impl CrystalWaveApp {
             })
             .size(11),
         )
+        .style(self.theme.button_style(self.workspace.inspector_open))
         .on_press(UiMessage::ToggleInspector);
-        let win_plugins =
-            button(text("Plugins [L]").size(11)).on_press(UiMessage::ToggleLibraryBrowser);
+
+        let win_plugins = button(text("Plugins [L]").size(11))
+            .style(self.theme.button_style(false))
+            .on_press(UiMessage::ToggleLibraryBrowser);
 
         // Theme Switcher & Snap Toggle
         let theme_btn = button(
@@ -454,20 +472,25 @@ impl CrystalWaveApp {
 
             for chan in &self.channel_rack.channels {
                 let chan_id = chan.id;
-                let mut steps_row = row![].spacing(2);
+                let mut beat_groups = row![].spacing(6);
 
-                for (s_idx, step) in chan.steps.iter().enumerate() {
-                    let is_active = step.active;
-                    let is_even_beat = (s_idx / 4) % 2 != 0;
-                    let step_lbl = if is_active { "■" } else { "·" };
-                    let step_btn = button(text(step_lbl).size(11))
-                        .style(self.theme.step_pad_style(is_active, is_even_beat))
-                        .padding(2)
-                        .on_press(UiMessage::ChannelRackToggleStep {
-                            channel_id: chan_id,
-                            step_index: s_idx,
-                        });
-                    steps_row = steps_row.push(step_btn);
+                for beat_idx in 0..4 {
+                    let mut beat_col = row![].spacing(2);
+                    for step_in_beat in 0..4 {
+                        let s_idx = beat_idx * 4 + step_in_beat;
+                        let is_active = chan.steps.get(s_idx).map(|s| s.active).unwrap_or(false);
+                        let is_even_beat = beat_idx % 2 != 0;
+                        let step_lbl = if is_active { "■" } else { "·" };
+                        let step_btn = button(text(step_lbl).size(11))
+                            .style(self.theme.step_pad_style(is_active, is_even_beat))
+                            .padding(2)
+                            .on_press(UiMessage::ChannelRackToggleStep {
+                                channel_id: chan_id,
+                                step_index: s_idx,
+                            });
+                        beat_col = beat_col.push(step_btn);
+                    }
+                    beat_groups = beat_groups.push(beat_col);
                 }
 
                 let ch_row = row![
@@ -476,7 +499,7 @@ impl CrystalWaveApp {
                     )
                     .width(Length::Fixed(110.0))
                     .padding(2),
-                    steps_row,
+                    beat_groups,
                 ]
                 .spacing(6);
 
@@ -828,23 +851,27 @@ impl CrystalWaveApp {
                 let mut rack_col = column![].spacing(6).padding(4);
 
                 for ch in &self.channel_rack.channels {
-                    let mut steps_row = row![].spacing(3);
+                    let mut beat_groups = row![].spacing(6);
 
-                    // 16 Step Buttons with 4-beat alternating grouping & tactile hardware styling
-                    for (s_idx, step) in ch.steps.iter().enumerate() {
-                        let is_active = step.active;
-                        let is_even_beat = (s_idx / 4) % 2 == 0;
-                        let step_label = if is_active { "■" } else { "·" };
+                    for beat_idx in 0..4 {
+                        let mut beat_col = row![].spacing(2);
+                        for step_in_beat in 0..4 {
+                            let s_idx = beat_idx * 4 + step_in_beat;
+                            let is_active = ch.steps.get(s_idx).map(|s| s.active).unwrap_or(false);
+                            let is_even_beat = beat_idx % 2 != 0;
+                            let step_label = if is_active { "■" } else { "·" };
 
-                        let step_btn = button(text(step_label).size(11))
-                            .style(self.theme.step_pad_style(is_active, is_even_beat))
-                            .padding(2)
-                            .on_press(UiMessage::StepSequencerToggleStep {
-                                channel_id: ch.id,
-                                step_index: s_idx,
-                            });
+                            let step_btn = button(text(step_label).size(11))
+                                .style(self.theme.step_pad_style(is_active, is_even_beat))
+                                .padding(2)
+                                .on_press(UiMessage::StepSequencerToggleStep {
+                                    channel_id: ch.id,
+                                    step_index: s_idx,
+                                });
 
-                        steps_row = steps_row.push(step_btn);
+                            beat_col = beat_col.push(step_btn);
+                        }
+                        beat_groups = beat_groups.push(beat_col);
                     }
 
                     let ch_row = row![
@@ -853,7 +880,7 @@ impl CrystalWaveApp {
                         )
                         .width(Length::Fixed(120.0))
                         .padding(2),
-                        steps_row,
+                        beat_groups,
                     ]
                     .spacing(8);
 
