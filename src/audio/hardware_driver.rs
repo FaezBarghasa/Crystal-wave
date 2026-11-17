@@ -61,7 +61,7 @@ impl AudioHardwareDriver {
 
         let underrun_counter = Arc::clone(&self.underrun_count);
         let running_flag = Arc::clone(&self.is_running);
-        running_flag.store(true, Ordering::SeqCst);
+        running_flag.store(false, Ordering::SeqCst);
 
         let err_fn = move |err| {
             eprintln!("Audio DAC Stream Error: {}", err);

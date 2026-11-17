@@ -1025,16 +1025,12 @@ impl CrystalWaveApp {
             )
         };
 
-        let master_peak_str = if let Some(m_ch) = self.mixer.channels.first() {
-            if m_ch.meter.auto_mute_tripped {
-                "PEAK: AUTO-MUTE TRIPPED (+12 dBFS)".to_string()
-            } else if m_ch.meter.peak_db > 0.0 {
-                format!("PEAK: +{:.1} dBFS (CLIP)", m_ch.meter.peak_db)
-            } else if m_ch.meter.peak_db > -90.0 {
-                format!("PEAK: {:.1} dBFS", m_ch.meter.peak_db)
-            } else {
-                "PEAK: -inf dBFS".to_string()
-            }
+        let master_peak_str = if self.mixer.master_strip.meter.auto_mute_tripped {
+            "PEAK: AUTO-MUTE TRIPPED (+12 dBFS)".to_string()
+        } else if self.mixer.master_strip.meter.peak_db > 0.0 {
+            format!("PEAK: +{:.1} dBFS (CLIP)", self.mixer.master_strip.meter.peak_db)
+        } else if self.mixer.master_strip.meter.peak_db > -90.0 {
+            format!("PEAK: {:.1} dBFS", self.mixer.master_strip.meter.peak_db)
         } else {
             "PEAK: -inf dBFS".to_string()
         };

@@ -38,6 +38,7 @@ pub struct MixingEngine {
     pub buses: Vec<AuxBus>,
     pub vca_faders: Vec<VcaFader>,
     pub master_fader_db: f32,
+    pub master_strip: ChannelStrip,
     pub sample_rate: f32,
     pub pdc_enabled: bool,
     pub channel_latencies_samples: Vec<usize>,
@@ -61,11 +62,14 @@ impl MixingEngine {
             buses.push(AuxBus::new(id, name));
         }
 
+        let master_strip = ChannelStrip::new(9999, "Master");
+
         Ok(Self {
             channels: Vec::new(),
             buses,
             vca_faders: Vec::new(),
             master_fader_db: 0.0,
+            master_strip,
             sample_rate,
             pdc_enabled: true,
             channel_latencies_samples: Vec::new(),
@@ -110,13 +114,9 @@ impl MixingEngine {
             .collect()
     }
 
-    /// Master linear gain calculated from fader dB
+    /// Master linear gain calculated from master strip fader dB
     pub fn master_linear_gain(&self) -> f32 {
-        if self.master_fader_db <= -96.0 {
-            0.0
-        } else {
-            10.0f32.powf(self.master_fader_db / 20.0)
-        }
+        self.master_strip.linear_gain()
     }
 
     /// Clear all bus accumulators for a new processing block
@@ -238,7 +238,14 @@ impl MixingEngine {
             if i < bus0.left_accumulator.len() {
                 master_left[i] = bus0.left_accumulator[i] * master_gain;
                 master_right[i] = bus0.right_accumulator[i] * master_gain;
+            } else {
+                master_left[i] = 0.0;
+                master_right[i] = 0.0;
             }
         }
+
+        // 4. Process Master Strip Inserts, Limiter and Meter Ballistics
+        self.master_strip
+            .process_block(&mut master_left[..len], &mut master_right[..len], 1.0);
     }
 }
