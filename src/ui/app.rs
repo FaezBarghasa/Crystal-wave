@@ -1558,5 +1558,7 @@ impl CrystalWaveApp {
                 | crate::ui::theme::ThemePreset::FlStudioModern
         ))
         .with_channel_id(self.piano_roll_selected_channel)
+        .with_scale(self.piano_roll_scale, self.piano_roll_scale_root)
+        .with_event_target(self.piano_roll_event_target)
     }
 }

@@ -40,8 +40,8 @@ pub struct RackChannel {
     pub id: usize,
     pub name: String,
     pub sample_path: Option<String>,
-    pub volume: f32, // 0.0 to 1.25 (0 to 125%)
-    pub pan: f32,    // -1.0 to 1.0
+    pub volume: f32,         // 0.0 to 1.25 (0 to 125%)
+    pub pan: f32,            // -1.0 to 1.0
     pub pitch_semitones: i8, // -12 to +12 semitones
     pub target_mixer_track: usize,
     pub steps: Vec<StepProperties>,

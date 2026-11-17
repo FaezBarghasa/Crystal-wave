@@ -57,6 +57,8 @@ pub struct PianoRollNoteDisplay {
     pub start_tick: u64,
     pub length_ticks: u64,
     pub velocity: f32,
+    pub pan: f32,
+    pub fine_pitch_cents: f32,
     pub is_slide: bool,
 }
 
@@ -236,6 +238,39 @@ impl<Theme> canvas::Program<UiMessage, Theme> for PianoRollCanvasProgram {
                 if cursor_pos.x < KEYBOARD_WIDTH {
                     let clicked_key = self.y_to_key(cursor_pos.y);
                     return Some(Action::publish(UiMessage::PianoRollSelectKey(clicked_key)));
+                }
+
+                // 1b. Click in Lower Event Editor Lane
+                let lane_y = bounds.height - self.event_lane_height;
+                if cursor_pos.y >= lane_y && self.event_lane_height > 20.0 {
+                    if let Some(closest) = self.notes.iter().min_by_key(|n| {
+                        let nx = self.tick_to_x(n.start_tick);
+                        ((nx - cursor_pos.x).abs() * 100.0) as i64
+                    }) {
+                        let usable_h = (self.event_lane_height - 16.0).max(1.0);
+                        let val = match self.event_target {
+                            EventLaneTarget::Velocity => {
+                                let frac = 1.0 - (cursor_pos.y - (lane_y + 4.0)) / usable_h;
+                                frac.clamp(0.05, 1.0)
+                            }
+                            EventLaneTarget::Pan => {
+                                let mid_y = lane_y + (self.event_lane_height * 0.5);
+                                let frac = (mid_y - cursor_pos.y) / (usable_h * 0.5);
+                                frac.clamp(-1.0, 1.0)
+                            }
+                            EventLaneTarget::Pitch => {
+                                let mid_y = lane_y + (self.event_lane_height * 0.5);
+                                let frac = (mid_y - cursor_pos.y) / (usable_h * 0.5);
+                                (frac * 100.0).clamp(-100.0, 100.0)
+                            }
+                        };
+                        return Some(Action::publish(UiMessage::PianoRollSetNoteProperty {
+                            note_id: closest.id,
+                            property: self.event_target,
+                            value: val,
+                        }));
+                    }
+                    return Some(Action::request_redraw());
                 }
 
                 // 2. Click in 2D Note Grid: Hit-test existing active notes (reverse order)
@@ -464,7 +499,10 @@ impl<Theme> canvas::Program<UiMessage, Theme> for PianoRollCanvasProgram {
             }
 
             let is_black = is_black_key(key);
-            let row_bg = if is_black {
+            let in_scale = self.scale.is_in_scale(self.scale_root, key);
+            let row_bg = if !in_scale {
+                Color::from_rgba8(0x05, 0x07, 0x0a, 0.65)
+            } else if is_black {
                 Color::from_rgba8(0x0a, 0x0c, 0x10, 0.40)
             } else {
                 Color::from_rgba8(0xff, 0xff, 0xff, 0.02)
@@ -840,6 +878,107 @@ impl<Theme> canvas::Program<UiMessage, Theme> for PianoRollCanvasProgram {
                 .with_color(Color::from_rgba8(0x00, 0x00, 0x00, 0.60))
                 .with_width(2.0),
         );
+
+        // 9. Lower Event Editor Lane (Velocity / Pan / Pitch)
+        let lane_h = self.event_lane_height;
+        let lane_y = bounds.height - lane_h;
+        if lane_h > 20.0 && lane_y > 0.0 {
+            // Background well
+            frame.fill_rectangle(
+                Point::new(0.0, lane_y),
+                Size::new(bounds.width, lane_h),
+                Color::from_rgb8(0x10, 0x12, 0x17),
+            );
+            // Top border divider
+            let lane_sep = Path::line(Point::new(0.0, lane_y), Point::new(bounds.width, lane_y));
+            frame.stroke(
+                &lane_sep,
+                Stroke::default()
+                    .with_color(Color::from_rgb8(0x2d, 0x33, 0x42))
+                    .with_width(1.5),
+            );
+
+            // Left header label in the keyboard column
+            frame.fill_rectangle(
+                Point::new(0.0, lane_y),
+                Size::new(KEYBOARD_WIDTH, lane_h),
+                Color::from_rgb8(0x16, 0x18, 0x20),
+            );
+            let target_str = match self.event_target {
+                EventLaneTarget::Velocity => "VELOCITY",
+                EventLaneTarget::Pan => "PAN",
+                EventLaneTarget::Pitch => "PITCH",
+            };
+            frame.fill_text(canvas::Text {
+                content: target_str.to_string(),
+                position: Point::new(4.0, lane_y + 6.0),
+                color: Color::from_rgb8(0xfa, 0x82, 0x31),
+                size: 8.5.into(),
+                ..Default::default()
+            });
+
+            // Center baseline for bi-polar parameters (Pan, Pitch)
+            if self.event_target == EventLaneTarget::Pan || self.event_target == EventLaneTarget::Pitch {
+                let mid_y = lane_y + (lane_h * 0.5);
+                let mid_line = Path::line(Point::new(KEYBOARD_WIDTH, mid_y), Point::new(bounds.width, mid_y));
+                frame.stroke(
+                    &mid_line,
+                    Stroke::default()
+                        .with_color(Color::from_rgba8(0xff, 0xff, 0xff, 0.10))
+                        .with_width(1.0),
+                );
+            }
+
+            // Draw note stems and node heads
+            let stem_usable_h = lane_h - 16.0;
+            for note in &self.notes {
+                let nx = self.tick_to_x(note.start_tick);
+                if nx < KEYBOARD_WIDTH || nx > bounds.width {
+                    continue;
+                }
+
+                let (stem_y_top, stem_y_bottom, node_val_str) = match self.event_target {
+                    EventLaneTarget::Velocity => {
+                        let h = (note.velocity * stem_usable_h).clamp(2.0, stem_usable_h);
+                        (lane_y + lane_h - h - 4.0, lane_y + lane_h - 4.0, format!("{:.0}%", note.velocity * 100.0))
+                    }
+                    EventLaneTarget::Pan => {
+                        let mid_y = lane_y + (lane_h * 0.5);
+                        let offset = (note.pan * (stem_usable_h * 0.5)).clamp(-stem_usable_h * 0.5, stem_usable_h * 0.5);
+                        let top = mid_y - offset;
+                        (top, mid_y, if note.pan.abs() < 0.05 { "C".to_string() } else if note.pan < 0.0 { format!("L{:.0}", -note.pan * 100.0) } else { format!("R{:.0}", note.pan * 100.0) })
+                    }
+                    EventLaneTarget::Pitch => {
+                        let mid_y = lane_y + (lane_h * 0.5);
+                        let offset = ((note.fine_pitch_cents / 100.0) * (stem_usable_h * 0.5)).clamp(-stem_usable_h * 0.5, stem_usable_h * 0.5);
+                        let top = mid_y - offset;
+                        (top, mid_y, format!("{:+.0}c", note.fine_pitch_cents))
+                    }
+                };
+
+                // Vertical stem line
+                let stem_line = Path::line(Point::new(nx, stem_y_bottom), Point::new(nx, stem_y_top));
+                frame.stroke(
+                    &stem_line,
+                    Stroke::default()
+                        .with_color(Color::from_rgba8(0xfa, 0x82, 0x31, 0.75))
+                        .with_width(1.5),
+                );
+
+                // Circular node cap at the top of the stem
+                let cap_circle = Path::circle(Point::new(nx, stem_y_top), 3.0);
+                frame.fill(&cap_circle, Color::from_rgb8(0xfa, 0x82, 0x31));
+
+                // Value readout if room
+                frame.fill_text(canvas::Text {
+                    content: node_val_str,
+                    position: Point::new(nx + 3.0, (stem_y_top - 6.0).max(lane_y + 2.0)),
+                    color: Color::from_rgba8(0xff, 0xff, 0xff, 0.50),
+                    size: 8.0.into(),
+                    ..Default::default()
+                });
+            }
+        }
 
         vec![frame.into_geometry()]
     }

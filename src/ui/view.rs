@@ -896,7 +896,7 @@ impl CrystalWaveApp {
             }
 
             crate::ui::layout::DrawerTab::PianoRoll => {
-                // Interactive Piano Roll with Alt-Tools & Polyphonic Ghost Notes
+                // Interactive Piano Roll with Alt-Tools, Event Editor & Polyphonic Ghost Notes
                 let btn_strum =
                     button(text("Strum").size(10)).on_press(UiMessage::PianoRollQuickStrum);
                 let btn_flip_h =
@@ -905,6 +905,12 @@ impl CrystalWaveApp {
                     button(text("Flip V").size(10)).on_press(UiMessage::PianoRollFlipVertical);
                 let btn_chop =
                     button(text("Chop 1/16").size(10)).on_press(UiMessage::PianoRollQuickChop);
+                let btn_arp_up = button(text("Arp ↑").size(10)).on_press(
+                    UiMessage::PianoRollArpeggiate(crate::fl_studio::piano_roll::ArpDirection::Up),
+                );
+                let btn_arp_down = button(text("Arp ↓").size(10)).on_press(
+                    UiMessage::PianoRollArpeggiate(crate::fl_studio::piano_roll::ArpDirection::Down),
+                );
                 let btn_add_c4 =
                     button(text("+ Note C4").size(10)).on_press(UiMessage::PianoRollAddNote {
                         channel_id: 0,
@@ -913,21 +919,82 @@ impl CrystalWaveApp {
                         length_ticks: 960,
                     });
 
+                let next_scale = match self.piano_roll_scale {
+                    crate::fl_studio::piano_roll::MusicalScale::Chromatic => {
+                        crate::fl_studio::piano_roll::MusicalScale::Major
+                    }
+                    crate::fl_studio::piano_roll::MusicalScale::Major => {
+                        crate::fl_studio::piano_roll::MusicalScale::Minor
+                    }
+                    crate::fl_studio::piano_roll::MusicalScale::Minor => {
+                        crate::fl_studio::piano_roll::MusicalScale::Dorian
+                    }
+                    crate::fl_studio::piano_roll::MusicalScale::Dorian => {
+                        crate::fl_studio::piano_roll::MusicalScale::Phrygian
+                    }
+                    crate::fl_studio::piano_roll::MusicalScale::Phrygian => {
+                        crate::fl_studio::piano_roll::MusicalScale::HarmonicMinor
+                    }
+                    crate::fl_studio::piano_roll::MusicalScale::HarmonicMinor => {
+                        crate::fl_studio::piano_roll::MusicalScale::PentatonicMinor
+                    }
+                    _ => crate::fl_studio::piano_roll::MusicalScale::Chromatic,
+                };
+
+                let btn_scale = button(
+                    text(format!("Scale: {}", self.piano_roll_scale.label())).size(10),
+                )
+                .style(self.theme.button_style(
+                    self.piano_roll_scale != crate::fl_studio::piano_roll::MusicalScale::Chromatic,
+                ))
+                .on_press(UiMessage::PianoRollSetScale(next_scale));
+
+                let btn_vel = button(text("VEL").size(9))
+                    .style(self.theme.button_style(
+                        self.piano_roll_event_target
+                            == crate::fl_studio::piano_roll::EventLaneTarget::Velocity,
+                    ))
+                    .on_press(UiMessage::PianoRollSetEventTarget(
+                        crate::fl_studio::piano_roll::EventLaneTarget::Velocity,
+                    ));
+                let btn_pan = button(text("PAN").size(9))
+                    .style(self.theme.button_style(
+                        self.piano_roll_event_target
+                            == crate::fl_studio::piano_roll::EventLaneTarget::Pan,
+                    ))
+                    .on_press(UiMessage::PianoRollSetEventTarget(
+                        crate::fl_studio::piano_roll::EventLaneTarget::Pan,
+                    ));
+                let btn_pitch = button(text("PITCH").size(9))
+                    .style(self.theme.button_style(
+                        self.piano_roll_event_target
+                            == crate::fl_studio::piano_roll::EventLaneTarget::Pitch,
+                    ))
+                    .on_press(UiMessage::PianoRollSetEventTarget(
+                        crate::fl_studio::piano_roll::EventLaneTarget::Pitch,
+                    ));
+
                 let roll_header = row![
-                    text("FL Studio Piano Roll (Ghost Polyphony: Active)").size(11),
+                    text("FL Studio Piano Roll").size(11),
                     btn_strum,
                     btn_flip_h,
                     btn_flip_v,
                     btn_chop,
+                    btn_arp_up,
+                    btn_arp_down,
                     btn_add_c4,
+                    btn_scale,
+                    container(row![text("EVENT:").size(9), btn_vel, btn_pan, btn_pitch].spacing(2))
+                        .padding(2),
                     text(format!(
-                        "Notes: {} | Scale: Chromatic | Grid: {}",
+                        "Notes: {} | Grid: {}",
                         self.piano_roll_notes.len(),
                         self.snap_grid.label()
                     ))
                     .size(10),
                 ]
-                .spacing(6);
+                .spacing(5)
+                .align_y(iced::Alignment::Center);
 
                 let roll_canvas = crate::ui::canvas_piano_roll::view_canvas_piano_roll(
                     self.piano_roll_canvas_program(),
