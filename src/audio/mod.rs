@@ -8,6 +8,7 @@ pub mod realtime_gc;
 pub mod recording_engine;
 pub mod stem_separator;
 pub mod take;
+pub mod worker;
 
 pub use comping_tool::{CompSelection, CompingTool};
 pub use decoder::{AudioDecoder, DecodedAudio};
@@ -19,3 +20,6 @@ pub use realtime_gc::{RealtimeAudioBuffer, RealtimeBufferPoolHandle, RealtimeBuf
 pub use recording_engine::{AudioTrackBuffer, CircularAudioBuffer, RecordingEngine};
 pub use stem_separator::{StemSeparationResult, StemSeparatorEngine, StemType};
 pub use take::Take;
+pub use worker::{
+    spawn_audio_worker, AudioWorkerCommand, AudioWorkerHandle, AudioWorkerSharedState,
+};

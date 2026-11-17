@@ -15,6 +15,7 @@ pub struct CrystalWaveApp {
     pub mixer: MixingEngine,
     pub audio_driver: Option<AudioHardwareDriver>,
     pub audio_producer: Option<Producer<f32>>,
+    pub audio_worker: Option<crate::audio::AudioWorkerHandle>,
     pub is_playing: bool,
     pub is_recording: bool,
     pub is_looping: bool,
@@ -101,6 +102,12 @@ impl CrystalWaveApp {
             .as_mut()
             .and_then(|d| d.start_stream(4096).ok());
 
+        let audio_worker = Some(crate::audio::spawn_audio_worker(
+            sample_rate,
+            256,
+            audio_producer,
+        ));
+
         let mut channel_rack = crate::fl_studio::ChannelRack::new(16);
         let kick_idx = channel_rack.add_channel("808 Kick");
         let snare_idx = channel_rack.add_channel("Clap / Snare");
@@ -126,7 +133,8 @@ impl CrystalWaveApp {
             arrangement,
             mixer,
             audio_driver,
-            audio_producer,
+            audio_producer: None,
+            audio_worker,
             is_playing: false,
             is_recording: false,
             is_looping: false,
