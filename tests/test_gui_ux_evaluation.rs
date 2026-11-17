@@ -788,3 +788,200 @@ fn test_phase4_honest_telemetry_status_bar() {
         let _tree_mute = driver.app.view();
     }
 }
+
+#[test]
+fn test_phase5_stress_rapid_track_mutations_and_playback() {
+    let mut driver = UiSessionDriver::new(48000.0);
+
+    // 1. Start playback
+    driver.dispatch(UiMessage::TransportPlay);
+    assert!(driver.app.is_playing);
+
+    // 2. Stress loop: 10 cycles of rapid mutation, audio processing, and track deletions
+    for i in 0..10 {
+        // Add Audio track
+        driver.dispatch(UiMessage::MenuAction(
+            Crystal_wave::ui::message::MenuCommand::AddAudioTrack,
+        ));
+        let added_idx = driver.app.arrangement.timeline.tracks.len() - 1;
+
+        // Add pattern clip to new track
+        driver.dispatch(UiMessage::TimelineAddPatternClip {
+            track_id: added_idx,
+            start_tick: (i as u64) * 960,
+            length_ticks: 1920,
+            name: format!("Stress Take {}", i),
+        });
+
+        // Adjust fader & pan
+        driver.dispatch(UiMessage::SetTrackFader {
+            track_id: added_idx,
+            volume_db: -6.0 + (i as f32 * 0.5),
+        });
+        driver.dispatch(UiMessage::SetTrackPan {
+            track_id: added_idx,
+            pan: if i % 2 == 0 { -0.5 } else { 0.5 },
+        });
+
+        // Advance hardware clock via Tick
+        driver.dispatch(UiMessage::Tick);
+
+        // Delete track if we have accumulated more than 3 tracks
+        if driver.app.arrangement.timeline.tracks.len() > 3 {
+            driver.dispatch(UiMessage::SelectTrack(added_idx));
+            driver.dispatch(UiMessage::MenuAction(
+                Crystal_wave::ui::message::MenuCommand::DeleteTrack,
+            ));
+        }
+
+        // Verify contiguous track IDs and matching mixer channel count
+        let track_count = driver.app.arrangement.timeline.tracks.len();
+        assert_eq!(driver.app.mixer.channels.len(), track_count);
+        for (idx, trk) in driver.app.arrangement.timeline.tracks.iter().enumerate() {
+            assert_eq!(trk.id, idx);
+            for reg in &trk.regions {
+                assert_eq!(reg.track_id, idx);
+            }
+        }
+    }
+
+    assert!(driver.app.playhead_frame > 0);
+    assert!(driver.app.playhead_tick > 0);
+}
+
+#[test]
+fn test_phase5_extreme_tempo_ramping_clock_continuity() {
+    let mut driver = UiSessionDriver::new(48000.0);
+    driver.dispatch(UiMessage::TransportPlay);
+
+    // Step 1: Slow crawl (20 BPM)
+    driver.dispatch(UiMessage::SetTempoBpm(20.0));
+    assert_eq!(driver.app.workspace.lcd_diagnostic.project_tempo_bpm, 20.0);
+    for _ in 0..5 {
+        driver.dispatch(UiMessage::Tick);
+    }
+    let frame_at_20 = driver.app.playhead_frame;
+    let tick_at_20 = driver.app.playhead_tick;
+
+    // Step 2: Standard (120 BPM)
+    driver.dispatch(UiMessage::SetTempoBpm(120.0));
+    assert_eq!(driver.app.workspace.lcd_diagnostic.project_tempo_bpm, 120.0);
+    for _ in 0..5 {
+        driver.dispatch(UiMessage::Tick);
+    }
+    let frame_at_120 = driver.app.playhead_frame;
+    let tick_at_120 = driver.app.playhead_tick;
+    assert!(frame_at_120 > frame_at_20);
+    assert!(tick_at_120 > tick_at_20);
+
+    // Step 3: Extreme high speed (999 BPM)
+    driver.dispatch(UiMessage::SetTempoBpm(999.0));
+    assert_eq!(driver.app.workspace.lcd_diagnostic.project_tempo_bpm, 999.0);
+    for _ in 0..5 {
+        driver.dispatch(UiMessage::Tick);
+    }
+    let frame_at_999 = driver.app.playhead_frame;
+    let tick_at_999 = driver.app.playhead_tick;
+    assert!(frame_at_999 > frame_at_120);
+    assert!(tick_at_999 > tick_at_120);
+}
+
+#[test]
+fn test_phase5_large_polyphony_and_note_bounds_adversarial() {
+    let mut driver = UiSessionDriver::new(48000.0);
+
+    // 1. Add boundary note at C-1 (MIDI 0)
+    driver.dispatch(UiMessage::PianoRollAddNote {
+        channel_id: 0,
+        key: 0,
+        start_tick: 0,
+        length_ticks: 960,
+    });
+    let min_note_id = driver.app.piano_roll_notes.last().unwrap().id;
+
+    // Attempt to transpose below 0 (-50 semitones)
+    driver.dispatch(UiMessage::PianoRollMoveNote {
+        id: min_note_id,
+        delta_ticks: 0,
+        delta_key: -50,
+    });
+    let min_note = driver
+        .app
+        .piano_roll_notes
+        .iter()
+        .find(|n| n.id == min_note_id)
+        .unwrap();
+    assert_eq!(min_note.key, 0, "MIDI pitch must clamp to minimum 0!");
+
+    // 2. Add boundary note at G9 (MIDI 127)
+    driver.dispatch(UiMessage::PianoRollAddNote {
+        channel_id: 0,
+        key: 127,
+        start_tick: 1920,
+        length_ticks: 960,
+    });
+    let max_note_id = driver.app.piano_roll_notes.last().unwrap().id;
+
+    // Attempt to transpose above 127 (+50 semitones)
+    driver.dispatch(UiMessage::PianoRollMoveNote {
+        id: max_note_id,
+        delta_ticks: 0,
+        delta_key: 50,
+    });
+    let max_note = driver
+        .app
+        .piano_roll_notes
+        .iter()
+        .find(|n| n.id == max_note_id)
+        .unwrap();
+    assert_eq!(max_note.key, 127, "MIDI pitch must clamp to maximum 127!");
+
+    // 3. Attempt to resize to negative length (-5000 ticks)
+    driver.dispatch(UiMessage::PianoRollResizeNote {
+        id: max_note_id,
+        delta_ticks: -5000,
+    });
+    let resized_note = driver
+        .app
+        .piano_roll_notes
+        .iter()
+        .find(|n| n.id == max_note_id)
+        .unwrap();
+    assert!(
+        resized_note.length_ticks >= 60,
+        "Note length must clamp to safe minimum 60 ticks!"
+    );
+
+    // 4. Verify Piano Roll canvas program handles boundary notes cleanly
+    let program = driver.app.piano_roll_canvas_program();
+    let y_0 = program.key_to_y(0);
+    let y_127 = program.key_to_y(127);
+    assert!(y_0.is_finite());
+    assert!(y_127.is_finite());
+    assert!(y_127 < y_0, "Key 127 must render vertically above Key 0!");
+}
+
+#[test]
+fn test_phase5_auto_mute_protection_and_recovery() {
+    let mut driver = UiSessionDriver::new(48000.0);
+    let mut left = [4.5f32; 128]; // Exceeds +12 dBFS threshold (3.981 linear)
+    let mut right = [4.5f32; 128];
+
+    let ch = &mut driver.app.mixer.channels[0];
+    ch.meter.process_block(&mut left, &mut right);
+
+    // Assert auto-mute tripped and output buffers zeroed instantly
+    assert!(ch.meter.auto_mute_tripped);
+    assert_eq!(ch.linear_gain(), 0.0);
+    for s in &left {
+        assert_eq!(*s, 0.0);
+    }
+    for s in &right {
+        assert_eq!(*s, 0.0);
+    }
+
+    // Recover channel from auto-mute
+    ch.meter.auto_mute_tripped = false;
+    ch.volume_fader_db = 0.0;
+    assert!((ch.linear_gain() - 1.0).abs() < 1e-4);
+}

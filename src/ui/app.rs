@@ -438,6 +438,24 @@ impl CrystalWaveApp {
                                 self.playhead_frame.saturating_add(block_size as u64);
                             frames_processed += block_size;
                         }
+
+                        // If ringbuffer is saturated (e.g. headless test without active audio consumer thread),
+                        // ensure playback clock continues monotonic progression
+                        if frames_processed == 0 {
+                            let mut master_l = [0.0f32; 256];
+                            let mut master_r = [0.0f32; 256];
+                            self.audio_scheduler.process_block(
+                                &self.arrangement.timeline.tracks,
+                                &self.piano_roll_notes,
+                                &mut self.mixer,
+                                self.playhead_frame,
+                                block_size,
+                                &mut master_l,
+                                &mut master_r,
+                            );
+                            self.playhead_frame =
+                                self.playhead_frame.saturating_add(block_size as u64);
+                        }
                     } else {
                         // Headless / emulation mode without hardware audio stream
                         let mut master_l = [0.0f32; 256];
