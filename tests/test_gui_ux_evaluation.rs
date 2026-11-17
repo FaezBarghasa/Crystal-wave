@@ -310,3 +310,155 @@ fn test_phase1_playhead_tick_and_frame_clock_synchronization() {
     assert_eq!(driver.app.playhead_tick, 0);
     assert!(!driver.app.is_playing);
 }
+
+#[test]
+fn test_phase2_canvas_ghost_drag_interaction() {
+    use iced::widget::canvas::Program;
+
+    let mut program = Crystal_wave::ui::canvas_timeline::ArrangementCanvasProgram::new(0, 1.0, 2)
+        .with_track_types(vec![
+            Crystal_wave::timeline::track::TrackType::Audio,
+            Crystal_wave::timeline::track::TrackType::Software,
+        ]);
+
+    program.clips.push(Crystal_wave::ui::canvas_timeline::TimelineClipDisplay {
+        id: 1,
+        track_index: 0,
+        start_tick: 0,
+        length_ticks: 3840,
+        name: "Audio Take 1".to_string(),
+        color_rgb: [80, 120, 220],
+        muted: false,
+        looped: false,
+        fade_in_ticks: 0,
+        fade_out_ticks: 0,
+        kind: Crystal_wave::ui::canvas_timeline::ClipVisualKind::Audio {
+            waveform_peaks: Vec::new(),
+        },
+        is_selected: false,
+    });
+
+    let mut state = Crystal_wave::ui::canvas_timeline::CanvasInteractionState::default();
+    let bounds = iced::Rectangle::new(iced::Point::ORIGIN, iced::Size::new(1000.0, 400.0));
+
+    // 1. Mouse down on clip in Track 0
+    let cursor_down = iced::mouse::Cursor::Available(iced::Point::new(50.0, 60.0));
+    let press_event = iced::widget::canvas::Event::Mouse(iced::mouse::Event::ButtonPressed(
+        iced::mouse::Button::Left,
+    ));
+    let _ = <ArrangementCanvasProgram as iced::widget::canvas::Program<
+        UiMessage,
+        iced::Theme,
+    >>::update(&program, &mut state, &press_event, bounds, cursor_down);
+
+    assert!(state.dragged_clip.is_some());
+    assert!(state.live_drag.is_some());
+
+    // 2. Drag cursor to Track 1 (y = 140.0)
+    let cursor_move_trk1 = iced::mouse::Cursor::Available(iced::Point::new(150.0, 140.0));
+    let move_event = iced::widget::canvas::Event::Mouse(iced::mouse::Event::CursorMoved {
+        position: iced::Point::new(150.0, 140.0),
+    });
+    let _ = <ArrangementCanvasProgram as iced::widget::canvas::Program<
+        UiMessage,
+        iced::Theme,
+    >>::update(
+        &program,
+        &mut state,
+        &move_event,
+        bounds,
+        cursor_move_trk1,
+    );
+
+    let preview_trk1 = state.live_drag.as_ref().expect("must have live drag preview");
+    assert_eq!(preview_trk1.target_track, 1);
+    assert!(preview_trk1.target_start_tick > 0);
+    // Audio clip on Software track must be flagged as invalid drop
+    assert!(!preview_trk1.is_valid_drop);
+
+    // 3. Drag cursor back to Track 0 (y = 50.0)
+    let cursor_move_trk0 = iced::mouse::Cursor::Available(iced::Point::new(150.0, 50.0));
+    let move_event2 = iced::widget::canvas::Event::Mouse(iced::mouse::Event::CursorMoved {
+        position: iced::Point::new(150.0, 50.0),
+    });
+    let _ = <ArrangementCanvasProgram as iced::widget::canvas::Program<
+        UiMessage,
+        iced::Theme,
+    >>::update(
+        &program,
+        &mut state,
+        &move_event2,
+        bounds,
+        cursor_move_trk0,
+    );
+
+    let preview_trk0 = state.live_drag.as_ref().expect("must have live drag preview");
+    assert_eq!(preview_trk0.target_track, 0);
+    // Audio clip on Audio track is valid
+    assert!(preview_trk0.is_valid_drop);
+}
+
+#[test]
+fn test_phase2_track_type_compatibility_drop_rejection() {
+    let mut driver = UiSessionDriver::new(48000.0);
+
+    // Track 0 is Audio with Region 1. Track 1 is Software with Region 2.
+    assert_eq!(
+        driver.app.arrangement.timeline.tracks[0].track_type,
+        Crystal_wave::timeline::track::TrackType::Audio
+    );
+    assert_eq!(
+        driver.app.arrangement.timeline.tracks[1].track_type,
+        Crystal_wave::timeline::track::TrackType::Software
+    );
+
+    // 1. Attempt to move Audio Region 1 to Track 1 (Software) -> should be rejected and kept on Track 0!
+    driver.dispatch(UiMessage::TimelineMoveClip {
+        clip_id: 1,
+        new_track_id: 1,
+        new_start_tick: 960,
+    });
+
+    let trk0_has_reg1 = driver.app.arrangement.timeline.tracks[0]
+        .regions
+        .iter()
+        .any(|r| r.id == 1);
+    let trk1_has_reg1 = driver.app.arrangement.timeline.tracks[1]
+        .regions
+        .iter()
+        .any(|r| r.id == 1);
+
+    assert!(
+        trk0_has_reg1,
+        "Audio region should remain on Track 0 when incompatible drop occurs!"
+    );
+    assert!(
+        !trk1_has_reg1,
+        "Incompatible audio region must NOT be placed on Software Instrument track!"
+    );
+
+    // 2. Add another Audio track (Track 2)
+    driver.dispatch(UiMessage::MenuAction(
+        Crystal_wave::ui::message::MenuCommand::AddAudioTrack,
+    ));
+    assert_eq!(
+        driver.app.arrangement.timeline.tracks[2].track_type,
+        Crystal_wave::timeline::track::TrackType::Audio
+    );
+
+    // 3. Move Region 1 to Track 2 (Audio -> Audio) -> should succeed!
+    driver.dispatch(UiMessage::TimelineMoveClip {
+        clip_id: 1,
+        new_track_id: 2,
+        new_start_tick: 1920,
+    });
+
+    let trk2_has_reg1 = driver.app.arrangement.timeline.tracks[2]
+        .regions
+        .iter()
+        .any(|r| r.id == 1);
+    assert!(
+        trk2_has_reg1,
+        "Compatible audio region must successfully move to Track 2!"
+    );
+}

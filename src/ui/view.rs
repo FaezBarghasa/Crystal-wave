@@ -476,11 +476,20 @@ impl CrystalWaveApp {
                 .padding(4),
             ];
 
+            let track_types: Vec<_> = self
+                .arrangement
+                .timeline
+                .tracks
+                .iter()
+                .map(|t| t.track_type)
+                .collect();
+
             let mut canvas_program = crate::ui::canvas_timeline::ArrangementCanvasProgram::new(
                 self.playhead_tick,
                 self.arrangement.horizontal_zoom,
                 self.arrangement.timeline.tracks.len().max(1),
-            );
+            )
+            .with_track_types(track_types);
 
             canvas_program.selected_track_id = self.workspace.selected_track_id;
             canvas_program.loop_range = if self.arrangement.timeline.loop_region.enabled {

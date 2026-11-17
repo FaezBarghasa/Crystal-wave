@@ -362,6 +362,7 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
             canvas::Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
                 state.is_scrubbing_playhead = false;
                 state.cycle_drag = None;
+                let preview = state.live_drag.take();
 
                 // Handle Marquee Selection Completion
                 if let Some((start_pt, end_pt)) = state.marquee_drag.take() {
@@ -387,7 +388,12 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                     let target_tick = self.x_to_tick(cursor_pos.x, bounds.width);
                     match zone {
                         SmartToolZone::GrabMove => {
-                            let target_trk = self.y_to_track(cursor_pos.y).unwrap_or(orig_trk);
+                            let is_valid = preview.as_ref().map(|p| p.is_valid_drop).unwrap_or(true);
+                            let target_trk = if is_valid {
+                                self.y_to_track(cursor_pos.y).unwrap_or(orig_trk)
+                            } else {
+                                orig_trk
+                            };
                             let new_start = target_tick.saturating_sub(offset_ticks);
                             let snapped_tick = self.snap.snap(new_start, self.horizontal_zoom);
                             return Some(Action::publish(UiMessage::TimelineMoveClip {
@@ -446,6 +452,79 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
 
                 if let Some((_, ref mut curr)) = state.marquee_drag {
                     *curr = cursor_pos;
+                }
+
+                // Live Clip Dragging & Snapping Guide Preview
+                if let Some((clip_id, zone, orig_trk, orig_start, orig_len, offset_ticks)) =
+                    state.dragged_clip
+                {
+                    let target_trk = self.y_to_track(cursor_pos.y).unwrap_or(orig_trk);
+                    let is_audio = self
+                        .clips
+                        .iter()
+                        .find(|c| c.id == clip_id)
+                        .map(|c| matches!(c.kind, ClipVisualKind::Audio { .. }))
+                        .unwrap_or(true);
+
+                    let is_compatible = if let Some(&dest_type) = self.track_types.get(target_trk) {
+                        if is_audio {
+                            matches!(dest_type, crate::timeline::track::TrackType::Audio | crate::timeline::track::TrackType::Aux)
+                        } else {
+                            matches!(dest_type, crate::timeline::track::TrackType::Software | crate::timeline::track::TrackType::Midi | crate::timeline::track::TrackType::Drum)
+                        }
+                    } else {
+                        true
+                    };
+
+                    match zone {
+                        SmartToolZone::GrabMove => {
+                            let new_start = target_tick.saturating_sub(offset_ticks);
+                            let snapped_tick = self.snap.snap(new_start, self.horizontal_zoom);
+                            let delta = snapped_tick as i64 - orig_start as i64;
+                            state.live_drag = Some(LiveDragPreview {
+                                clip_id,
+                                zone,
+                                target_track: target_trk,
+                                target_start_tick: snapped_tick,
+                                target_length_ticks: orig_len,
+                                delta_ticks: delta,
+                                is_valid_drop: is_compatible,
+                            });
+                        }
+                        SmartToolZone::TrimStart => {
+                            let snapped_tick = self.snap.snap(target_tick, self.horizontal_zoom);
+                            if snapped_tick < orig_start + orig_len.saturating_sub(120) {
+                                let new_len = (orig_start + orig_len).saturating_sub(snapped_tick);
+                                let delta = snapped_tick as i64 - orig_start as i64;
+                                state.live_drag = Some(LiveDragPreview {
+                                    clip_id,
+                                    zone,
+                                    target_track: orig_trk,
+                                    target_start_tick: snapped_tick,
+                                    target_length_ticks: new_len,
+                                    delta_ticks: delta,
+                                    is_valid_drop: true,
+                                });
+                            }
+                        }
+                        SmartToolZone::TrimEnd => {
+                            let snapped_tick = self.snap.snap(target_tick, self.horizontal_zoom);
+                            if snapped_tick > orig_start + 120 {
+                                let new_len = snapped_tick.saturating_sub(orig_start);
+                                let delta = new_len as i64 - orig_len as i64;
+                                state.live_drag = Some(LiveDragPreview {
+                                    clip_id,
+                                    zone,
+                                    target_track: orig_trk,
+                                    target_start_tick: orig_start,
+                                    target_length_ticks: new_len,
+                                    delta_ticks: delta,
+                                    is_valid_drop: true,
+                                });
+                            }
+                        }
+                        _ => {}
+                    }
                 }
 
                 if let Some((mode, start_anchor, end_anchor)) = state.cycle_drag {
@@ -913,6 +992,102 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                 &border_rect,
                 Stroke::default().with_color(marquee_border).with_width(1.0),
             );
+        }
+
+        // 4h. Live Drag Ghost Clip & Snap Guides
+        if let Some(ref drag) = state.live_drag {
+            let snap_x = self.tick_to_x(drag.target_start_tick, bounds.width);
+            let ghost_x_end =
+                self.tick_to_x(drag.target_start_tick + drag.target_length_ticks, bounds.width);
+            let ghost_w = (ghost_x_end - snap_x).max(6.0);
+            let ghost_y = self.track_to_y(drag.target_track) + 4.0;
+            let ghost_h = LANE_HEIGHT - 8.0;
+
+            // 1. Vertical Beat/Bar Alignment Snap Guide Line across whole canvas
+            let snap_guide = Path::line(
+                Point::new(snap_x, RULER_HEIGHT),
+                Point::new(snap_x, bounds.height),
+            );
+            frame.stroke(
+                &snap_guide,
+                Stroke::default()
+                    .with_color(if drag.is_valid_drop {
+                        Color::from_rgba8(0x00, 0xe5, 0xff, 0.75) // Cyan laser guide
+                    } else {
+                        Color::from_rgba8(0xff, 0x47, 0x57, 0.75) // Red invalid drop guide
+                    })
+                    .with_width(1.5),
+            );
+
+            // 2. Translucent Ghost Box on Target Track
+            let (fill_col, stroke_col) = if !drag.is_valid_drop {
+                (
+                    Color::from_rgba8(235, 77, 75, 0.35),
+                    Color::from_rgb8(255, 71, 87),
+                )
+            } else if self.is_fl_theme {
+                (
+                    Color::from_rgba8(248, 138, 54, 0.40),
+                    Color::from_rgb8(255, 175, 80),
+                )
+            } else {
+                (
+                    Color::from_rgba8(0, 122, 255, 0.40),
+                    Color::from_rgb8(100, 200, 255),
+                )
+            };
+
+            let ghost_rect =
+                Path::rectangle(Point::new(snap_x, ghost_y), Size::new(ghost_w, ghost_h));
+            frame.fill(&ghost_rect, fill_col);
+            frame.stroke(
+                &ghost_rect,
+                Stroke::default().with_color(stroke_col).with_width(2.0),
+            );
+
+            // 3. Floating HUD Information Pill
+            let bar = (drag.target_start_tick / TICKS_PER_BAR) + 1;
+            let beat = ((drag.target_start_tick % TICKS_PER_BAR) / PPQN) + 1;
+            let delta_txt = if drag.delta_ticks >= 0 {
+                format!("+{} ticks", drag.delta_ticks)
+            } else {
+                format!("{} ticks", drag.delta_ticks)
+            };
+
+            let hud_label = if drag.is_valid_drop {
+                format!(
+                    "Track {} | Bar {}.{} | {}",
+                    drag.target_track + 1,
+                    bar,
+                    beat,
+                    delta_txt
+                )
+            } else {
+                format!("Track {} | 🚫 Incompatible Track Type", drag.target_track + 1)
+            };
+
+            let hud_x = snap_x.clamp(4.0, (bounds.width - 200.0).max(4.0));
+            let hud_y = (ghost_y - 20.0).max(RULER_HEIGHT + 4.0);
+
+            // HUD Background Pill
+            frame.fill_rectangle(
+                Point::new(hud_x, hud_y),
+                Size::new(190.0, 16.0),
+                Color::from_rgba8(16, 18, 24, 0.92),
+            );
+            let pill_outline = Path::rectangle(Point::new(hud_x, hud_y), Size::new(190.0, 16.0));
+            frame.stroke(
+                &pill_outline,
+                Stroke::default().with_color(stroke_col).with_width(1.0),
+            );
+
+            frame.fill_text(canvas::Text {
+                content: hud_label,
+                position: Point::new(hud_x + 6.0, hud_y + 2.0),
+                color: Color::from_rgb8(245, 248, 255),
+                size: 9.0.into(),
+                ..Default::default()
+            });
         }
 
         // 5. Logic Pro Top Ruler Bar (Height = 30.0)

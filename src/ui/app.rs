@@ -740,20 +740,60 @@ impl CrystalWaveApp {
             } => {
                 // Find and extract region
                 let mut found_region = None;
-                for track in &mut self.arrangement.timeline.tracks {
+                let mut source_track_idx = 0;
+                for (trk_idx, track) in self.arrangement.timeline.tracks.iter_mut().enumerate() {
                     if let Some(pos) = track.regions.iter().position(|r| r.id == clip_id) {
-                        let mut reg = track.regions.remove(pos);
-                        reg.start_tick = new_start_tick;
-                        reg.track_id = new_track_id;
+                        let reg = track.regions.remove(pos);
+                        source_track_idx = trk_idx;
                         found_region = Some(reg);
                         break;
                     }
                 }
-                // Insert into new destination track
-                if let Some(reg) = found_region
-                    && let Some(dest_track) = self.arrangement.timeline.tracks.get_mut(new_track_id)
-                {
-                    dest_track.regions.push(reg);
+
+                if let Some(mut reg) = found_region {
+                    let dest_type = self
+                        .arrangement
+                        .timeline
+                        .tracks
+                        .get(new_track_id)
+                        .map(|t| t.track_type);
+
+                    // Track Type Compatibility Validation:
+                    // Audio regions can only go to Audio / Aux tracks.
+                    // Midi / Pattern regions can only go to Software / Midi / Drum tracks.
+                    let is_compatible = match (&reg.kind, dest_type) {
+                        (
+                            crate::timeline::region::RegionKind::Audio { .. },
+                            Some(
+                                crate::timeline::track::TrackType::Audio
+                                | crate::timeline::track::TrackType::Aux,
+                            ),
+                        ) => true,
+                        (
+                            crate::timeline::region::RegionKind::Midi { .. }
+                            | crate::timeline::region::RegionKind::Pattern { .. },
+                            Some(
+                                crate::timeline::track::TrackType::Software
+                                | crate::timeline::track::TrackType::Midi
+                                | crate::timeline::track::TrackType::Drum,
+                            ),
+                        ) => true,
+                        _ => false,
+                    };
+
+                    let final_track_id = if is_compatible {
+                        new_track_id
+                    } else {
+                        source_track_idx
+                    };
+                    reg.start_tick = new_start_tick;
+                    reg.track_id = final_track_id;
+
+                    if let Some(dest_track) =
+                        self.arrangement.timeline.tracks.get_mut(final_track_id)
+                    {
+                        dest_track.regions.push(reg);
+                    }
                 }
                 self.dirty = true;
             }
