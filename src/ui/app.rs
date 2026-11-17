@@ -295,9 +295,18 @@ impl CrystalWaveApp {
                 } else {
                     -120.0
                 };
-                if let Some(strip) = self.mixer.channels.get_mut(track_id) {
-                    strip.volume_fader_db = safe_db;
+                if track_id == 9999 {
+                    self.mixer.master_strip.volume_fader_db = safe_db;
+                    self.mixer.master_fader_db = safe_db;
+                } else {
+                    if let Some(strip) = self.mixer.channels.get_mut(track_id) {
+                        strip.volume_fader_db = safe_db;
+                    }
+                    if let Some(track) = self.arrangement.timeline.tracks.get_mut(track_id) {
+                        track.gain_db = safe_db;
+                    }
                 }
+                self.dirty = true;
             }
             UiMessage::SetTrackPan { track_id, pan } => {
                 let safe_pan = if pan.is_finite() {
@@ -305,24 +314,47 @@ impl CrystalWaveApp {
                 } else {
                     0.0
                 };
-                if let Some(strip) = self.mixer.channels.get_mut(track_id) {
-                    strip.pan.balance = safe_pan;
+                if track_id == 9999 {
+                    self.mixer.master_strip.pan.balance = safe_pan;
+                } else {
+                    if let Some(strip) = self.mixer.channels.get_mut(track_id) {
+                        strip.pan.balance = safe_pan;
+                    }
+                    if let Some(track) = self.arrangement.timeline.tracks.get_mut(track_id) {
+                        track.pan = safe_pan;
+                    }
                 }
+                self.dirty = true;
             }
             UiMessage::ToggleTrackMute(track_id) => {
-                if let Some(strip) = self.mixer.channels.get_mut(track_id) {
-                    strip.muted = !strip.muted;
+                if track_id == 9999 {
+                    self.mixer.master_strip.muted = !self.mixer.master_strip.muted;
+                } else {
+                    if let Some(strip) = self.mixer.channels.get_mut(track_id) {
+                        strip.muted = !strip.muted;
+                    }
+                    if let Some(track) = self.arrangement.timeline.tracks.get_mut(track_id) {
+                        track.muted = !track.muted;
+                    }
                 }
+                self.dirty = true;
             }
             UiMessage::ToggleTrackSolo(track_id) => {
                 if let Some(strip) = self.mixer.channels.get_mut(track_id) {
                     strip.solo = !strip.solo;
                 }
+                if let Some(track) = self.arrangement.timeline.tracks.get_mut(track_id) {
+                    track.soloed = !track.soloed;
+                }
+                self.dirty = true;
             }
             UiMessage::ResetAutoMute(track_id) => {
-                if let Some(strip) = self.mixer.channels.get_mut(track_id) {
+                if track_id == 9999 {
+                    self.mixer.master_strip.meter.reset_auto_mute();
+                } else if let Some(strip) = self.mixer.channels.get_mut(track_id) {
                     strip.meter.reset_auto_mute();
                 }
+                self.dirty = true;
             }
 
             UiMessage::TelemetryReceived(batch) => {
@@ -1059,6 +1091,8 @@ impl CrystalWaveApp {
                     self.is_recording = !self.is_recording;
                 } else if lower.contains("save") {
                     self.dirty = false;
+                } else if lower.contains("modern") {
+                    self.theme = crate::ui::theme::UiTheme::fl_studio_modern();
                 } else if lower.contains("orange") || lower.contains("fl") {
                     self.theme = crate::ui::theme::UiTheme::fl_dark_orange();
                 } else if lower.contains("graphite") || lower.contains("logic") {
@@ -1321,7 +1355,11 @@ impl CrystalWaveApp {
         .with_notes(active_notes)
         .with_ghost_notes(ghost_notes)
         .with_snap(self.snap_grid)
-        .with_theme(self.theme.preset == crate::ui::theme::ThemePreset::FlDarkOrange)
+        .with_theme(matches!(
+            self.theme.preset,
+            crate::ui::theme::ThemePreset::FlDarkOrange
+                | crate::ui::theme::ThemePreset::FlStudioModern
+        ))
         .with_channel_id(self.piano_roll_selected_channel)
     }
 }

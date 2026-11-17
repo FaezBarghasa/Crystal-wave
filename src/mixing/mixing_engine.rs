@@ -189,7 +189,6 @@ impl MixingEngine {
     /// Process mixer graph summing: topological multi-bus summing hierarchically into Bus 0 (Stereo Out), then Master
     pub fn sum_buses(&mut self, master_left: &mut [f32], master_right: &mut [f32]) {
         let len = master_left.len().min(master_right.len());
-        let master_gain = self.master_linear_gain();
 
         if self.buses.is_empty() {
             return;
@@ -236,15 +235,15 @@ impl MixingEngine {
         // 3. Accumulate Bus 0 (Stereo Out) into master output
         for i in 0..len {
             if i < bus0.left_accumulator.len() {
-                master_left[i] = bus0.left_accumulator[i] * master_gain;
-                master_right[i] = bus0.right_accumulator[i] * master_gain;
+                master_left[i] = bus0.left_accumulator[i];
+                master_right[i] = bus0.right_accumulator[i];
             } else {
                 master_left[i] = 0.0;
                 master_right[i] = 0.0;
             }
         }
 
-        // 4. Process Master Strip Inserts, Limiter and Meter Ballistics
+        // 4. Process Master Strip Inserts, Fader Gain, Limiter and Meter Ballistics
         self.master_strip
             .process_block(&mut master_left[..len], &mut master_right[..len], 1.0);
     }

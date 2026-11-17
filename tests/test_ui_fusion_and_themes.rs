@@ -16,6 +16,22 @@ fn test_ui_theme_tokens_and_presets() {
     assert_eq!(fl_orange.note_colors.len(), 16);
     assert_eq!(fl_orange.meters.len(), 6);
 
+    let fl_modern = UiTheme::fl_studio_modern();
+    assert_eq!(fl_modern.preset, ThemePreset::FlStudioModern);
+    assert_eq!(fl_modern.note_colors.len(), 16);
+    assert_eq!(fl_modern.meters.len(), 6);
+    assert_eq!(fl_modern.accent, iced::Color::from_rgb8(0xff, 0x88, 0x00));
+    assert_eq!(
+        fl_modern.background,
+        iced::Color::from_rgb8(0x10, 0x11, 0x14)
+    );
+    assert_eq!(fl_modern.surface, iced::Color::from_rgb8(0x18, 0x1a, 0x20));
+    assert_eq!(fl_modern.step_odd, iced::Color::from_rgb8(0x18, 0x1a, 0x20));
+    assert_eq!(
+        fl_modern.step_even,
+        iced::Color::from_rgb8(0x25, 0x29, 0x32)
+    );
+
     // FL Orange accent verification
     assert_eq!(
         fl_orange.border_focus,
@@ -26,16 +42,27 @@ fn test_ui_theme_tokens_and_presets() {
     // Note colors rotation
     assert_eq!(fl_orange.note_color(0), fl_orange.note_colors[0]);
     assert_eq!(fl_orange.note_color(16), fl_orange.note_colors[0]);
+    assert_eq!(fl_modern.note_color(0), fl_modern.note_colors[0]);
 
-    // Container style builder
+    // Container style builders
     let panel_style = fl_orange.panel_container_style();
     assert!(panel_style.background.is_some());
     let header_style = fl_orange.header_container_style();
     assert!(header_style.background.is_some());
 
+    // Double-bezel & Machined Capsules
+    let bezel_style = fl_modern.outer_bezel_style();
+    assert!(bezel_style.background.is_some());
+    let well_style = fl_modern.inner_well_style();
+    assert!(well_style.background.is_some());
+    let capsule_style = fl_modern.machined_capsule_style();
+    assert!(capsule_style.background.is_some());
+
     // Luxury Hardware & OLED Display Containers
     let oled_style = fl_orange.oled_vfd_display_style();
     assert!(oled_style.background.is_some());
+    let oled_modern = fl_modern.oled_vfd_display_style();
+    assert!(oled_modern.background.is_some());
     let rack_style = graphite.hardware_rack_style();
     assert!(rack_style.background.is_some());
 
@@ -201,6 +228,12 @@ fn test_command_palette_execution() {
     app.update(UiMessage::ExecuteCommand("orange".to_string()));
     assert!(!app.command_palette_open);
     assert_eq!(app.theme.preset, ThemePreset::FlDarkOrange);
+
+    // Switch to modern FL 2026 theme via command palette
+    app.update(UiMessage::ToggleCommandPalette);
+    app.update(UiMessage::ExecuteCommand("modern".to_string()));
+    assert!(!app.command_palette_open);
+    assert_eq!(app.theme.preset, ThemePreset::FlStudioModern);
 
     // Execute play command via palette
     app.update(UiMessage::ExecuteCommand("play".to_string()));

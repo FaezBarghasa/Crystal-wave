@@ -14,6 +14,7 @@ pub enum ThemePreset {
     #[default]
     Graphite,
     FlDarkOrange,
+    FlStudioModern,
 }
 
 impl ThemePreset {
@@ -21,6 +22,7 @@ impl ThemePreset {
         match self {
             Self::Graphite => "Logic Pro Graphite",
             Self::FlDarkOrange => "FL Studio Dark Orange",
+            Self::FlStudioModern => "FL Studio 2026 Modern",
         }
     }
 }
@@ -62,6 +64,7 @@ impl UiTheme {
         match preset {
             ThemePreset::Graphite => Self::graphite(),
             ThemePreset::FlDarkOrange => Self::fl_dark_orange(),
+            ThemePreset::FlStudioModern => Self::fl_studio_modern(),
         }
     }
 
@@ -163,6 +166,57 @@ impl UiTheme {
                 Color::from_rgb8(0xc0, 0x39, 0x2b), // 13: Pomegranate
                 Color::from_rgb8(0xbd, 0xc3, 0xc7), // 14: Silver
                 Color::from_rgb8(0x7f, 0x8c, 0x8d), // 15: Asbestos
+            ],
+        }
+    }
+
+    /// FL Studio 2026 Modern OLED Theme (Deep charcoal with radiant neon citrus orange)
+    pub fn fl_studio_modern() -> Self {
+        Self {
+            preset: ThemePreset::FlStudioModern,
+            background: Color::from_rgb8(0x10, 0x11, 0x14), // Deep OLED Charcoal
+            surface: Color::from_rgb8(0x18, 0x1a, 0x20),    // Slate Surface
+            surface_elevated: Color::from_rgb8(0x22, 0x25, 0x2d),
+            surface_sunken: Color::from_rgb8(0x0a, 0x0b, 0x0d), // Sunken Well
+            border: Color::from_rgb8(0x2c, 0x30, 0x3a),
+            border_focus: Color::from_rgb8(0xff, 0x88, 0x00), // Citrus Orange
+            text_primary: Color::from_rgb8(0xf4, 0xf6, 0xfa),
+            text_secondary: Color::from_rgb8(0xc2, 0xc7, 0xd4),
+            text_muted: Color::from_rgb8(0x70, 0x76, 0x88),
+            accent: Color::from_rgb8(0xff, 0x88, 0x00), // Citrus Accent
+            accent_active: Color::from_rgb8(0xff, 0xa5, 0x33),
+            selected: Color::from_rgb8(0xff, 0x88, 0x00),
+            highlight: Color::from_rgb8(0x00, 0xf2, 0xfe), // Electric Cyan
+            mute: Color::from_rgb8(0x3d, 0x2e, 0x22),
+            solo: Color::from_rgb8(0xf5, 0xa6, 0x23),
+            record: Color::from_rgb8(0xe7, 0x4c, 0x3c),
+            step_even: Color::from_rgb8(0x25, 0x29, 0x32), // Beats 2 & 4 (Graphite)
+            step_odd: Color::from_rgb8(0x18, 0x1a, 0x20),  // Beats 1 & 3 (Obsidian)
+            meters: [
+                Color::from_rgb8(0x0e, 0x6a, 0x38), // -48 dB Dark Green
+                Color::from_rgb8(0x1e, 0xbb, 0x5d), // -18 dB Emerald Green
+                Color::from_rgb8(0x38, 0xef, 0x7d), // -12 dB Neon Lime
+                Color::from_rgb8(0xf3, 0x9c, 0x12), // -6 dB Yellow
+                Color::from_rgb8(0xff, 0x88, 0x00), // -2 dB Citrus Orange
+                Color::from_rgb8(0xff, 0x2d, 0x55), // 0 dB / Clip Neon Red
+            ],
+            note_colors: [
+                Color::from_rgb8(0x49, 0x77, 0xf6), // 0: Sky Blue
+                Color::from_rgb8(0xff, 0x88, 0x00), // 1: Citrus Orange
+                Color::from_rgb8(0x38, 0xef, 0x7d), // 2: Neon Lime
+                Color::from_rgb8(0x9b, 0x59, 0xb6), // 3: Purple
+                Color::from_rgb8(0x00, 0xf2, 0xfe), // 4: Electric Cyan
+                Color::from_rgb8(0xe6, 0x7e, 0x22), // 5: Amber
+                Color::from_rgb8(0x34, 0x98, 0xdb), // 6: Deep Blue
+                Color::from_rgb8(0xe7, 0x4c, 0x3c), // 7: Red
+                Color::from_rgb8(0xf1, 0xc4, 0x0f), // 8: Yellow
+                Color::from_rgb8(0x16, 0xa0, 0x85), // 9: Teal
+                Color::from_rgb8(0xa8, 0x55, 0xf7), // 10: Violet
+                Color::from_rgb8(0xf9, 0x73, 0x16), // 11: Warm Orange
+                Color::from_rgb8(0x06, 0xb6, 0xd4), // 12: Cyan
+                Color::from_rgb8(0x10, 0xb9, 0x81), // 13: Emerald
+                Color::from_rgb8(0xec, 0x48, 0x99), // 14: Pink
+                Color::from_rgb8(0x64, 0x74, 0x8b), // 15: Slate
             ],
         }
     }
@@ -325,12 +379,14 @@ impl UiTheme {
         let border_glow = match self.preset {
             ThemePreset::Graphite => Color::from_rgba8(0x00, 0xa8, 0xff, 0.35),
             ThemePreset::FlDarkOrange => Color::from_rgba8(0xf8, 0x8a, 0x36, 0.40),
+            ThemePreset::FlStudioModern => Color::from_rgba8(0xff, 0x88, 0x00, 0.50),
         };
         container::Style {
             background: Some(Background::Color(Color::from_rgb8(0x08, 0x09, 0x0d))),
             text_color: Some(match self.preset {
                 ThemePreset::Graphite => Color::from_rgb8(0x5a, 0xe0, 0xff), // VFD Cyan
                 ThemePreset::FlDarkOrange => Color::from_rgb8(0xff, 0xb8, 0x5a), // FL Amber VFD
+                ThemePreset::FlStudioModern => Color::from_rgb8(0xff, 0xaa, 0x44), // FL Modern Amber Neon
             }),
             border: Border {
                 color: border_glow,
@@ -338,6 +394,59 @@ impl UiTheme {
                 radius: Radius::from(4.0),
             },
             shadow: Shadow::default(),
+            ..container::Style::default()
+        }
+    }
+
+    /// Double-bezel outer frame container style
+    pub fn outer_bezel_style(&self) -> container::Style {
+        container::Style {
+            background: Some(Background::Color(self.surface_elevated)),
+            text_color: Some(self.text_primary),
+            border: Border {
+                color: self.border,
+                width: 1.5,
+                radius: Radius::from(6.0),
+            },
+            shadow: Shadow {
+                color: Color::from_rgba(0.0, 0.0, 0.0, 0.4),
+                offset: iced::Vector::new(0.0, 2.0),
+                blur_radius: 6.0,
+            },
+            ..container::Style::default()
+        }
+    }
+
+    /// Machined sunken inner well container style
+    pub fn inner_well_style(&self) -> container::Style {
+        container::Style {
+            background: Some(Background::Color(self.surface_sunken)),
+            text_color: Some(self.text_primary),
+            border: Border {
+                color: self.border,
+                width: 1.0,
+                radius: Radius::from(4.0),
+            },
+            shadow: Shadow::default(),
+            ..container::Style::default()
+        }
+    }
+
+    /// Machined capsule container style for modular toolbar segments
+    pub fn machined_capsule_style(&self) -> container::Style {
+        container::Style {
+            background: Some(Background::Color(self.surface)),
+            text_color: Some(self.text_primary),
+            border: Border {
+                color: self.border,
+                width: 1.0,
+                radius: Radius::from(6.0),
+            },
+            shadow: Shadow {
+                color: Color::from_rgba(0.0, 0.0, 0.0, 0.25),
+                offset: iced::Vector::new(0.0, 1.0),
+                blur_radius: 3.0,
+            },
             ..container::Style::default()
         }
     }

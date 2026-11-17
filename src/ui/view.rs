@@ -51,66 +51,66 @@ impl CrystalWaveApp {
         let track_add_midi = button(text("+ MIDI").size(11))
             .on_press(UiMessage::MenuAction(MenuCommand::AddMidiTrack));
 
-        // FL Studio Multi-Window Toolbars (F5, F6, F7, F8, F9)
+        // FL Studio Multi-Window Toolbars (F5, F6, F7, F8, F9) with LED jewel indicators
         let win_playlist = button(
             text(if self.fl_windows.playlist_visible {
-                "Playlist [F5]*"
+                "● Playlist [F5]"
             } else {
-                "Playlist [F5]"
+                "○ Playlist [F5]"
             })
             .size(11),
         )
         .on_press(UiMessage::ToggleFlPlaylist);
         let win_channel_rack = button(
             text(if self.fl_windows.channel_rack_visible {
-                "Rack [F6]*"
+                "● Rack [F6]"
             } else {
-                "Rack [F6]"
+                "○ Rack [F6]"
             })
             .size(11),
         )
         .on_press(UiMessage::ToggleFlChannelRack);
         let win_piano_roll = button(
             text(if self.fl_windows.piano_roll_visible {
-                "Piano Roll [F7]*"
+                "● Piano Roll [F7]"
             } else {
-                "Piano Roll [F7]"
+                "○ Piano Roll [F7]"
             })
             .size(11),
         )
         .on_press(UiMessage::ToggleFlPianoRoll);
         let win_browser = button(
             text(if self.fl_windows.browser_visible {
-                "Browser [F8]*"
+                "● Browser [F8]"
             } else {
-                "Browser [F8]"
+                "○ Browser [F8]"
             })
             .size(11),
         )
         .on_press(UiMessage::ToggleFlBrowser);
         let win_mixer = button(
             text(if self.fl_windows.mixer_visible {
-                "Mixer [F9]*"
+                "● Mixer [F9]"
             } else {
-                "Mixer [F9]"
+                "○ Mixer [F9]"
             })
             .size(11),
         )
         .on_press(UiMessage::ToggleFlMixer);
         let win_patcher = button(
             text(if self.fl_windows.patcher_visible {
-                "Patcher*"
+                "● Patcher"
             } else {
-                "Patcher"
+                "○ Patcher"
             })
             .size(11),
         )
         .on_press(UiMessage::ToggleFlPatcher);
         let win_inspector = button(
             text(if self.workspace.inspector_open {
-                "Inspect [I]*"
+                "● Inspect [I]"
             } else {
-                "Inspect [I]"
+                "○ Inspect [I]"
             })
             .size(11),
         )
@@ -123,16 +123,19 @@ impl CrystalWaveApp {
             text(match self.theme.preset {
                 crate::ui::theme::ThemePreset::Graphite => "Theme: Logic Graphite",
                 crate::ui::theme::ThemePreset::FlDarkOrange => "Theme: FL Dark Orange",
+                crate::ui::theme::ThemePreset::FlStudioModern => "Theme: FL 2026 Modern",
             })
             .size(11),
         )
-        .on_press(UiMessage::SetThemePreset(
-            if self.theme.preset == crate::ui::theme::ThemePreset::Graphite {
-                crate::ui::theme::ThemePreset::FlDarkOrange
-            } else {
+        .on_press(UiMessage::SetThemePreset(match self.theme.preset {
+            crate::ui::theme::ThemePreset::Graphite => crate::ui::theme::ThemePreset::FlDarkOrange,
+            crate::ui::theme::ThemePreset::FlDarkOrange => {
+                crate::ui::theme::ThemePreset::FlStudioModern
+            }
+            crate::ui::theme::ThemePreset::FlStudioModern => {
                 crate::ui::theme::ThemePreset::Graphite
-            },
-        ));
+            }
+        }));
 
         let snap_btn = button(text(self.snap_grid.label()).size(11)).on_press(
             UiMessage::SetSnapGrid(match self.snap_grid {
@@ -158,30 +161,49 @@ impl CrystalWaveApp {
         let cmd_palette_btn =
             button(text("⌘K / Ctrl+K").size(11)).on_press(UiMessage::ToggleCommandPalette);
 
-        row![
-            container(text("CRYSTAL WAVE").size(12)).padding(4),
-            file_new,
-            file_save,
-            file_bounce,
-            file_aaf,
-            edit_split,
-            track_add_audio,
-            track_add_midi,
-            snap_btn,
-            theme_btn,
-            cmd_palette_btn,
-            win_playlist,
-            win_channel_rack,
-            win_piano_roll,
-            win_browser,
-            win_mixer,
-            win_patcher,
-            win_inspector,
-            win_plugins
-        ]
-        .spacing(4)
-        .padding(4)
-        .into()
+        // Modular machined floating capsules
+        let capsule_file = container(
+            row![
+                container(text("CRYSTAL WAVE").size(11)).padding(3),
+                file_new,
+                file_save,
+                file_bounce,
+                file_aaf,
+            ]
+            .spacing(4),
+        )
+        .style(|_t| self.theme.machined_capsule_style())
+        .padding(3);
+
+        let capsule_tools =
+            container(row![edit_split, track_add_audio, track_add_midi, snap_btn,].spacing(4))
+                .style(|_t| self.theme.machined_capsule_style())
+                .padding(3);
+
+        let capsule_windows = container(
+            row![
+                win_playlist,
+                win_channel_rack,
+                win_piano_roll,
+                win_browser,
+                win_mixer,
+                win_patcher,
+                win_inspector,
+                win_plugins,
+            ]
+            .spacing(4),
+        )
+        .style(|_t| self.theme.machined_capsule_style())
+        .padding(3);
+
+        let capsule_system = container(row![theme_btn, cmd_palette_btn,].spacing(4))
+            .style(|_t| self.theme.machined_capsule_style())
+            .padding(3);
+
+        row![capsule_file, capsule_tools, capsule_windows, capsule_system,]
+            .spacing(6)
+            .padding(4)
+            .into()
     }
 
     fn view_control_bar(&self) -> Element<'_, UiMessage> {
@@ -295,21 +317,23 @@ impl CrystalWaveApp {
         let tune_434_btn =
             button(text("434.5 Hz").size(10)).on_press(UiMessage::SetMasterTuning(434.5));
 
-        row![
-            play_btn,
-            stop_btn,
-            record_btn,
-            cycle_btn,
-            time_lcd,
-            tempo_lcd,
-            dsp_lcd,
-            tune_440_btn,
-            tune_432_btn,
-            tune_434_btn
-        ]
-        .spacing(6)
-        .padding(4)
-        .into()
+        let capsule_transport =
+            container(row![play_btn, stop_btn, record_btn, cycle_btn,].spacing(4))
+                .style(|_t| self.theme.machined_capsule_style())
+                .padding(3);
+
+        let capsule_telemetry = container(row![time_lcd, tempo_lcd, dsp_lcd,].spacing(4))
+            .style(|_t| self.theme.machined_capsule_style())
+            .padding(3);
+
+        let capsule_tuning = container(row![tune_440_btn, tune_432_btn, tune_434_btn,].spacing(3))
+            .style(|_t| self.theme.machined_capsule_style())
+            .padding(3);
+
+        row![capsule_transport, capsule_telemetry, capsule_tuning,]
+            .spacing(6)
+            .padding(4)
+            .into()
     }
 
     fn view_main_workspace(&self) -> Element<'_, UiMessage> {
@@ -430,26 +454,38 @@ impl CrystalWaveApp {
 
             for chan in &self.channel_rack.channels {
                 let chan_id = chan.id;
-                let mut steps_row =
-                    row![container(text(&chan.name).size(11)).width(Length::Fixed(90.0)),]
-                        .spacing(2);
+                let mut steps_row = row![].spacing(2);
 
                 for (s_idx, step) in chan.steps.iter().enumerate() {
-                    let step_lbl = if step.active { "■" } else { "·" };
-                    let step_btn = button(text(step_lbl).size(11)).padding(2).on_press(
-                        UiMessage::ChannelRackToggleStep {
+                    let is_active = step.active;
+                    let is_even_beat = (s_idx / 4) % 2 != 0;
+                    let step_lbl = if is_active { "■" } else { "·" };
+                    let step_btn = button(text(step_lbl).size(11))
+                        .style(self.theme.step_pad_style(is_active, is_even_beat))
+                        .padding(2)
+                        .on_press(UiMessage::ChannelRackToggleStep {
                             channel_id: chan_id,
                             step_index: s_idx,
-                        },
-                    );
+                        });
                     steps_row = steps_row.push(step_btn);
                 }
 
-                rack_col = rack_col.push(steps_row);
+                let ch_row = row![
+                    container(
+                        text(format!("[{}] {}", chan.target_mixer_track, chan.name)).size(11)
+                    )
+                    .width(Length::Fixed(110.0))
+                    .padding(2),
+                    steps_row,
+                ]
+                .spacing(6);
+
+                rack_col = rack_col.push(ch_row);
             }
 
             let rack_panel = container(scrollable(rack_col))
-                .width(Length::Fixed(360.0))
+                .style(|_t| self.theme.panel_container_style())
+                .width(Length::Fixed(460.0))
                 .padding(6);
 
             content = content.push(rack_panel);
@@ -558,15 +594,6 @@ impl CrystalWaveApp {
                     .style(self.theme.button_style(track.is_frozen))
                     .on_press(UiMessage::ToggleTrackFreeze(trk_idx));
 
-                let pan_txt = if track.pan.abs() < 0.05 {
-                    "Pan: C".to_string()
-                } else if track.pan < 0.0 {
-                    format!("Pan: L{:.0}%", (-track.pan) * 100.0)
-                } else {
-                    format!("Pan: R{:.0}%", track.pan * 100.0)
-                };
-
-                // Vertical color ribbon on left edge
                 let accent_strip = container(column![])
                     .width(Length::Fixed(4.0))
                     .height(Length::Fill)
@@ -574,6 +601,22 @@ impl CrystalWaveApp {
                         background: Some(iced::Background::Color(track_accent)),
                         ..container::Style::default()
                     });
+
+                let fader_mini = slider(-60.0..=6.0, track.gain_db, move |v| {
+                    UiMessage::SetTrackFader {
+                        track_id: trk_idx,
+                        volume_db: v,
+                    }
+                })
+                .step(0.5_f32)
+                .width(Length::Fixed(50.0));
+
+                let pan_mini = slider(-1.0..=1.0, track.pan, move |p| UiMessage::SetTrackPan {
+                    track_id: trk_idx,
+                    pan: p,
+                })
+                .step(0.05_f32)
+                .width(Length::Fixed(40.0));
 
                 let track_inner = column![
                     row![
@@ -597,15 +640,11 @@ impl CrystalWaveApp {
                     .spacing(4),
                     row![mute_btn, solo_btn, rec_btn, freeze_btn].spacing(3),
                     row![
-                        text(format!("{:.1} dB | {}", track.gain_db, pan_txt)).size(9),
-                        text(if is_muted {
-                            "▪▪▫▫"
-                        } else {
-                            "▪▪▪▪▪▫"
-                        })
-                        .size(8),
+                        fader_mini,
+                        pan_mini,
+                        text(format!("{:.1} dB", track.gain_db)).size(8),
                     ]
-                    .spacing(4),
+                    .spacing(3),
                 ]
                 .spacing(2)
                 .width(Length::Fill);
@@ -660,7 +699,11 @@ impl CrystalWaveApp {
             }
 
             let track_header_column = container(track_headers).width(Length::Fixed(200.0));
-            let is_fl = self.theme.preset == crate::ui::theme::ThemePreset::FlDarkOrange;
+            let is_fl = matches!(
+                self.theme.preset,
+                crate::ui::theme::ThemePreset::FlDarkOrange
+                    | crate::ui::theme::ThemePreset::FlStudioModern
+            );
             let arrangement_canvas = crate::ui::canvas_timeline::view_canvas_timeline(
                 canvas_program
                     .with_snap(self.snap_grid)
@@ -805,9 +848,11 @@ impl CrystalWaveApp {
                     }
 
                     let ch_row = row![
-                        container(text(&ch.name).size(11))
-                            .width(Length::Fixed(120.0))
-                            .padding(2),
+                        container(
+                            text(format!("[{}] {}", ch.target_mixer_track, ch.name)).size(11),
+                        )
+                        .width(Length::Fixed(120.0))
+                        .padding(2),
                         steps_row,
                     ]
                     .spacing(8);
@@ -973,9 +1018,67 @@ impl CrystalWaveApp {
                     channel_strips = channel_strips.push(strip);
                 }
 
+                // Dedicated Master Output Strip
+                let m_ch = &self.mixer.master_strip;
+                let m_fader = slider(-60.0..=6.0, m_ch.volume_fader_db, |v| {
+                    UiMessage::SetTrackFader {
+                        track_id: 9999,
+                        volume_db: v,
+                    }
+                })
+                .step(0.5_f32)
+                .width(Length::Fixed(60.0));
+
+                let m_meters = column![
+                    render_led_meter(
+                        m_ch.meter.peak_db,
+                        m_ch.meter.rms_db,
+                        m_ch.meter.peak_hold_db,
+                        m_ch.meter.auto_mute_tripped,
+                    ),
+                    render_led_meter(
+                        m_ch.meter.rms_db,
+                        m_ch.meter.rms_db,
+                        m_ch.meter.peak_hold_db,
+                        m_ch.meter.auto_mute_tripped,
+                    ),
+                ]
+                .spacing(2);
+
+                let m_strip = container(
+                    column![
+                        row![
+                            container(column![])
+                                .width(Length::Fixed(3.0))
+                                .height(Length::Fixed(12.0))
+                                .style(|_t| container::Style {
+                                    background: Some(iced::Background::Color(Color::from_rgb8(
+                                        0xe7, 0x4c, 0x3c
+                                    ))),
+                                    ..container::Style::default()
+                                }),
+                            text("MASTER").size(9),
+                        ]
+                        .spacing(3),
+                        row![
+                            container(text("LIMITER").size(8)).padding(1),
+                            container(text("TRUE PEAK").size(8)).padding(1),
+                        ]
+                        .spacing(2),
+                        text("Stereo Out").size(11),
+                        text("Bus 0").size(9),
+                        row![m_fader, m_meters].spacing(4),
+                        text(format!("{:.1} dB", m_ch.volume_fader_db)).size(10),
+                    ]
+                    .spacing(2),
+                )
+                .style(|_t| self.theme.sunken_container_style())
+                .padding(4)
+                .width(Length::Fixed(110.0));
+
                 column![
                     text("Logic Pro / FL Studio 256-Bus Topological Mixing Console").size(11),
-                    scrollable(channel_strips),
+                    row![scrollable(channel_strips), m_strip].spacing(8),
                 ]
                 .spacing(4)
                 .into()
@@ -1028,7 +1131,10 @@ impl CrystalWaveApp {
         let master_peak_str = if self.mixer.master_strip.meter.auto_mute_tripped {
             "PEAK: AUTO-MUTE TRIPPED (+12 dBFS)".to_string()
         } else if self.mixer.master_strip.meter.peak_db > 0.0 {
-            format!("PEAK: +{:.1} dBFS (CLIP)", self.mixer.master_strip.meter.peak_db)
+            format!(
+                "PEAK: +{:.1} dBFS (CLIP)",
+                self.mixer.master_strip.meter.peak_db
+            )
         } else if self.mixer.master_strip.meter.peak_db > -90.0 {
             format!("PEAK: {:.1} dBFS", self.mixer.master_strip.meter.peak_db)
         } else {
