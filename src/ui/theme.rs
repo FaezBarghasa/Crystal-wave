@@ -736,7 +736,7 @@ impl UiTheme {
             background: Some(Background::Color(Color::from_rgb8(0x13, 0x15, 0x1b))),
             text_color: Some(self.text_primary),
             border: Border {
-                color: Color::from_rgba8(255, 255, 255, 18),
+                color: Color::from_rgba8(255, 255, 255, 0.08),
                 width: 1.0,
                 radius: Radius::from(0.0),
             },
@@ -814,7 +814,7 @@ impl UiTheme {
                 color: if active {
                     Color::from_rgba8(0x38, 0xef, 0x7d, 0.25)
                 } else {
-                    Color::from_rgba8(255, 255, 255, 12)
+                    Color::from_rgba8(255, 255, 255, 0.05)
                 },
                 width: 1.0,
                 radius: Radius::from(3.0),

@@ -218,6 +218,12 @@ impl CrystalWaveApp {
             channel_rack_step_count: 16,
             active_playlist_tool: crate::ui::message::PlaylistTool::Draw,
             active_pianoroll_tool: crate::ui::message::PianoRollTool::Draw,
+            edison: crate::fl_studio::EdisonEditor::new(sample_rate),
+            fpc: crate::fl_studio::FpcEngine::new(),
+            slicex: crate::fl_studio::SlicexEngine::new(sample_rate),
+            wrapper_state: crate::fl_studio::FruityWrapperState::default(),
+            tap_tempo_times: Vec::new(),
+            mixer_sends: vec![vec![0.0; 128]; 128],
         }
     }
 
@@ -960,6 +966,118 @@ impl CrystalWaveApp {
             }
             UiMessage::ToggleFlPluginPicker => {
                 self.fl_windows.toggle_plugin_picker();
+            }
+            UiMessage::ToggleFlEdison => {
+                self.fl_windows.toggle_edison();
+                if self.fl_windows.edison_visible {
+                    self.layout.active_view = crate::ui::layout::FlActiveView::Edison;
+                }
+            }
+            UiMessage::ToggleFlFpc => {
+                self.fl_windows.toggle_fpc();
+                if self.fl_windows.fpc_visible {
+                    self.layout.active_view = crate::ui::layout::FlActiveView::Fpc;
+                }
+            }
+            UiMessage::ToggleFlSlicex => {
+                self.fl_windows.toggle_slicex();
+                if self.fl_windows.slicex_visible {
+                    self.layout.active_view = crate::ui::layout::FlActiveView::Slicex;
+                }
+            }
+            UiMessage::SelectFlView(view) => {
+                self.layout.active_view = view;
+                match view {
+                    crate::ui::layout::FlActiveView::Playlist => self.fl_windows.playlist_visible = true,
+                    crate::ui::layout::FlActiveView::ChannelRack => self.fl_windows.channel_rack_visible = true,
+                    crate::ui::layout::FlActiveView::PianoRoll => self.fl_windows.piano_roll_visible = true,
+                    crate::ui::layout::FlActiveView::Mixer => self.fl_windows.mixer_visible = true,
+                    crate::ui::layout::FlActiveView::Browser => self.fl_windows.browser_visible = true,
+                    crate::ui::layout::FlActiveView::Edison => self.fl_windows.edison_visible = true,
+                    crate::ui::layout::FlActiveView::Fpc => self.fl_windows.fpc_visible = true,
+                    crate::ui::layout::FlActiveView::Slicex => self.fl_windows.slicex_visible = true,
+                    crate::ui::layout::FlActiveView::Patcher => self.fl_windows.patcher_visible = true,
+                }
+            }
+
+            // Edison Operations
+            UiMessage::EdisonNormalize => self.edison.normalize(),
+            UiMessage::EdisonReverse => self.edison.reverse(),
+            UiMessage::EdisonFadeIn => self.edison.fade_in(),
+            UiMessage::EdisonFadeOut => self.edison.fade_out(),
+            UiMessage::EdisonCut => self.edison.cut(),
+            UiMessage::EdisonCopy => self.edison.copy(),
+            UiMessage::EdisonPaste => self.edison.paste(),
+            UiMessage::EdisonSelectAll => self.edison.select_all(),
+
+            // FPC Drum Triggers
+            UiMessage::FpcTriggerPad(pad_id) => {
+                self.fpc.trigger_pad(pad_id);
+            }
+            UiMessage::FpcSetVolume(vol) => {
+                self.fpc.master_volume = vol.clamp(0.0, 1.25);
+            }
+
+            // Slicex Triggers
+            UiMessage::SlicexTriggerSlice(slice_id) => {
+                self.slicex.trigger_slice(slice_id);
+            }
+
+            // Tap Tempo & Transport Nudge
+            UiMessage::TapTempo => {
+                let now = std::time::Instant::now();
+                self.tap_tempo_times.push(now);
+                if self.tap_tempo_times.len() > 4 {
+                    self.tap_tempo_times.remove(0);
+                }
+                if self.tap_tempo_times.len() >= 2 {
+                    let mut intervals = Vec::new();
+                    for i in 1..self.tap_tempo_times.len() {
+                        intervals.push(self.tap_tempo_times[i].duration_since(self.tap_tempo_times[i - 1]).as_secs_f32());
+                    }
+                    let avg = intervals.iter().sum::<f32>() / intervals.len() as f32;
+                    if avg > 0.1 && avg < 3.0 {
+                        let bpm = (60.0 / avg).clamp(40.0, 280.0);
+                        self.workspace.lcd_diagnostic.project_tempo_bpm = bpm;
+                        self.audio_scheduler.set_tempo(bpm);
+                        if let Some(ref mut worker) = self.audio_worker {
+                            worker.set_tempo(bpm);
+                        }
+                    }
+                }
+            }
+            UiMessage::NudgeTempo(delta) => {
+                let current_bpm = self.workspace.lcd_diagnostic.project_tempo_bpm;
+                let new_bpm = (current_bpm + delta).clamp(40.0, 280.0);
+                self.workspace.lcd_diagnostic.project_tempo_bpm = new_bpm;
+                self.audio_scheduler.set_tempo(new_bpm);
+                if let Some(ref mut worker) = self.audio_worker {
+                    worker.set_tempo(new_bpm);
+                }
+            }
+
+            // Mixer Routing Sends
+            UiMessage::MixerToggleSend { from_track, to_track } => {
+                if from_track < self.mixer_sends.len() && to_track < self.mixer_sends[from_track].len() {
+                    let current = self.mixer_sends[from_track][to_track];
+                    self.mixer_sends[from_track][to_track] = if current > 0.0 { 0.0 } else { 0.8 };
+                }
+            }
+            UiMessage::MixerSetSendLevel { from_track, to_track, level } => {
+                if from_track < self.mixer_sends.len() && to_track < self.mixer_sends[from_track].len() {
+                    self.mixer_sends[from_track][to_track] = level.clamp(0.0, 1.25);
+                }
+            }
+
+            // Fruity Wrapper
+            UiMessage::WrapperSetTab(tab) => {
+                self.wrapper_state.active_tab = tab;
+            }
+            UiMessage::WrapperSetAdsr { channel_id: _, attack, decay, sustain, release } => {
+                self.wrapper_state.volume_env.attack_ms = attack;
+                self.wrapper_state.volume_env.decay_ms = decay;
+                self.wrapper_state.volume_env.sustain_level = sustain;
+                self.wrapper_state.volume_env.release_ms = release;
             }
             UiMessage::BrowserSetSearchQuery(q) => {
                 self.browser.search_query = q;
@@ -1705,6 +1823,9 @@ impl CrystalWaveApp {
                     }
                     iced::keyboard::Key::Named(iced::keyboard::key::Named::F9) => {
                         Some(UiMessage::ToggleFlMixer)
+                    }
+                    iced::keyboard::Key::Named(iced::keyboard::key::Named::F10) => {
+                        Some(UiMessage::ToggleAudioSettings)
                     }
                     iced::keyboard::Key::Character(ref c) if c.eq_ignore_ascii_case("i") => {
                         Some(UiMessage::ToggleInspector)

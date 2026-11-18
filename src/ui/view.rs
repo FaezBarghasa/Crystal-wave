@@ -67,109 +67,85 @@ impl CrystalWaveApp {
             .on_press(UiMessage::MenuAction(MenuCommand::AddMidiTrack));
 
         // FL Studio Multi-Window Toolbars (F5, F6, F7, F8, F9, F10) with LED jewel indicators
+        let is_pl = self.layout.active_view == crate::ui::layout::FlActiveView::Playlist;
+        let is_cr = self.layout.active_view == crate::ui::layout::FlActiveView::ChannelRack;
+        let is_pr = self.layout.active_view == crate::ui::layout::FlActiveView::PianoRoll;
+        let is_mx = self.layout.active_view == crate::ui::layout::FlActiveView::Mixer;
+        let is_ed = self.layout.active_view == crate::ui::layout::FlActiveView::Edison;
+        let is_fpc = self.layout.active_view == crate::ui::layout::FlActiveView::Fpc;
+        let is_sl = self.layout.active_view == crate::ui::layout::FlActiveView::Slicex;
+        let is_pat = self.layout.active_view == crate::ui::layout::FlActiveView::Patcher;
+
         let win_playlist = button(
-            text(if self.fl_windows.playlist_visible {
-                "● Playlist [F5]"
-            } else {
-                "○ Playlist [F5]"
-            })
-            .size(11),
+            text(if is_pl { "● Playlist [F5]" } else { "○ Playlist [F5]" }).size(11),
         )
-        .style(self.theme.button_style(self.fl_windows.playlist_visible))
-        .on_press(UiMessage::ToggleFlPlaylist);
+        .style(self.theme.button_style(is_pl))
+        .on_press(UiMessage::SelectFlView(crate::ui::layout::FlActiveView::Playlist));
 
         let win_channel_rack = button(
-            text(if self.fl_windows.channel_rack_visible {
-                "● Rack [F6]"
-            } else {
-                "○ Rack [F6]"
-            })
-            .size(11),
+            text(if is_cr { "● Rack [F6]" } else { "○ Rack [F6]" }).size(11),
         )
-        .style(
-            self.theme
-                .button_style(self.fl_windows.channel_rack_visible),
-        )
-        .on_press(UiMessage::ToggleFlChannelRack);
+        .style(self.theme.button_style(is_cr))
+        .on_press(UiMessage::SelectFlView(crate::ui::layout::FlActiveView::ChannelRack));
 
         let win_piano_roll = button(
-            text(if self.fl_windows.piano_roll_visible {
-                "● Piano Roll [F7]"
-            } else {
-                "○ Piano Roll [F7]"
-            })
-            .size(11),
+            text(if is_pr { "● Piano Roll [F7]" } else { "○ Piano Roll [F7]" }).size(11),
         )
-        .style(self.theme.button_style(self.fl_windows.piano_roll_visible))
-        .on_press(UiMessage::ToggleFlPianoRoll);
+        .style(self.theme.button_style(is_pr))
+        .on_press(UiMessage::SelectFlView(crate::ui::layout::FlActiveView::PianoRoll));
 
         let win_browser = button(
-            text(if self.fl_windows.browser_visible {
-                "● Browser [F8]"
-            } else {
-                "○ Browser [F8]"
-            })
-            .size(11),
+            text(if self.fl_windows.browser_visible { "● Browser [F8]" } else { "○ Browser [F8]" }).size(11),
         )
         .style(self.theme.button_style(self.fl_windows.browser_visible))
         .on_press(UiMessage::ToggleFlBrowser);
 
         let win_mixer = button(
-            text(if self.fl_windows.mixer_visible {
-                "● Mixer [F9]"
-            } else {
-                "○ Mixer [F9]"
-            })
-            .size(11),
+            text(if is_mx { "● Mixer [F9]" } else { "○ Mixer [F9]" }).size(11),
         )
-        .style(self.theme.button_style(self.fl_windows.mixer_visible))
-        .on_press(UiMessage::ToggleFlMixer);
+        .style(self.theme.button_style(is_mx))
+        .on_press(UiMessage::SelectFlView(crate::ui::layout::FlActiveView::Mixer));
 
         let win_audio = button(
-            text(if self.audio_settings_open {
-                "● Audio [F10]"
-            } else {
-                "○ Audio [F10]"
-            })
-            .size(11),
+            text(if self.audio_settings_open { "● Audio [F10]" } else { "○ Audio [F10]" }).size(11),
         )
         .style(self.theme.button_style(self.audio_settings_open))
         .on_press(UiMessage::ToggleAudioSettings);
 
-        let win_patcher = button(
-            text(if self.fl_windows.patcher_visible {
-                "● Patcher"
-            } else {
-                "○ Patcher"
-            })
-            .size(11),
+        let win_edison = button(
+            text(if is_ed { "● Edison" } else { "○ Edison" }).size(11),
         )
-        .style(self.theme.button_style(self.fl_windows.patcher_visible))
-        .on_press(UiMessage::ToggleFlPatcher);
+        .style(self.theme.button_style(is_ed))
+        .on_press(UiMessage::SelectFlView(crate::ui::layout::FlActiveView::Edison));
+
+        let win_fpc = button(
+            text(if is_fpc { "● FPC" } else { "○ FPC" }).size(11),
+        )
+        .style(self.theme.button_style(is_fpc))
+        .on_press(UiMessage::SelectFlView(crate::ui::layout::FlActiveView::Fpc));
+
+        let win_slicex = button(
+            text(if is_sl { "● Slicex" } else { "○ Slicex" }).size(11),
+        )
+        .style(self.theme.button_style(is_sl))
+        .on_press(UiMessage::SelectFlView(crate::ui::layout::FlActiveView::Slicex));
+
+        let win_patcher = button(
+            text(if is_pat { "● Patcher" } else { "○ Patcher" }).size(11),
+        )
+        .style(self.theme.button_style(is_pat))
+        .on_press(UiMessage::SelectFlView(crate::ui::layout::FlActiveView::Patcher));
 
         let win_inspector = button(
-            text(if self.workspace.inspector_open {
-                "● Inspect [I]"
-            } else {
-                "○ Inspect [I]"
-            })
-            .size(11),
+            text(if self.workspace.inspector_open { "● Inspect [I]" } else { "○ Inspect [I]" }).size(11),
         )
         .style(self.theme.button_style(self.workspace.inspector_open))
         .on_press(UiMessage::ToggleInspector);
 
         let win_plugins = button(
-            text(if self.fl_windows.plugin_picker_visible {
-                "● Plugins [F8]"
-            } else {
-                "○ Plugins [F8]"
-            })
-            .size(11),
+            text(if self.fl_windows.plugin_picker_visible { "● Plugins" } else { "○ Plugins" }).size(11),
         )
-        .style(
-            self.theme
-                .button_style(self.fl_windows.plugin_picker_visible),
-        )
+        .style(self.theme.button_style(self.fl_windows.plugin_picker_visible))
         .on_press(UiMessage::ToggleFlPluginPicker);
 
         // Theme Switcher & Snap Toggle
@@ -244,6 +220,9 @@ impl CrystalWaveApp {
                 win_browser,
                 win_mixer,
                 win_audio,
+                win_edison,
+                win_fpc,
+                win_slicex,
                 win_patcher,
                 win_inspector,
                 win_plugins,
@@ -420,9 +399,17 @@ impl CrystalWaveApp {
         let btn_tap = button(text("TAP").size(9))
             .padding(3)
             .style(self.theme.button_style(false))
-            .on_press(UiMessage::SetTempoBpm(
-                self.workspace.lcd_diagnostic.project_tempo_bpm,
-            ));
+            .on_press(UiMessage::TapTempo);
+
+        let btn_tempo_minus = button(text("▼").size(8))
+            .padding(2)
+            .style(self.theme.button_style(false))
+            .on_press(UiMessage::NudgeTempo(-1.0));
+
+        let btn_tempo_plus = button(text("▲").size(8))
+            .padding(2)
+            .style(self.theme.button_style(false))
+            .on_press(UiMessage::NudgeTempo(1.0));
 
         let met_btn =
             button(
@@ -520,8 +507,8 @@ impl CrystalWaveApp {
             .padding(3);
 
         let capsule_tempo = container(
-            row![tempo_lcd, btn_tap, leds_row,]
-                .spacing(4)
+            row![tempo_lcd, row![btn_tempo_minus, btn_tempo_plus].spacing(1), btn_tap, leds_row,]
+                .spacing(3)
                 .align_y(iced::Alignment::Center),
         )
         .style(|_t| self.theme.machined_capsule_style())
@@ -544,564 +531,1040 @@ impl CrystalWaveApp {
         .into()
     }
 
+    /// FL Studio Browser / Sample Library Panel (Left docked 260px)
+    pub fn view_browser_panel(&self) -> Element<'_, UiMessage> {
+        let tabs = [
+            (crate::fl_studio::browser::BrowserTab::All, "All"),
+            (crate::fl_studio::browser::BrowserTab::Drums, "Drums"),
+            (crate::fl_studio::browser::BrowserTab::Bass, "808"),
+            (crate::fl_studio::browser::BrowserTab::Instruments, "Inst"),
+            (crate::fl_studio::browser::BrowserTab::Fx, "FX"),
+            (crate::fl_studio::browser::BrowserTab::Plugins, "Plugins"),
+            (crate::fl_studio::browser::BrowserTab::Presets, "Presets"),
+        ];
+
+        let mut tab_row = row![].spacing(2);
+        for (tab_variant, tab_lbl) in tabs {
+            let is_active = self.browser.active_tab == tab_variant;
+            let tab_btn = button(text(tab_lbl).size(9))
+                .padding(3)
+                .style(self.theme.button_style(is_active))
+                .on_press(UiMessage::BrowserSelectTab(tab_variant));
+            tab_row = tab_row.push(tab_btn);
+        }
+
+        let search_input = text_input("Search library...", &self.browser.search_query)
+            .on_input(UiMessage::BrowserSetSearchQuery)
+            .padding(4)
+            .size(10);
+
+        let mut items_col = column![].spacing(3).width(Length::Fill);
+
+        match self.browser.active_tab {
+            crate::fl_studio::browser::BrowserTab::Presets => {
+                for preset in self.browser.filtered_presets() {
+                    let card = container(
+                        row![
+                            column![
+                                text(&preset.name).size(10),
+                                text(format!("{} • {}", preset.category, preset.plugin_name))
+                                    .size(8)
+                                    .color(Color::from_rgb8(0x8a, 0x90, 0x9a)),
+                            ]
+                            .spacing(1)
+                            .width(Length::Fill),
+                        ]
+                        .spacing(4)
+                        .align_y(iced::Alignment::Center),
+                    )
+                    .padding(4)
+                    .style(|_t| self.theme.inner_well_style());
+                    items_col = items_col.push(card);
+                }
+            }
+            crate::fl_studio::browser::BrowserTab::Plugins => {
+                for plugin in self
+                    .browser
+                    .filtered_plugins(&self.browser.search_query, None)
+                {
+                    let pid = plugin.id;
+                    let is_gen = plugin.is_generator;
+                    let card = container(
+                        row![
+                            column![
+                                text(&plugin.name).size(10),
+                                text(format!("{:?} • {}", plugin.category, plugin.vendor))
+                                    .size(8)
+                                    .color(Color::from_rgb8(0x8a, 0x90, 0x9a)),
+                            ]
+                            .spacing(1)
+                            .width(Length::Fill),
+                            button(text("+ Load").size(9))
+                                .padding(3)
+                                .style(self.theme.accent_button_style(self.theme.accent))
+                                .on_press(UiMessage::PluginPickerLoadPlugin {
+                                    plugin_id: pid,
+                                    is_generator: is_gen,
+                                }),
+                        ]
+                        .spacing(4)
+                        .align_y(iced::Alignment::Center),
+                    )
+                    .padding(4)
+                    .style(|_t| self.theme.inner_well_style());
+                    items_col = items_col.push(card);
+                }
+            }
+            _ => {
+                for sample in self.browser.filtered_samples() {
+                    let sample_id = sample.id;
+                    let is_previewing = self.browser.previewing_sample_id == Some(sample_id);
+
+                    let audition_btn =
+                        button(text(if is_previewing { "■" } else { "▶" }).size(9))
+                            .padding(3)
+                            .style(
+                                self.theme.toggle_accent_button_style(
+                                    is_previewing,
+                                    self.theme.record,
+                                ),
+                            )
+                            .on_press(if is_previewing {
+                                UiMessage::BrowserStopAudition
+                            } else {
+                                UiMessage::BrowserAuditionSample(sample_id)
+                            });
+
+                    let rack_btn = button(text("+Rack").size(8))
+                        .padding(2)
+                        .on_press(UiMessage::ChannelRackDropSample { sample_id });
+
+                    let lane_btn = button(text("+Lane").size(8)).padding(2).on_press(
+                        UiMessage::BrowserDropSampleToPlaylist {
+                            sample_id,
+                            track_id: self.workspace.selected_track_id,
+                            start_tick: self.playhead_tick,
+                        },
+                    );
+
+                    let card = container(
+                        row![
+                            audition_btn,
+                            column![
+                                text(&sample.name).size(10),
+                                text(format!(
+                                    "{} | {:.1}s",
+                                    sample.category, sample.duration_seconds
+                                ))
+                                .size(8)
+                                .color(Color::from_rgb8(0x8a, 0x90, 0x9a)),
+                            ]
+                            .spacing(1)
+                            .width(Length::Fill),
+                            rack_btn,
+                            lane_btn,
+                        ]
+                        .spacing(3)
+                        .align_y(iced::Alignment::Center),
+                    )
+                    .padding(3)
+                    .style(|_t| self.theme.inner_well_style());
+
+                    items_col = items_col.push(card);
+                }
+            }
+        }
+
+        let browser_header = row![
+            text("BROWSER / LIBRARY").size(11),
+            Space::new().width(Length::Fill),
+            button(text("✕").size(9))
+                .padding(2)
+                .on_press(UiMessage::ToggleFlBrowser),
+        ]
+        .align_y(iced::Alignment::Center);
+
+        container(
+            column![
+                browser_header,
+                tab_row,
+                search_input,
+                scrollable(items_col).height(Length::Fill),
+            ]
+            .spacing(4),
+        )
+        .width(Length::Fixed(260.0))
+        .padding(6)
+        .style(|_t| self.theme.sunken_container_style())
+        .into()
+    }
+
+    /// FL Studio 24 Professional Playlist Free-Form Timeline & Track Headers
+    pub fn view_playlist_window(&self) -> Element<'_, UiMessage> {
+        let tools = [
+            PlaylistTool::Draw,
+            PlaylistTool::Paint,
+            PlaylistTool::Delete,
+            PlaylistTool::Mute,
+            PlaylistTool::Slip,
+            PlaylistTool::Slice,
+            PlaylistTool::Select,
+            PlaylistTool::Zoom,
+        ];
+        let mut tool_row = row![].spacing(2);
+        for t in tools {
+            let is_sel = self.active_playlist_tool == t;
+            let btn = button(text(t.label()).size(9))
+                .padding(2)
+                .style(self.theme.button_style(is_sel))
+                .on_press(UiMessage::SetPlaylistTool(t));
+            tool_row = tool_row.push(btn);
+        }
+
+        let mut track_headers = column![
+            // Top Ruler spacer bar matching RULER_HEIGHT = 30.0
+            container(
+                row![
+                    text("TRACKS").size(10),
+                    button(text("+ Aud").size(9))
+                        .padding(2)
+                        .on_press(UiMessage::MenuAction(MenuCommand::AddAudioTrack)),
+                    button(text("+ Inst").size(9))
+                        .padding(2)
+                        .on_press(UiMessage::MenuAction(MenuCommand::AddMidiTrack)),
+                    tool_row,
+                ]
+                .spacing(4)
+                .align_y(iced::Alignment::Center)
+            )
+            .height(Length::Fixed(crate::ui::canvas_timeline::RULER_HEIGHT))
+            .width(Length::Fill)
+            .padding(3),
+        ];
+
+        let track_types: Vec<_> = self
+            .arrangement
+            .timeline
+            .tracks
+            .iter()
+            .map(|t| t.track_type)
+            .collect();
+
+        let mut canvas_program = crate::ui::canvas_timeline::ArrangementCanvasProgram::new(
+            self.playhead_tick,
+            self.arrangement.horizontal_zoom,
+            self.arrangement.timeline.tracks.len().max(1),
+        )
+        .with_track_types(track_types);
+
+        canvas_program.selected_track_id = self.workspace.selected_track_id;
+        canvas_program.loop_range = if self.arrangement.timeline.loop_region.enabled {
+            Some((
+                self.arrangement.timeline.loop_region.start_tick,
+                self.arrangement.timeline.loop_region.end_tick,
+            ))
+        } else {
+            None
+        };
+
+        for (trk_idx, track) in self.arrangement.timeline.tracks.iter().enumerate() {
+            let is_selected = trk_idx == self.workspace.selected_track_id;
+            let ch_muted = self
+                .mixer
+                .channels
+                .get(trk_idx)
+                .map(|c| c.muted)
+                .unwrap_or(false);
+            let ch_solo = self
+                .mixer
+                .channels
+                .get(trk_idx)
+                .map(|c| c.solo)
+                .unwrap_or(false);
+            let is_muted = track.muted || ch_muted;
+            let is_solo = track.soloed || ch_solo;
+
+            let type_badge = match track.track_type {
+                crate::timeline::track::TrackType::Audio => "AUD",
+                crate::timeline::track::TrackType::Software => "INST",
+                crate::timeline::track::TrackType::Drum => "DRUM",
+                crate::timeline::track::TrackType::Midi => "MIDI",
+                crate::timeline::track::TrackType::Aux => "AUX",
+                crate::timeline::track::TrackType::Master => "MST",
+            };
+
+            let track_accent = self.theme.track_accent_color(trk_idx);
+
+            let mute_btn = button(text("M").size(10))
+                .padding(3)
+                .style(
+                    self.theme
+                        .toggle_accent_button_style(is_muted, self.theme.mute),
+                )
+                .on_press(UiMessage::ToggleTrackMute(trk_idx));
+
+            let solo_btn = button(text("S").size(10))
+                .padding(3)
+                .style(
+                    self.theme
+                        .toggle_accent_button_style(is_solo, self.theme.solo),
+                )
+                .on_press(UiMessage::ToggleTrackSolo(trk_idx));
+
+            let rec_btn = button(text(if track.record_armed { "● R" } else { "R" }).size(10))
+                .padding(3)
+                .style(
+                    self.theme
+                        .toggle_accent_button_style(track.record_armed, self.theme.record),
+                )
+                .on_press(UiMessage::ToggleTrackRecordArm(trk_idx));
+
+            let freeze_btn = button(text(if track.is_frozen { "❄" } else { "·" }).size(10))
+                .padding(3)
+                .style(self.theme.button_style(track.is_frozen))
+                .on_press(UiMessage::ToggleTrackFreeze(trk_idx));
+
+            let accent_strip = container(column![])
+                .width(Length::Fixed(4.0))
+                .height(Length::Fill)
+                .style(move |_t| container::Style {
+                    background: Some(iced::Background::Color(track_accent)),
+                    ..container::Style::default()
+                });
+
+            let fader_mini = slider(-60.0..=6.0, track.gain_db, move |v| {
+                UiMessage::SetTrackFader {
+                    track_id: trk_idx,
+                    volume_db: v,
+                }
+            })
+            .step(0.5_f32)
+            .width(Length::Fixed(50.0));
+
+            let pan_mini = slider(-1.0..=1.0, track.pan, move |p| UiMessage::SetTrackPan {
+                track_id: trk_idx,
+                pan: p,
+            })
+            .step(0.05_f32)
+            .width(Length::Fixed(40.0));
+
+            let track_inner = column![
+                row![
+                    container(text(type_badge).size(9))
+                        .padding(2)
+                        .style(move |_t| container::Style {
+                            background: Some(iced::Background::Color(iced::Color::from_rgba8(
+                                0, 0, 0, 0.35,
+                            ))),
+                            border: iced::Border {
+                                color: track_accent,
+                                width: 1.0,
+                                radius: iced::border::Radius::from(3.0),
+                            },
+                            ..container::Style::default()
+                        }),
+                    button(text(&track.name).size(11))
+                        .padding(1)
+                        .on_press(UiMessage::SelectTrack(trk_idx)),
+                ]
+                .spacing(4),
+                row![mute_btn, solo_btn, rec_btn, freeze_btn].spacing(3),
+                row![
+                    fader_mini,
+                    pan_mini,
+                    text(format!("{:.1} dB", track.gain_db)).size(8),
+                ]
+                .spacing(3),
+            ]
+            .spacing(2)
+            .width(Length::Fill);
+
+            let track_card =
+                container(row![accent_strip, container(track_inner).padding(3)].spacing(4))
+                    .height(Length::Fixed(crate::ui::canvas_timeline::LANE_HEIGHT))
+                    .width(Length::Fill)
+                    .style(move |_t| {
+                        let mut st = self.theme.panel_container_style();
+                        if is_selected {
+                            st.border.color = self.theme.border_focus;
+                            st.border.width = 1.5;
+                        }
+                        st
+                    });
+
+            track_headers = track_headers.push(track_card);
+
+            for region in &track.regions {
+                let visual_kind = match &region.kind {
+                    crate::timeline::region::RegionKind::Audio { .. } => {
+                        crate::ui::canvas_timeline::ClipVisualKind::Audio {
+                            waveform_peaks: Vec::new(),
+                        }
+                    }
+                    crate::timeline::region::RegionKind::Midi { .. } => {
+                        crate::ui::canvas_timeline::ClipVisualKind::Midi { notes: Vec::new() }
+                    }
+                    crate::timeline::region::RegionKind::Pattern { .. } => {
+                        crate::ui::canvas_timeline::ClipVisualKind::Pattern
+                    }
+                    crate::timeline::region::RegionKind::Automation {
+                        parameter_target,
+                        points,
+                        ..
+                    } => {
+                        let pts = points
+                            .iter()
+                            .map(|p| (p.tick_offset, p.value, p.tension))
+                            .collect();
+                        crate::ui::canvas_timeline::ClipVisualKind::Automation {
+                            parameter_target: parameter_target.clone(),
+                            points: pts,
+                        }
+                    }
+                };
+
+                canvas_program
+                    .clips
+                    .push(crate::ui::canvas_timeline::TimelineClipDisplay {
+                        id: region.id,
+                        track_index: trk_idx,
+                        start_tick: region.start_tick,
+                        length_ticks: region.length_ticks,
+                        name: region.name.clone(),
+                        color_rgb: [track.color.r, track.color.g, track.color.b],
+                        muted: region.muted || is_muted,
+                        looped: region.looped,
+                        fade_in_ticks: region.fade.in_ticks,
+                        fade_out_ticks: region.fade.out_ticks,
+                        kind: visual_kind,
+                        is_selected,
+                    });
+            }
+        }
+
+        let track_header_column = container(track_headers).width(Length::Fixed(200.0));
+        let is_fl = matches!(
+            self.theme.preset,
+            crate::ui::theme::ThemePreset::FlDarkOrange
+                | crate::ui::theme::ThemePreset::FlStudioModern
+        );
+        let arrangement_canvas = crate::ui::canvas_timeline::view_canvas_timeline(
+            canvas_program
+                .with_snap(self.snap_grid)
+                .with_theme(is_fl)
+                .with_scroll_y(self.timeline_scroll_y)
+                .with_marquee(self.marquee_selection),
+        );
+
+        row![track_header_column, arrangement_canvas]
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .spacing(1)
+            .into()
+    }
+
+    /// Master FL Studio Workspace: Routes to Active Center View with Optional Docked Panels
     fn view_main_workspace(&self) -> Element<'_, UiMessage> {
-        let mut content = row![].spacing(4).width(Length::Fill).height(Length::Fill);
+        let mut content = row![].spacing(2).width(Length::Fill).height(Length::Fill);
 
         // 1. FL Studio Browser (Alt+F8 / F8) - Samples, Presets & Plugins Library
         if self.fl_windows.browser_visible {
-            let tabs = [
-                (crate::fl_studio::browser::BrowserTab::All, "All"),
-                (crate::fl_studio::browser::BrowserTab::Drums, "Drums"),
-                (crate::fl_studio::browser::BrowserTab::Bass, "808"),
-                (crate::fl_studio::browser::BrowserTab::Instruments, "Inst"),
-                (crate::fl_studio::browser::BrowserTab::Fx, "FX"),
-                (crate::fl_studio::browser::BrowserTab::Plugins, "Plugins"),
-                (crate::fl_studio::browser::BrowserTab::Presets, "Presets"),
-            ];
-
-            let mut tab_row = row![].spacing(2);
-            for (tab_variant, tab_lbl) in tabs {
-                let is_active = self.browser.active_tab == tab_variant;
-                let tab_btn = button(text(tab_lbl).size(9))
-                    .padding(3)
-                    .style(self.theme.button_style(is_active))
-                    .on_press(UiMessage::BrowserSelectTab(tab_variant));
-                tab_row = tab_row.push(tab_btn);
-            }
-
-            let search_input = text_input("Search library...", &self.browser.search_query)
-                .on_input(UiMessage::BrowserSetSearchQuery)
-                .padding(4)
-                .size(10);
-
-            let mut items_col = column![].spacing(3).width(Length::Fill);
-
-            match self.browser.active_tab {
-                crate::fl_studio::browser::BrowserTab::Presets => {
-                    for preset in self.browser.filtered_presets() {
-                        let card = container(
-                            row![
-                                column![
-                                    text(&preset.name).size(10),
-                                    text(format!("{} • {}", preset.category, preset.plugin_name))
-                                        .size(8)
-                                        .color(Color::from_rgb8(0x8a, 0x90, 0x9a)),
-                                ]
-                                .spacing(1)
-                                .width(Length::Fill),
-                            ]
-                            .spacing(4)
-                            .align_y(iced::Alignment::Center),
-                        )
-                        .padding(4)
-                        .style(|_t| self.theme.inner_well_style());
-                        items_col = items_col.push(card);
-                    }
-                }
-                crate::fl_studio::browser::BrowserTab::Plugins => {
-                    for plugin in self
-                        .browser
-                        .filtered_plugins(&self.browser.search_query, None)
-                    {
-                        let pid = plugin.id;
-                        let is_gen = plugin.is_generator;
-                        let card = container(
-                            row![
-                                column![
-                                    text(&plugin.name).size(10),
-                                    text(format!("{:?} • {}", plugin.category, plugin.vendor))
-                                        .size(8)
-                                        .color(Color::from_rgb8(0x8a, 0x90, 0x9a)),
-                                ]
-                                .spacing(1)
-                                .width(Length::Fill),
-                                button(text("+ Load").size(9))
-                                    .padding(3)
-                                    .style(self.theme.accent_button_style(self.theme.accent))
-                                    .on_press(UiMessage::PluginPickerLoadPlugin {
-                                        plugin_id: pid,
-                                        is_generator: is_gen,
-                                    }),
-                            ]
-                            .spacing(4)
-                            .align_y(iced::Alignment::Center),
-                        )
-                        .padding(4)
-                        .style(|_t| self.theme.inner_well_style());
-                        items_col = items_col.push(card);
-                    }
-                }
-                _ => {
-                    for sample in self.browser.filtered_samples() {
-                        let sample_id = sample.id;
-                        let is_previewing = self.browser.previewing_sample_id == Some(sample_id);
-
-                        let audition_btn =
-                            button(text(if is_previewing { "■" } else { "▶" }).size(9))
-                                .padding(3)
-                                .style(
-                                    self.theme.toggle_accent_button_style(
-                                        is_previewing,
-                                        self.theme.record,
-                                    ),
-                                )
-                                .on_press(if is_previewing {
-                                    UiMessage::BrowserStopAudition
-                                } else {
-                                    UiMessage::BrowserAuditionSample(sample_id)
-                                });
-
-                        let rack_btn = button(text("+Rack").size(8))
-                            .padding(2)
-                            .on_press(UiMessage::ChannelRackDropSample { sample_id });
-
-                        let lane_btn = button(text("+Lane").size(8)).padding(2).on_press(
-                            UiMessage::BrowserDropSampleToPlaylist {
-                                sample_id,
-                                track_id: self.workspace.selected_track_id,
-                                start_tick: self.playhead_tick,
-                            },
-                        );
-
-                        let card = container(
-                            row![
-                                audition_btn,
-                                column![
-                                    text(&sample.name).size(10),
-                                    text(format!(
-                                        "{} | {:.1}s",
-                                        sample.category, sample.duration_seconds
-                                    ))
-                                    .size(8)
-                                    .color(Color::from_rgb8(0x8a, 0x90, 0x9a)),
-                                ]
-                                .spacing(1)
-                                .width(Length::Fill),
-                                rack_btn,
-                                lane_btn,
-                            ]
-                            .spacing(3)
-                            .align_y(iced::Alignment::Center),
-                        )
-                        .padding(3)
-                        .style(|_t| self.theme.inner_well_style());
-
-                        items_col = items_col.push(card);
-                    }
-                }
-            }
-
-            let browser_header = row![
-                text("BROWSER / LIBRARY").size(11),
-                Space::new().width(Length::Fill),
-                button(text("✕").size(9))
-                    .padding(2)
-                    .on_press(UiMessage::ToggleFlBrowser),
-            ]
-            .align_y(iced::Alignment::Center);
-
-            let browser_panel = container(
-                column![
-                    browser_header,
-                    tab_row,
-                    search_input,
-                    scrollable(items_col).height(Length::Fill),
-                ]
-                .spacing(4),
-            )
-            .width(Length::Fixed(260.0))
-            .padding(6)
-            .style(|_t| self.theme.sunken_container_style());
-
-            content = content.push(browser_panel);
+            content = content.push(self.view_browser_panel());
         }
 
-        // 2. Logic/Pro Tools Inspector (I)
-        if self.workspace.inspector_open {
-            let trk_id = self.workspace.selected_track_id;
-            let channel_name = self
-                .mixer
-                .channels
-                .get(trk_id)
-                .map(|c| c.name.as_str())
-                .unwrap_or("No Track");
+        // 2. Active Center Workspace View
+        let center_view: Element<'_, UiMessage> = match self.layout.active_view {
+            crate::ui::layout::FlActiveView::Playlist => self.view_playlist_window(),
+            crate::ui::layout::FlActiveView::ChannelRack => self.view_channel_rack(false),
+            crate::ui::layout::FlActiveView::PianoRoll => self.view_piano_roll_window(),
+            crate::ui::layout::FlActiveView::Mixer => self.view_mixer_window(),
+            crate::ui::layout::FlActiveView::Edison => self.view_edison_window(),
+            crate::ui::layout::FlActiveView::Fpc => self.view_fpc_window(),
+            crate::ui::layout::FlActiveView::Slicex => self.view_slicex_window(),
+            crate::ui::layout::FlActiveView::Patcher => self.view_patcher_window(),
+            crate::ui::layout::FlActiveView::Browser => self.view_playlist_window(),
+        };
 
-            let fader_val = self
-                .mixer
-                .channels
-                .get(trk_id)
-                .map(|c| c.volume_fader_db)
-                .unwrap_or(0.0);
+        content = content.push(container(center_view).width(Length::Fill).height(Length::Fill));
+        content.into()
+    }
 
-            let pan_val = self
-                .mixer
-                .channels
-                .get(trk_id)
-                .map(|c| c.pan.balance)
-                .unwrap_or(0.0);
-
-            let is_muted = self
-                .mixer
-                .channels
-                .get(trk_id)
-                .map(|c| c.muted)
-                .unwrap_or(false);
-
-            let is_solo = self
-                .mixer
-                .channels
-                .get(trk_id)
-                .map(|c| c.solo)
-                .unwrap_or(false);
-
-            let mute_btn = button(text(if is_muted { "Muted" } else { "Mute" }).size(10))
-                .on_press(UiMessage::ToggleTrackMute(trk_id));
-
-            let solo_btn = button(text(if is_solo { "Soloed" } else { "Solo" }).size(10))
-                .on_press(UiMessage::ToggleTrackSolo(trk_id));
-
-            let inspector_box = container(
-                column![
-                    row![
-                        text(format!("Track {}", trk_id)).size(12),
-                        button(text("x").size(10)).on_press(UiMessage::ToggleInspector),
-                    ]
-                    .spacing(8),
-                    text(format!("Name: {}", channel_name)).size(11),
-                    text(format!("Level: {:.1} dB", fader_val)).size(11),
-                    text(format!("Pan: {:.2}", pan_val)).size(11),
-                    row![mute_btn, solo_btn].spacing(4),
-                ]
-                .spacing(4),
-            )
-            .width(Length::Fixed(160.0))
-            .padding(6);
-
-            content = content.push(inspector_box);
+    pub fn view_piano_roll_window(&self) -> Element<'_, UiMessage> {
+        // Interactive Piano Roll with Alt-Tools, Event Editor & Polyphonic Ghost Notes
+        let tools = [
+            PianoRollTool::Draw,
+            PianoRollTool::Paint,
+            PianoRollTool::Delete,
+            PianoRollTool::Mute,
+            PianoRollTool::Slice,
+            PianoRollTool::Select,
+            PianoRollTool::Zoom,
+        ];
+        let mut tool_row = row![].spacing(2);
+        for t in tools {
+            let is_sel = self.active_pianoroll_tool == t;
+            let btn = button(text(t.label()).size(9))
+                .padding(2)
+                .style(self.theme.button_style(is_sel))
+                .on_press(UiMessage::SetPianoRollTool(t));
+            tool_row = tool_row.push(btn);
         }
 
-        // 3. FL Studio Channel Rack Window (F6) - Step Sequencer Matrix
-        if self.fl_windows.channel_rack_visible {
-            content = content.push(self.view_channel_rack(true));
-        }
+        let btn_strum =
+            button(text("Strum").size(9)).on_press(UiMessage::PianoRollQuickStrum);
+        let btn_flip_h =
+            button(text("Flip H").size(9)).on_press(UiMessage::PianoRollFlipHorizontal);
+        let btn_flip_v =
+            button(text("Flip V").size(9)).on_press(UiMessage::PianoRollFlipVertical);
+        let btn_chop =
+            button(text("Chop 1/16").size(9)).on_press(UiMessage::PianoRollQuickChop);
+        let btn_arp_up = button(text("Arp ↑").size(9)).on_press(
+            UiMessage::PianoRollArpeggiate(crate::fl_studio::piano_roll::ArpDirection::Up),
+        );
+        let btn_arp_down =
+            button(text("Arp ↓").size(9)).on_press(UiMessage::PianoRollArpeggiate(
+                crate::fl_studio::piano_roll::ArpDirection::Down,
+            ));
+        let btn_add_c4 =
+            button(text("+ Note C4").size(9)).on_press(UiMessage::PianoRollAddNote {
+                channel_id: 0,
+                key: 60,
+                start_tick: self.playhead_tick,
+                length_ticks: 960,
+            });
 
-        // 4. FL Studio 24 Professional Playlist Free-Form Timeline & Track Headers
-        if self.fl_windows.playlist_visible {
-            let tools = [
-                PlaylistTool::Draw,
-                PlaylistTool::Paint,
-                PlaylistTool::Delete,
-                PlaylistTool::Mute,
-                PlaylistTool::Slip,
-                PlaylistTool::Slice,
-                PlaylistTool::Select,
-                PlaylistTool::Zoom,
-            ];
-            let mut tool_row = row![].spacing(2);
-            for t in tools {
-                let is_sel = self.active_playlist_tool == t;
-                let btn = button(text(t.label()).size(9))
-                    .padding(2)
-                    .style(self.theme.button_style(is_sel))
-                    .on_press(UiMessage::SetPlaylistTool(t));
-                tool_row = tool_row.push(btn);
+        let next_scale = match self.piano_roll_scale {
+            crate::fl_studio::piano_roll::MusicalScale::Chromatic => {
+                crate::fl_studio::piano_roll::MusicalScale::Major
             }
+            crate::fl_studio::piano_roll::MusicalScale::Major => {
+                crate::fl_studio::piano_roll::MusicalScale::Minor
+            }
+            crate::fl_studio::piano_roll::MusicalScale::Minor => {
+                crate::fl_studio::piano_roll::MusicalScale::Dorian
+            }
+            crate::fl_studio::piano_roll::MusicalScale::Dorian => {
+                crate::fl_studio::piano_roll::MusicalScale::Phrygian
+            }
+            crate::fl_studio::piano_roll::MusicalScale::Phrygian => {
+                crate::fl_studio::piano_roll::MusicalScale::HarmonicMinor
+            }
+            crate::fl_studio::piano_roll::MusicalScale::HarmonicMinor => {
+                crate::fl_studio::piano_roll::MusicalScale::PentatonicMinor
+            }
+            _ => crate::fl_studio::piano_roll::MusicalScale::Chromatic,
+        };
 
-            let mut track_headers = column![
-                // Top Ruler spacer bar matching RULER_HEIGHT = 30.0
-                container(
-                    row![
-                        text("TRACKS").size(10),
-                        button(text("+ Aud").size(9))
-                            .padding(2)
-                            .on_press(UiMessage::MenuAction(MenuCommand::AddAudioTrack)),
-                        button(text("+ Inst").size(9))
-                            .padding(2)
-                            .on_press(UiMessage::MenuAction(MenuCommand::AddMidiTrack)),
-                        tool_row,
-                    ]
-                    .spacing(4)
-                    .align_y(iced::Alignment::Center)
-                )
-                .height(Length::Fixed(crate::ui::canvas_timeline::RULER_HEIGHT))
-                .width(Length::Fill)
-                .padding(3),
-            ];
-
-            let track_types: Vec<_> = self
-                .arrangement
-                .timeline
-                .tracks
-                .iter()
-                .map(|t| t.track_type)
-                .collect();
-
-            let mut canvas_program = crate::ui::canvas_timeline::ArrangementCanvasProgram::new(
-                self.playhead_tick,
-                self.arrangement.horizontal_zoom,
-                self.arrangement.timeline.tracks.len().max(1),
-            )
-            .with_track_types(track_types);
-
-            canvas_program.selected_track_id = self.workspace.selected_track_id;
-            canvas_program.loop_range = if self.arrangement.timeline.loop_region.enabled {
-                Some((
-                    self.arrangement.timeline.loop_region.start_tick,
-                    self.arrangement.timeline.loop_region.end_tick,
+        let btn_scale =
+            button(text(format!("Scale: {}", self.piano_roll_scale.label())).size(9))
+                .style(self.theme.button_style(
+                    self.piano_roll_scale
+                        != crate::fl_studio::piano_roll::MusicalScale::Chromatic,
                 ))
+                .on_press(UiMessage::PianoRollSetScale(next_scale));
+
+        let btn_vel = button(text("VEL").size(9))
+            .style(self.theme.button_style(
+                self.piano_roll_event_target
+                    == crate::fl_studio::piano_roll::EventLaneTarget::Velocity,
+            ))
+            .on_press(UiMessage::PianoRollSetEventTarget(
+                crate::fl_studio::piano_roll::EventLaneTarget::Velocity,
+            ));
+        let btn_pan = button(text("PAN").size(9))
+            .style(self.theme.button_style(
+                self.piano_roll_event_target
+                    == crate::fl_studio::piano_roll::EventLaneTarget::Pan,
+            ))
+            .on_press(UiMessage::PianoRollSetEventTarget(
+                crate::fl_studio::piano_roll::EventLaneTarget::Pan,
+            ));
+        let btn_pitch = button(text("PITCH").size(9))
+            .style(self.theme.button_style(
+                self.piano_roll_event_target
+                    == crate::fl_studio::piano_roll::EventLaneTarget::Pitch,
+            ))
+            .on_press(UiMessage::PianoRollSetEventTarget(
+                crate::fl_studio::piano_roll::EventLaneTarget::Pitch,
+            ));
+
+        let roll_header = row![
+            text("FL Studio Piano Roll").size(11),
+            tool_row,
+            btn_strum,
+            btn_flip_h,
+            btn_flip_v,
+            btn_chop,
+            btn_arp_up,
+            btn_arp_down,
+            btn_add_c4,
+            btn_scale,
+            container(row![text("EVENT:").size(9), btn_vel, btn_pan, btn_pitch].spacing(2))
+                .padding(2),
+            text(format!(
+                "Notes: {} | Grid: {}",
+                self.piano_roll_notes.len(),
+                self.snap_grid.label()
+            ))
+            .size(10),
+        ]
+        .spacing(4)
+        .align_y(iced::Alignment::Center);
+
+        let roll_canvas = crate::ui::canvas_piano_roll::view_canvas_piano_roll(
+            self.piano_roll_canvas_program(),
+        );
+        let roll_body = container(roll_canvas)
+            .width(Length::Fill)
+            .height(Length::Fill);
+
+        column![roll_header, roll_body].spacing(4).into()
+    }
+
+    pub fn view_mixer_window(&self) -> Element<'_, UiMessage> {
+        let selected_id = self.selected_mixer_track;
+        let is_master_selected = selected_id == 9999;
+        let active_strip = if is_master_selected {
+            &self.mixer.master_strip
+        } else {
+            self.mixer
+                .channels
+                .get(selected_id)
+                .unwrap_or(&self.mixer.master_strip)
+        };
+
+        // 1. Pinned Master Output Strip (Left)
+        let m_ch = &self.mixer.master_strip;
+        let m_selected = is_master_selected;
+
+        let m_header_btn = button(
+            row![
+                container(column![])
+                    .width(Length::Fixed(3.0))
+                    .height(Length::Fixed(12.0))
+                    .style(|_t| container::Style {
+                        background: Some(iced::Background::Color(Color::from_rgb8(
+                            0xe7, 0x4c, 0x3c,
+                        ))),
+                        ..container::Style::default()
+                    }),
+                text("MASTER").size(10),
+            ]
+            .spacing(4),
+        )
+        .padding(2)
+        .style(self.theme.button_style(m_selected))
+        .on_press(UiMessage::SelectMixerTrack(9999));
+
+        let m_phase_btn = button(text("Ø").size(9))
+            .padding(2)
+            .style(self.theme.toggle_accent_button_style(
+                m_ch.phase_invert,
+                Color::from_rgb8(0x38, 0xef, 0x7d),
+            ))
+            .on_press(UiMessage::ToggleTrackPhaseInvert(9999));
+
+        let m_swap_btn = button(text("⇄").size(9))
+            .padding(2)
+            .style(self.theme.toggle_accent_button_style(
+                m_ch.swap_channels,
+                Color::from_rgb8(0x00, 0xf2, 0xfe),
+            ))
+            .on_press(UiMessage::ToggleTrackSwapChannels(9999));
+
+        let m_clipper_btn = button(text("CLIP").size(9))
+            .padding(2)
+            .style(self.theme.toggle_accent_button_style(
+                self.mixer.master_soft_clipper_enabled,
+                Color::from_rgb8(0x38, 0xef, 0x7d),
+            ))
+            .on_press(UiMessage::ToggleMasterSoftClipper);
+
+        let m_mute_btn = button(text("M").size(10))
+            .padding(3)
+            .style(
+                self.theme
+                    .toggle_accent_button_style(m_ch.muted, self.theme.mute),
+            )
+            .on_press(UiMessage::ToggleTrackMute(9999));
+
+        let m_fader = slider(-60.0..=6.0, m_ch.volume_fader_db, |v| {
+            UiMessage::SetTrackFader {
+                track_id: 9999,
+                volume_db: v,
+            }
+        })
+        .step(0.5_f32)
+        .width(Length::Fixed(60.0));
+
+        let m_meters = column![
+            render_led_meter(
+                m_ch.meter.peak_db,
+                m_ch.meter.rms_db,
+                m_ch.meter.peak_hold_db,
+                m_ch.meter.auto_mute_tripped,
+            ),
+            render_led_meter(
+                m_ch.meter.rms_db,
+                m_ch.meter.rms_db,
+                m_ch.meter.peak_hold_db,
+                m_ch.meter.auto_mute_tripped,
+            ),
+        ]
+        .spacing(2);
+
+        let m_strip = container(
+            column![
+                m_header_btn,
+                row![m_phase_btn, m_swap_btn, m_clipper_btn].spacing(2),
+                text("Stereo Out").size(10),
+                row![m_fader, m_meters].spacing(4),
+                text(format!("{:.1} dB", m_ch.volume_fader_db)).size(10),
+                m_mute_btn,
+            ]
+            .spacing(3),
+        )
+        .style(move |_t| self.theme.mixer_strip_style(true, m_selected))
+        .padding(4)
+        .width(Length::Fixed(112.0));
+
+        // 2. Scrollable Insert Channel Strips
+        let mut channel_strips = row![].spacing(6).padding(4);
+
+        for (idx, ch) in self.mixer.channels.iter().enumerate() {
+            let is_selected = selected_id == idx;
+            let strip_accent = self.theme.track_accent_color(idx);
+
+            let header_btn = button(
+                row![
+                    container(column![])
+                        .width(Length::Fixed(3.0))
+                        .height(Length::Fixed(12.0))
+                        .style(move |_t| container::Style {
+                            background: Some(iced::Background::Color(strip_accent)),
+                            ..container::Style::default()
+                        }),
+                    text(format!("CH {:02}", idx + 1)).size(9),
+                ]
+                .spacing(3),
+            )
+            .padding(2)
+            .style(self.theme.button_style(is_selected))
+            .on_press(UiMessage::SelectMixerTrack(idx));
+
+            let phase_btn = button(text("Ø").size(9))
+                .padding(2)
+                .style(self.theme.toggle_accent_button_style(
+                    ch.phase_invert,
+                    Color::from_rgb8(0x38, 0xef, 0x7d),
+                ))
+                .on_press(UiMessage::ToggleTrackPhaseInvert(idx));
+
+            let swap_btn = button(text("⇄").size(9))
+                .padding(2)
+                .style(self.theme.toggle_accent_button_style(
+                    ch.swap_channels,
+                    Color::from_rgb8(0x00, 0xf2, 0xfe),
+                ))
+                .on_press(UiMessage::ToggleTrackSwapChannels(idx));
+
+            let mute_btn = button(text("M").size(10))
+                .padding(3)
+                .style(
+                    self.theme
+                        .toggle_accent_button_style(ch.muted, self.theme.mute),
+                )
+                .on_press(UiMessage::ToggleTrackMute(idx));
+
+            let solo_btn = button(text("S").size(10))
+                .padding(3)
+                .style(
+                    self.theme
+                        .toggle_accent_button_style(ch.solo, self.theme.solo),
+                )
+                .on_press(UiMessage::ToggleTrackSolo(idx));
+
+            let fader_slider = slider(-60.0..=6.0, ch.volume_fader_db, move |vol| {
+                UiMessage::SetTrackFader {
+                    track_id: idx,
+                    volume_db: vol,
+                }
+            })
+            .step(0.5_f32)
+            .width(Length::Fixed(60.0));
+
+            let pan_slider = slider(-1.0..=1.0, ch.pan.balance, move |p| {
+                UiMessage::SetTrackPan {
+                    track_id: idx,
+                    pan: p,
+                }
+            })
+            .step(0.05_f32)
+            .width(Length::Fixed(60.0));
+
+            let pan_txt = if ch.pan.balance.abs() < 0.05 {
+                "Pan: C".to_string()
+            } else if ch.pan.balance < 0.0 {
+                format!("Pan: L{:.0}%", (-ch.pan.balance) * 100.0)
             } else {
-                None
+                format!("Pan: R{:.0}%", ch.pan.balance * 100.0)
             };
 
-            for (trk_idx, track) in self.arrangement.timeline.tracks.iter().enumerate() {
-                let is_selected = trk_idx == self.workspace.selected_track_id;
-                let ch_muted = self
-                    .mixer
-                    .channels
-                    .get(trk_idx)
-                    .map(|c| c.muted)
-                    .unwrap_or(false);
-                let ch_solo = self
-                    .mixer
-                    .channels
-                    .get(trk_idx)
-                    .map(|c| c.solo)
-                    .unwrap_or(false);
-                let is_muted = track.muted || ch_muted;
-                let is_solo = track.soloed || ch_solo;
+            let meter_bars = column![
+                render_led_meter(
+                    ch.meter.peak_db,
+                    ch.meter.rms_db,
+                    ch.meter.peak_hold_db,
+                    ch.meter.auto_mute_tripped,
+                ),
+                render_led_meter(
+                    ch.meter.rms_db,
+                    ch.meter.rms_db,
+                    ch.meter.peak_hold_db,
+                    ch.meter.auto_mute_tripped,
+                ),
+            ]
+            .spacing(2);
 
-                let type_badge = match track.track_type {
-                    crate::timeline::track::TrackType::Audio => "AUD",
-                    crate::timeline::track::TrackType::Software => "INST",
-                    crate::timeline::track::TrackType::Drum => "DRUM",
-                    crate::timeline::track::TrackType::Midi => "MIDI",
-                    crate::timeline::track::TrackType::Aux => "AUX",
-                    crate::timeline::track::TrackType::Master => "MST",
-                };
+            let is_sending_master = self
+                .mixer_sends
+                .get(idx)
+                .and_then(|s| s.get(0))
+                .copied()
+                .unwrap_or(1.0)
+                > 0.0;
+            let send_btn = button(text(if is_sending_master { "▲ MST" } else { "△ MST" }).size(8))
+                .padding(2)
+                .style(self.theme.toggle_accent_button_style(
+                    is_sending_master,
+                    Color::from_rgb8(0xff, 0x85, 0x00),
+                ))
+                .on_press(UiMessage::MixerToggleSend {
+                    from_track: idx,
+                    to_track: 0,
+                });
 
-                let track_accent = self.theme.track_accent_color(trk_idx);
+            let strip = container(
+                column![
+                    header_btn,
+                    row![phase_btn, swap_btn].spacing(2),
+                    text(ch.name.clone()).size(11),
+                    text(pan_txt).size(9),
+                    pan_slider,
+                    row![fader_slider, meter_bars].spacing(4),
+                    text(format!("{:.1} dB", ch.volume_fader_db)).size(10),
+                    row![mute_btn, solo_btn, send_btn].spacing(3),
+                ]
+                .spacing(2),
+            )
+            .style(move |_t| self.theme.mixer_strip_style(false, is_selected))
+            .padding(4)
+            .width(Length::Fixed(110.0));
 
-                let mute_btn = button(text("M").size(10))
-                    .padding(3)
-                    .style(
-                        self.theme
-                            .toggle_accent_button_style(is_muted, self.theme.mute),
-                    )
-                    .on_press(UiMessage::ToggleTrackMute(trk_idx));
+            channel_strips = channel_strips.push(strip);
+        }
 
-                let solo_btn = button(text("S").size(10))
-                    .padding(3)
-                    .style(
-                        self.theme
-                            .toggle_accent_button_style(is_solo, self.theme.solo),
-                    )
-                    .on_press(UiMessage::ToggleTrackSolo(trk_idx));
+        // 3. Dedicated 10-Slot Insert FX Rack Inspector
+        let target_track_id = if is_master_selected {
+            9999
+        } else {
+            selected_id
+        };
+        let target_title = if is_master_selected {
+            "MASTER".to_string()
+        } else {
+            format!("CH {:02}: {}", selected_id + 1, active_strip.name)
+        };
 
-                let rec_btn = button(text(if track.record_armed { "● R" } else { "R" }).size(10))
-                    .padding(3)
-                    .style(
-                        self.theme
-                            .toggle_accent_button_style(track.record_armed, self.theme.record),
-                    )
-                    .on_press(UiMessage::ToggleTrackRecordArm(trk_idx));
+        let mut slots_col = column![].spacing(3);
+        for (s_idx, slot) in active_strip.slots.iter().enumerate() {
+            let is_active = !slot.bypassed;
+            let led_color = if is_active {
+                Color::from_rgb8(0x38, 0xef, 0x7d) // Neon Green active LED
+            } else {
+                Color::from_rgb8(0x55, 0x55, 0x55) // Dim bypassed LED
+            };
 
-                let freeze_btn = button(text(if track.is_frozen { "❄" } else { "·" }).size(10))
-                    .padding(3)
-                    .style(self.theme.button_style(track.is_frozen))
-                    .on_press(UiMessage::ToggleTrackFreeze(trk_idx));
-
-                let accent_strip = container(column![])
-                    .width(Length::Fixed(4.0))
-                    .height(Length::Fill)
-                    .style(move |_t| container::Style {
-                        background: Some(iced::Background::Color(track_accent)),
-                        ..container::Style::default()
-                    });
-
-                let fader_mini = slider(-60.0..=6.0, track.gain_db, move |v| {
-                    UiMessage::SetTrackFader {
-                        track_id: trk_idx,
-                        volume_db: v,
-                    }
+            let led_btn = button(text(if is_active { "●" } else { "○" }).size(11))
+                .padding(1)
+                .style(move |_t, _status| button::Style {
+                    background: None,
+                    text_color: led_color,
+                    ..button::Style::default()
                 })
-                .step(0.5_f32)
-                .width(Length::Fixed(50.0));
+                .on_press(UiMessage::ToggleInsertSlotBypass {
+                    track_id: target_track_id,
+                    slot_id: s_idx,
+                });
 
-                let pan_mini = slider(-1.0..=1.0, track.pan, move |p| UiMessage::SetTrackPan {
-                    track_id: trk_idx,
-                    pan: p,
+            let slot_label = text(format!("{}. {}", s_idx + 1, slot.name)).size(10);
+            let mix_slider =
+                slider(0.0..=1.0, slot.mix, move |m| UiMessage::SetInsertSlotMix {
+                    track_id: target_track_id,
+                    slot_id: s_idx,
+                    mix: m,
                 })
-                .step(0.05_f32)
-                .width(Length::Fixed(40.0));
+                .step(0.01_f32)
+                .width(Length::Fixed(55.0));
 
-                let track_inner = column![
+            let mix_pct = text(format!("{:.0}%", slot.mix * 100.0)).size(8);
+
+            let slot_row = container(
+                row![
+                    led_btn,
+                    container(slot_label).width(Length::Fixed(100.0)),
+                    mix_slider,
+                    mix_pct,
+                ]
+                .spacing(3)
+                .align_y(iced::Alignment::Center),
+            )
+            .padding(2)
+            .style(|_t| container::Style {
+                background: Some(iced::Background::Color(Color::from_rgb8(
+                    0x18, 0x1a, 0x22,
+                ))),
+                border: iced::Border {
+                    color: Color::from_rgb8(0x28, 0x2c, 0x37),
+                    width: 1.0,
+                    radius: 3.0.into(),
+                },
+                text_color: Some(Color::from_rgb8(0xd0, 0xd4, 0xdc)),
+                ..container::Style::default()
+            });
+
+            slots_col = slots_col.push(slot_row);
+        }
+
+        // Stereo separation readout
+        let sep_val = active_strip.stereo_separation;
+        let sep_txt = if sep_val < -0.05 {
+            format!("Sep: {:.0}% Wide", (-sep_val) * 100.0)
+        } else if sep_val > 0.05 {
+            format!("Mono: {:.0}% Merged", sep_val * 100.0)
+        } else {
+            "100% Normal Stereo".to_string()
+        };
+
+        let sep_slider = slider(-1.0..=1.0, sep_val, move |s| {
+            UiMessage::SetTrackStereoSeparation {
+                track_id: target_track_id,
+                separation: s,
+            }
+        })
+        .step(0.05_f32)
+        .width(Length::Fixed(110.0));
+
+        let insp_phase_btn = button(
+            text(if active_strip.phase_invert {
+                "Ø [INV]"
+            } else {
+                "Ø [NORM]"
+            })
+            .size(9),
+        )
+        .padding(3)
+        .style(self.theme.toggle_accent_button_style(
+            active_strip.phase_invert,
+            Color::from_rgb8(0x38, 0xef, 0x7d),
+        ))
+        .on_press(UiMessage::ToggleTrackPhaseInvert(target_track_id));
+
+        let insp_swap_btn = button(
+            text(if active_strip.swap_channels {
+                "⇄ [SWAP]"
+            } else {
+                "⇄ [NORM]"
+            })
+            .size(9),
+        )
+        .padding(3)
+        .style(self.theme.toggle_accent_button_style(
+            active_strip.swap_channels,
+            Color::from_rgb8(0x00, 0xf2, 0xfe),
+        ))
+        .on_press(UiMessage::ToggleTrackSwapChannels(target_track_id));
+
+        let mut inspector_footer = column![
+            row![
+                text("STEREO SEPARATION").size(9),
+                sep_slider,
+                text(sep_txt).size(9)
+            ]
+            .spacing(4),
+            row![insp_phase_btn, insp_swap_btn].spacing(4),
+        ]
+        .spacing(3);
+
+        if is_master_selected {
+            let clipper_btn = button(
+                text(if self.mixer.master_soft_clipper_enabled {
+                    "SOFT CLIPPER (-0.1 dBFS): [ACTIVE]"
+                } else {
+                    "SOFT CLIPPER: [BYPASSED]"
+                })
+                .size(9),
+            )
+            .padding(3)
+            .style(self.theme.toggle_accent_button_style(
+                self.mixer.master_soft_clipper_enabled,
+                Color::from_rgb8(0x38, 0xef, 0x7d),
+            ))
+            .on_press(UiMessage::ToggleMasterSoftClipper);
+
+            inspector_footer = inspector_footer.push(clipper_btn);
+        }
+
+        let fx_inspector = container(
+            column![
+                container(
                     row![
-                        container(text(type_badge).size(9))
-                            .padding(2)
-                            .style(move |_t| container::Style {
-                                background: Some(iced::Background::Color(iced::Color::from_rgba8(
-                                    0, 0, 0, 0.35
-                                ))),
-                                border: iced::Border {
-                                    color: track_accent,
-                                    width: 1.0,
-                                    radius: iced::border::Radius::from(3.0),
-                                },
-                                ..container::Style::default()
-                            }),
-                        button(text(&track.name).size(11))
-                            .padding(1)
-                            .on_press(UiMessage::SelectTrack(trk_idx)),
+                        text("INSERT FX RACK").size(10),
+                        Space::new().width(Length::Fill),
+                        text(target_title).size(10),
                     ]
                     .spacing(4),
-                    row![mute_btn, solo_btn, rec_btn, freeze_btn].spacing(3),
-                    row![
-                        fader_mini,
-                        pan_mini,
-                        text(format!("{:.1} dB", track.gain_db)).size(8),
-                    ]
-                    .spacing(3),
-                ]
-                .spacing(2)
-                .width(Length::Fill);
-
-                let track_card =
-                    container(row![accent_strip, container(track_inner).padding(3)].spacing(4))
-                        .height(Length::Fixed(crate::ui::canvas_timeline::LANE_HEIGHT))
-                        .width(Length::Fill)
-                        .style(move |_t| {
-                            let mut st = self.theme.panel_container_style();
-                            if is_selected {
-                                st.border.color = self.theme.border_focus;
-                                st.border.width = 1.5;
-                            }
-                            st
-                        });
-
-                track_headers = track_headers.push(track_card);
-
-                for region in &track.regions {
-                    let visual_kind = match &region.kind {
-                        crate::timeline::region::RegionKind::Audio { .. } => {
-                            crate::ui::canvas_timeline::ClipVisualKind::Audio {
-                                waveform_peaks: Vec::new(),
-                            }
-                        }
-                        crate::timeline::region::RegionKind::Midi { .. } => {
-                            crate::ui::canvas_timeline::ClipVisualKind::Midi { notes: Vec::new() }
-                        }
-                        crate::timeline::region::RegionKind::Pattern { .. } => {
-                            crate::ui::canvas_timeline::ClipVisualKind::Pattern
-                        }
-                        crate::timeline::region::RegionKind::Automation {
-                            parameter_target,
-                            points,
-                            ..
-                        } => {
-                            let pts = points
-                                .iter()
-                                .map(|p| (p.tick_offset, p.value, p.tension))
-                                .collect();
-                            crate::ui::canvas_timeline::ClipVisualKind::Automation {
-                                parameter_target: parameter_target.clone(),
-                                points: pts,
-                            }
-                        }
-                    };
-
-                    canvas_program
-                        .clips
-                        .push(crate::ui::canvas_timeline::TimelineClipDisplay {
-                            id: region.id,
-                            track_index: trk_idx,
-                            start_tick: region.start_tick,
-                            length_ticks: region.length_ticks,
-                            name: region.name.clone(),
-                            color_rgb: [track.color.r, track.color.g, track.color.b],
-                            muted: region.muted || is_muted,
-                            looped: region.looped,
-                            fade_in_ticks: region.fade.in_ticks,
-                            fade_out_ticks: region.fade.out_ticks,
-                            kind: visual_kind,
-                            is_selected,
-                        });
-                }
-            }
-
-            let track_header_column = container(track_headers).width(Length::Fixed(200.0));
-            let is_fl = matches!(
-                self.theme.preset,
-                crate::ui::theme::ThemePreset::FlDarkOrange
-                    | crate::ui::theme::ThemePreset::FlStudioModern
-            );
-            let arrangement_canvas = crate::ui::canvas_timeline::view_canvas_timeline(
-                canvas_program
-                    .with_snap(self.snap_grid)
-                    .with_theme(is_fl)
-                    .with_scroll_y(self.timeline_scroll_y)
-                    .with_marquee(self.marquee_selection),
-            );
-
-            let logic_timeline = row![track_header_column, arrangement_canvas]
-                .width(Length::Fill)
-                .height(Length::Fill)
-                .spacing(1);
-
-            content = content.push(logic_timeline);
-        }
-
-        // 5. Plugin Manager Sidebar
-        if self.workspace.library_browser_open {
-            let mut plugins_list = column![
-                row![
-                    text("Plugin Manager").size(12),
-                    button(text("x").size(10)).on_press(UiMessage::ToggleLibraryBrowser),
-                ]
-                .spacing(8),
-                text(format!("Installed: {}", self.plugin_registry.len())).size(10),
-            ]
-            .spacing(4);
-
-            for entry in self.plugin_registry.list_entries() {
-                let meta_id = entry.descriptor.unique_id;
-                let is_enabled = entry.is_enabled;
-                let toggle_btn = if is_enabled {
-                    button(text("Disable").size(10)).on_press(UiMessage::DisablePlugin(meta_id))
-                } else {
-                    button(text("Enable").size(10)).on_press(UiMessage::EnablePlugin(meta_id))
-                };
-                let remove_btn =
-                    button(text("Uninstall").size(10)).on_press(UiMessage::RemovePlugin(meta_id));
-
-                let plugin_card = container(
-                    column![
-                        text(format!(
-                            "{} v{}",
-                            entry.descriptor.name, entry.descriptor.version
-                        ))
-                        .size(11),
-                        text(format!(
-                            "{:?} | {}",
-                            entry.descriptor.category, entry.descriptor.vendor
-                        ))
-                        .size(9),
-                        row![toggle_btn, remove_btn].spacing(4),
-                    ]
-                    .spacing(2),
                 )
-                .padding(4);
+                .padding(3)
+                .style(|_t| self.theme.machined_capsule_style()),
+                slots_col,
+                inspector_footer,
+            ]
+            .spacing(4),
+        )
+        .style(|_t| container::Style {
+            background: Some(iced::Background::Color(Color::from_rgb8(0x11, 0x12, 0x16))),
+            border: iced::Border {
+                color: Color::from_rgb8(0x2d, 0x31, 0x3d),
+                width: 1.0,
+                radius: 4.0.into(),
+            },
+            text_color: Some(Color::from_rgb8(0xec, 0xf0, 0xf1)),
+            ..container::Style::default()
+        })
+        .padding(4)
+        .width(Length::Fixed(240.0));
 
-                plugins_list = plugins_list.push(plugin_card);
-            }
-
-            let plugin_panel = container(scrollable(plugins_list))
-                .width(Length::Fixed(210.0))
-                .padding(6);
-
-            content = content.push(plugin_panel);
-        }
-
-        content.into()
+        column![
+            row![
+                text("FL Studio 24 Studio Mixer Console (125 Inserts + Master Strip)")
+                    .size(11),
+                Space::new().width(Length::Fill),
+                text(format!(
+                    "Target: [{}]",
+                    if is_master_selected {
+                        "Master".to_string()
+                    } else {
+                        format!("CH {:02}", selected_id + 1)
+                    }
+                ))
+                .size(10),
+            ]
+            .spacing(6),
+            row![m_strip, scrollable(channel_strips), fx_inspector].spacing(8),
+        ]
+        .spacing(4)
+        .into()
     }
 
     fn view_bottom_drawer(&self) -> Element<'_, UiMessage> {
@@ -1154,568 +1617,8 @@ impl CrystalWaveApp {
         // Drawer Content per Active Tab
         let content_element: Element<'_, UiMessage> = match self.layout.active_drawer_tab {
             crate::ui::layout::DrawerTab::StepSequencer => self.view_channel_rack(false),
-
-            crate::ui::layout::DrawerTab::PianoRoll => {
-                // Interactive Piano Roll with Alt-Tools, Event Editor & Polyphonic Ghost Notes
-                let tools = [
-                    PianoRollTool::Draw,
-                    PianoRollTool::Paint,
-                    PianoRollTool::Delete,
-                    PianoRollTool::Mute,
-                    PianoRollTool::Slice,
-                    PianoRollTool::Select,
-                    PianoRollTool::Zoom,
-                ];
-                let mut tool_row = row![].spacing(2);
-                for t in tools {
-                    let is_sel = self.active_pianoroll_tool == t;
-                    let btn = button(text(t.label()).size(9))
-                        .padding(2)
-                        .style(self.theme.button_style(is_sel))
-                        .on_press(UiMessage::SetPianoRollTool(t));
-                    tool_row = tool_row.push(btn);
-                }
-
-                let btn_strum =
-                    button(text("Strum").size(9)).on_press(UiMessage::PianoRollQuickStrum);
-                let btn_flip_h =
-                    button(text("Flip H").size(9)).on_press(UiMessage::PianoRollFlipHorizontal);
-                let btn_flip_v =
-                    button(text("Flip V").size(9)).on_press(UiMessage::PianoRollFlipVertical);
-                let btn_chop =
-                    button(text("Chop 1/16").size(9)).on_press(UiMessage::PianoRollQuickChop);
-                let btn_arp_up = button(text("Arp ↑").size(9)).on_press(
-                    UiMessage::PianoRollArpeggiate(crate::fl_studio::piano_roll::ArpDirection::Up),
-                );
-                let btn_arp_down =
-                    button(text("Arp ↓").size(9)).on_press(UiMessage::PianoRollArpeggiate(
-                        crate::fl_studio::piano_roll::ArpDirection::Down,
-                    ));
-                let btn_add_c4 =
-                    button(text("+ Note C4").size(9)).on_press(UiMessage::PianoRollAddNote {
-                        channel_id: 0,
-                        key: 60,
-                        start_tick: self.playhead_tick,
-                        length_ticks: 960,
-                    });
-
-                let next_scale = match self.piano_roll_scale {
-                    crate::fl_studio::piano_roll::MusicalScale::Chromatic => {
-                        crate::fl_studio::piano_roll::MusicalScale::Major
-                    }
-                    crate::fl_studio::piano_roll::MusicalScale::Major => {
-                        crate::fl_studio::piano_roll::MusicalScale::Minor
-                    }
-                    crate::fl_studio::piano_roll::MusicalScale::Minor => {
-                        crate::fl_studio::piano_roll::MusicalScale::Dorian
-                    }
-                    crate::fl_studio::piano_roll::MusicalScale::Dorian => {
-                        crate::fl_studio::piano_roll::MusicalScale::Phrygian
-                    }
-                    crate::fl_studio::piano_roll::MusicalScale::Phrygian => {
-                        crate::fl_studio::piano_roll::MusicalScale::HarmonicMinor
-                    }
-                    crate::fl_studio::piano_roll::MusicalScale::HarmonicMinor => {
-                        crate::fl_studio::piano_roll::MusicalScale::PentatonicMinor
-                    }
-                    _ => crate::fl_studio::piano_roll::MusicalScale::Chromatic,
-                };
-
-                let btn_scale =
-                    button(text(format!("Scale: {}", self.piano_roll_scale.label())).size(9))
-                        .style(self.theme.button_style(
-                            self.piano_roll_scale
-                                != crate::fl_studio::piano_roll::MusicalScale::Chromatic,
-                        ))
-                        .on_press(UiMessage::PianoRollSetScale(next_scale));
-
-                let btn_vel = button(text("VEL").size(9))
-                    .style(self.theme.button_style(
-                        self.piano_roll_event_target
-                            == crate::fl_studio::piano_roll::EventLaneTarget::Velocity,
-                    ))
-                    .on_press(UiMessage::PianoRollSetEventTarget(
-                        crate::fl_studio::piano_roll::EventLaneTarget::Velocity,
-                    ));
-                let btn_pan = button(text("PAN").size(9))
-                    .style(self.theme.button_style(
-                        self.piano_roll_event_target
-                            == crate::fl_studio::piano_roll::EventLaneTarget::Pan,
-                    ))
-                    .on_press(UiMessage::PianoRollSetEventTarget(
-                        crate::fl_studio::piano_roll::EventLaneTarget::Pan,
-                    ));
-                let btn_pitch = button(text("PITCH").size(9))
-                    .style(self.theme.button_style(
-                        self.piano_roll_event_target
-                            == crate::fl_studio::piano_roll::EventLaneTarget::Pitch,
-                    ))
-                    .on_press(UiMessage::PianoRollSetEventTarget(
-                        crate::fl_studio::piano_roll::EventLaneTarget::Pitch,
-                    ));
-
-                let roll_header = row![
-                    text("FL Studio Piano Roll").size(11),
-                    tool_row,
-                    btn_strum,
-                    btn_flip_h,
-                    btn_flip_v,
-                    btn_chop,
-                    btn_arp_up,
-                    btn_arp_down,
-                    btn_add_c4,
-                    btn_scale,
-                    container(row![text("EVENT:").size(9), btn_vel, btn_pan, btn_pitch].spacing(2))
-                        .padding(2),
-                    text(format!(
-                        "Notes: {} | Grid: {}",
-                        self.piano_roll_notes.len(),
-                        self.snap_grid.label()
-                    ))
-                    .size(10),
-                ]
-                .spacing(4)
-                .align_y(iced::Alignment::Center);
-
-                let roll_canvas = crate::ui::canvas_piano_roll::view_canvas_piano_roll(
-                    self.piano_roll_canvas_program(),
-                );
-                let roll_body = container(roll_canvas)
-                    .width(Length::Fill)
-                    .height(Length::Fill);
-
-                column![roll_header, roll_body].spacing(4).into()
-            }
-
-            crate::ui::layout::DrawerTab::Mixer => {
-                // FL Studio 24 Studio Mixing Console (125 Inserts + Master Strip + 10-Slot FX Inspector)
-                let selected_id = self.selected_mixer_track;
-                let is_master_selected = selected_id == 9999;
-                let active_strip = if is_master_selected {
-                    &self.mixer.master_strip
-                } else {
-                    self.mixer
-                        .channels
-                        .get(selected_id)
-                        .unwrap_or(&self.mixer.master_strip)
-                };
-
-                // 1. Pinned Master Output Strip (Left)
-                let m_ch = &self.mixer.master_strip;
-                let m_selected = is_master_selected;
-
-                let m_header_btn = button(
-                    row![
-                        container(column![])
-                            .width(Length::Fixed(3.0))
-                            .height(Length::Fixed(12.0))
-                            .style(|_t| container::Style {
-                                background: Some(iced::Background::Color(Color::from_rgb8(
-                                    0xe7, 0x4c, 0x3c,
-                                ))),
-                                ..container::Style::default()
-                            }),
-                        text("MASTER").size(10),
-                    ]
-                    .spacing(4),
-                )
-                .padding(2)
-                .style(self.theme.button_style(m_selected))
-                .on_press(UiMessage::SelectMixerTrack(9999));
-
-                let m_phase_btn = button(text("Ø").size(9))
-                    .padding(2)
-                    .style(self.theme.toggle_accent_button_style(
-                        m_ch.phase_invert,
-                        Color::from_rgb8(0x38, 0xef, 0x7d),
-                    ))
-                    .on_press(UiMessage::ToggleTrackPhaseInvert(9999));
-
-                let m_swap_btn = button(text("⇄").size(9))
-                    .padding(2)
-                    .style(self.theme.toggle_accent_button_style(
-                        m_ch.swap_channels,
-                        Color::from_rgb8(0x00, 0xf2, 0xfe),
-                    ))
-                    .on_press(UiMessage::ToggleTrackSwapChannels(9999));
-
-                let m_clipper_btn = button(text("CLIP").size(9))
-                    .padding(2)
-                    .style(self.theme.toggle_accent_button_style(
-                        self.mixer.master_soft_clipper_enabled,
-                        Color::from_rgb8(0x38, 0xef, 0x7d),
-                    ))
-                    .on_press(UiMessage::ToggleMasterSoftClipper);
-
-                let m_mute_btn = button(text("M").size(10))
-                    .padding(3)
-                    .style(
-                        self.theme
-                            .toggle_accent_button_style(m_ch.muted, self.theme.mute),
-                    )
-                    .on_press(UiMessage::ToggleTrackMute(9999));
-
-                let m_fader = slider(-60.0..=6.0, m_ch.volume_fader_db, |v| {
-                    UiMessage::SetTrackFader {
-                        track_id: 9999,
-                        volume_db: v,
-                    }
-                })
-                .step(0.5_f32)
-                .width(Length::Fixed(60.0));
-
-                let m_meters = column![
-                    render_led_meter(
-                        m_ch.meter.peak_db,
-                        m_ch.meter.rms_db,
-                        m_ch.meter.peak_hold_db,
-                        m_ch.meter.auto_mute_tripped,
-                    ),
-                    render_led_meter(
-                        m_ch.meter.rms_db,
-                        m_ch.meter.rms_db,
-                        m_ch.meter.peak_hold_db,
-                        m_ch.meter.auto_mute_tripped,
-                    ),
-                ]
-                .spacing(2);
-
-                let m_strip = container(
-                    column![
-                        m_header_btn,
-                        row![m_phase_btn, m_swap_btn, m_clipper_btn].spacing(2),
-                        text("Stereo Out").size(10),
-                        row![m_fader, m_meters].spacing(4),
-                        text(format!("{:.1} dB", m_ch.volume_fader_db)).size(10),
-                        m_mute_btn,
-                    ]
-                    .spacing(3),
-                )
-                .style(move |_t| self.theme.mixer_strip_style(true, m_selected))
-                .padding(4)
-                .width(Length::Fixed(112.0));
-
-                // 2. Scrollable Insert Channel Strips
-                let mut channel_strips = row![].spacing(6).padding(4);
-
-                for (idx, ch) in self.mixer.channels.iter().enumerate() {
-                    let is_selected = selected_id == idx;
-                    let strip_accent = self.theme.track_accent_color(idx);
-
-                    let header_btn = button(
-                        row![
-                            container(column![])
-                                .width(Length::Fixed(3.0))
-                                .height(Length::Fixed(12.0))
-                                .style(move |_t| container::Style {
-                                    background: Some(iced::Background::Color(strip_accent)),
-                                    ..container::Style::default()
-                                }),
-                            text(format!("CH {:02}", idx + 1)).size(9),
-                        ]
-                        .spacing(3),
-                    )
-                    .padding(2)
-                    .style(self.theme.button_style(is_selected))
-                    .on_press(UiMessage::SelectMixerTrack(idx));
-
-                    let phase_btn = button(text("Ø").size(9))
-                        .padding(2)
-                        .style(self.theme.toggle_accent_button_style(
-                            ch.phase_invert,
-                            Color::from_rgb8(0x38, 0xef, 0x7d),
-                        ))
-                        .on_press(UiMessage::ToggleTrackPhaseInvert(idx));
-
-                    let swap_btn = button(text("⇄").size(9))
-                        .padding(2)
-                        .style(self.theme.toggle_accent_button_style(
-                            ch.swap_channels,
-                            Color::from_rgb8(0x00, 0xf2, 0xfe),
-                        ))
-                        .on_press(UiMessage::ToggleTrackSwapChannels(idx));
-
-                    let mute_btn = button(text("M").size(10))
-                        .padding(3)
-                        .style(
-                            self.theme
-                                .toggle_accent_button_style(ch.muted, self.theme.mute),
-                        )
-                        .on_press(UiMessage::ToggleTrackMute(idx));
-
-                    let solo_btn = button(text("S").size(10))
-                        .padding(3)
-                        .style(
-                            self.theme
-                                .toggle_accent_button_style(ch.solo, self.theme.solo),
-                        )
-                        .on_press(UiMessage::ToggleTrackSolo(idx));
-
-                    let fader_slider = slider(-60.0..=6.0, ch.volume_fader_db, move |vol| {
-                        UiMessage::SetTrackFader {
-                            track_id: idx,
-                            volume_db: vol,
-                        }
-                    })
-                    .step(0.5_f32)
-                    .width(Length::Fixed(60.0));
-
-                    let pan_slider = slider(-1.0..=1.0, ch.pan.balance, move |p| {
-                        UiMessage::SetTrackPan {
-                            track_id: idx,
-                            pan: p,
-                        }
-                    })
-                    .step(0.05_f32)
-                    .width(Length::Fixed(60.0));
-
-                    let pan_txt = if ch.pan.balance.abs() < 0.05 {
-                        "Pan: C".to_string()
-                    } else if ch.pan.balance < 0.0 {
-                        format!("Pan: L{:.0}%", (-ch.pan.balance) * 100.0)
-                    } else {
-                        format!("Pan: R{:.0}%", ch.pan.balance * 100.0)
-                    };
-
-                    let meter_bars = column![
-                        render_led_meter(
-                            ch.meter.peak_db,
-                            ch.meter.rms_db,
-                            ch.meter.peak_hold_db,
-                            ch.meter.auto_mute_tripped,
-                        ),
-                        render_led_meter(
-                            ch.meter.rms_db,
-                            ch.meter.rms_db,
-                            ch.meter.peak_hold_db,
-                            ch.meter.auto_mute_tripped,
-                        ),
-                    ]
-                    .spacing(2);
-
-                    let strip = container(
-                        column![
-                            header_btn,
-                            row![phase_btn, swap_btn].spacing(2),
-                            text(ch.name.clone()).size(11),
-                            text(pan_txt).size(9),
-                            pan_slider,
-                            row![fader_slider, meter_bars].spacing(4),
-                            text(format!("{:.1} dB", ch.volume_fader_db)).size(10),
-                            row![mute_btn, solo_btn].spacing(4),
-                        ]
-                        .spacing(2),
-                    )
-                    .style(move |_t| self.theme.mixer_strip_style(false, is_selected))
-                    .padding(4)
-                    .width(Length::Fixed(110.0));
-
-                    channel_strips = channel_strips.push(strip);
-                }
-
-                // 3. Dedicated 10-Slot Insert FX Rack Inspector
-                let target_track_id = if is_master_selected {
-                    9999
-                } else {
-                    selected_id
-                };
-                let target_title = if is_master_selected {
-                    "MASTER".to_string()
-                } else {
-                    format!("CH {:02}: {}", selected_id + 1, active_strip.name)
-                };
-
-                let mut slots_col = column![].spacing(3);
-                for (s_idx, slot) in active_strip.slots.iter().enumerate() {
-                    let is_active = !slot.bypassed;
-                    let led_color = if is_active {
-                        Color::from_rgb8(0x38, 0xef, 0x7d) // Neon Green active LED
-                    } else {
-                        Color::from_rgb8(0x55, 0x55, 0x55) // Dim bypassed LED
-                    };
-
-                    let led_btn = button(text(if is_active { "●" } else { "○" }).size(11))
-                        .padding(1)
-                        .style(move |_t, _status| button::Style {
-                            background: None,
-                            text_color: led_color,
-                            ..button::Style::default()
-                        })
-                        .on_press(UiMessage::ToggleInsertSlotBypass {
-                            track_id: target_track_id,
-                            slot_id: s_idx,
-                        });
-
-                    let slot_label = text(format!("{}. {}", s_idx + 1, slot.name)).size(10);
-                    let mix_slider =
-                        slider(0.0..=1.0, slot.mix, move |m| UiMessage::SetInsertSlotMix {
-                            track_id: target_track_id,
-                            slot_id: s_idx,
-                            mix: m,
-                        })
-                        .step(0.01_f32)
-                        .width(Length::Fixed(55.0));
-
-                    let mix_pct = text(format!("{:.0}%", slot.mix * 100.0)).size(8);
-
-                    let slot_row = container(
-                        row![
-                            led_btn,
-                            container(slot_label).width(Length::Fixed(100.0)),
-                            mix_slider,
-                            mix_pct,
-                        ]
-                        .spacing(3)
-                        .align_y(iced::Alignment::Center),
-                    )
-                    .padding(2)
-                    .style(|_t| container::Style {
-                        background: Some(iced::Background::Color(Color::from_rgb8(
-                            0x18, 0x1a, 0x22,
-                        ))),
-                        border: iced::Border {
-                            color: Color::from_rgb8(0x28, 0x2c, 0x37),
-                            width: 1.0,
-                            radius: 3.0.into(),
-                        },
-                        text_color: Some(Color::from_rgb8(0xd0, 0xd4, 0xdc)),
-                        ..container::Style::default()
-                    });
-
-                    slots_col = slots_col.push(slot_row);
-                }
-
-                // Stereo separation readout
-                let sep_val = active_strip.stereo_separation;
-                let sep_txt = if sep_val < -0.05 {
-                    format!("Sep: {:.0}% Wide", (-sep_val) * 100.0)
-                } else if sep_val > 0.05 {
-                    format!("Mono: {:.0}% Merged", sep_val * 100.0)
-                } else {
-                    "100% Normal Stereo".to_string()
-                };
-
-                let sep_slider = slider(-1.0..=1.0, sep_val, move |s| {
-                    UiMessage::SetTrackStereoSeparation {
-                        track_id: target_track_id,
-                        separation: s,
-                    }
-                })
-                .step(0.05_f32)
-                .width(Length::Fixed(110.0));
-
-                let insp_phase_btn = button(
-                    text(if active_strip.phase_invert {
-                        "Ø [INV]"
-                    } else {
-                        "Ø [NORM]"
-                    })
-                    .size(9),
-                )
-                .padding(3)
-                .style(self.theme.toggle_accent_button_style(
-                    active_strip.phase_invert,
-                    Color::from_rgb8(0x38, 0xef, 0x7d),
-                ))
-                .on_press(UiMessage::ToggleTrackPhaseInvert(target_track_id));
-
-                let insp_swap_btn = button(
-                    text(if active_strip.swap_channels {
-                        "⇄ [SWAP]"
-                    } else {
-                        "⇄ [NORM]"
-                    })
-                    .size(9),
-                )
-                .padding(3)
-                .style(self.theme.toggle_accent_button_style(
-                    active_strip.swap_channels,
-                    Color::from_rgb8(0x00, 0xf2, 0xfe),
-                ))
-                .on_press(UiMessage::ToggleTrackSwapChannels(target_track_id));
-
-                let mut inspector_footer = column![
-                    row![
-                        text("STEREO SEPARATION").size(9),
-                        sep_slider,
-                        text(sep_txt).size(9)
-                    ]
-                    .spacing(4),
-                    row![insp_phase_btn, insp_swap_btn].spacing(4),
-                ]
-                .spacing(3);
-
-                if is_master_selected {
-                    let clipper_btn = button(
-                        text(if self.mixer.master_soft_clipper_enabled {
-                            "SOFT CLIPPER (-0.1 dBFS): [ACTIVE]"
-                        } else {
-                            "SOFT CLIPPER: [BYPASSED]"
-                        })
-                        .size(9),
-                    )
-                    .padding(3)
-                    .style(self.theme.toggle_accent_button_style(
-                        self.mixer.master_soft_clipper_enabled,
-                        Color::from_rgb8(0x38, 0xef, 0x7d),
-                    ))
-                    .on_press(UiMessage::ToggleMasterSoftClipper);
-
-                    inspector_footer = inspector_footer.push(clipper_btn);
-                }
-
-                let fx_inspector = container(
-                    column![
-                        container(
-                            row![
-                                text("INSERT FX RACK").size(10),
-                                Space::new().width(Length::Fill),
-                                text(target_title).size(10),
-                            ]
-                            .spacing(4),
-                        )
-                        .padding(3)
-                        .style(|_t| self.theme.machined_capsule_style()),
-                        slots_col,
-                        inspector_footer,
-                    ]
-                    .spacing(4),
-                )
-                .style(|_t| container::Style {
-                    background: Some(iced::Background::Color(Color::from_rgb8(0x11, 0x12, 0x16))),
-                    border: iced::Border {
-                        color: Color::from_rgb8(0x2d, 0x31, 0x3d),
-                        width: 1.0,
-                        radius: 4.0.into(),
-                    },
-                    text_color: Some(Color::from_rgb8(0xec, 0xf0, 0xf1)),
-                    ..container::Style::default()
-                })
-                .padding(4)
-                .width(Length::Fixed(240.0));
-
-                column![
-                    row![
-                        text("FL Studio 24 Studio Mixer Console (125 Inserts + Master Strip)")
-                            .size(11),
-                        Space::new().width(Length::Fill),
-                        text(format!(
-                            "Target: [{}]",
-                            if is_master_selected {
-                                "Master".to_string()
-                            } else {
-                                format!("CH {:02}", selected_id + 1)
-                            }
-                        ))
-                        .size(10),
-                    ]
-                    .spacing(6),
-                    row![m_strip, scrollable(channel_strips), fx_inspector].spacing(8),
-                ]
-                .spacing(4)
-                .into()
-            }
-
+            crate::ui::layout::DrawerTab::PianoRoll => self.view_piano_roll_window(),
+            crate::ui::layout::DrawerTab::Mixer => self.view_mixer_window(),
             crate::ui::layout::DrawerTab::Automation => column![
                 text("Automation Curve Drawer").size(11),
                 text("Select clip or parameter to edit spline curves").size(10),
@@ -2201,6 +2104,346 @@ impl CrystalWaveApp {
         .style(|_t| self.theme.oled_vfd_display_style())
         .width(Length::Fixed(640.0))
         .padding(12)
+        .into()
+    }
+
+    /// Dedicated Edison Sample Editor & Waveform Manipulation Window
+    pub fn view_edison_window(&self) -> Element<'_, UiMessage> {
+        let ed = &self.edison;
+        let header = row![
+            container(
+                text("EDISON — WAVEFORM EDITOR")
+                    .size(11)
+                    .color(Color::from_rgb8(0xff, 0x88, 0x00)),
+            )
+            .padding(3),
+            Space::new().width(Length::Fixed(12.0)),
+            button(text("Normalize").size(10))
+                .padding(3)
+                .on_press(UiMessage::EdisonNormalize),
+            button(text("Reverse").size(10))
+                .padding(3)
+                .on_press(UiMessage::EdisonReverse),
+            button(text("Fade In").size(10))
+                .padding(3)
+                .on_press(UiMessage::EdisonFadeIn),
+            button(text("Fade Out").size(10))
+                .padding(3)
+                .on_press(UiMessage::EdisonFadeOut),
+            button(text("Cut").size(10))
+                .padding(3)
+                .on_press(UiMessage::EdisonCut),
+            button(text("Copy").size(10))
+                .padding(3)
+                .on_press(UiMessage::EdisonCopy),
+            button(text("Paste").size(10))
+                .padding(3)
+                .on_press(UiMessage::EdisonPaste),
+            button(text("Select All").size(10))
+                .padding(3)
+                .on_press(UiMessage::EdisonSelectAll),
+            Space::new().width(Length::Fill),
+            text(format!(
+                "{:.2}s | {} spl | 44.1 kHz",
+                ed.duration_seconds(),
+                ed.len()
+            ))
+            .size(9)
+            .color(Color::from_rgb8(0x9a, 0xa0, 0xaa)),
+            button(text("Export WAV").size(10))
+                .style(self.theme.accent_button_style(self.theme.accent))
+                .padding(3)
+                .on_press(UiMessage::MenuAction(MenuCommand::BounceWav)),
+        ]
+        .spacing(4)
+        .align_y(iced::Alignment::Center);
+
+        // Waveform visualization container
+        let (sel_start, sel_end) = ed.active_range();
+        let num_bars = 140;
+        let step = (ed.samples_l.len() / num_bars).max(1);
+        let mut wave_bars = row![].spacing(1).align_y(iced::Alignment::Center);
+        for b in 0..num_bars {
+            let idx = (b * step).min(ed.samples_l.len().saturating_sub(1));
+            let amp = ed.samples_l.get(idx).copied().unwrap_or(0.0).abs();
+            let h = (amp * 140.0).max(4.0);
+            let in_sel = idx >= sel_start && idx <= sel_end;
+            let col = if in_sel {
+                Color::from_rgb8(0xff, 0x88, 0x00)
+            } else {
+                Color::from_rgb8(0x00, 0xf2, 0xfe)
+            };
+            let bar = container(column![])
+                .width(Length::Fixed(4.0))
+                .height(Length::Fixed(h))
+                .style(move |_t| container::Style {
+                    background: Some(iced::Background::Color(col)),
+                    border: iced::Border {
+                        radius: 1.0.into(),
+                        ..Default::default()
+                    },
+                    ..container::Style::default()
+                });
+            wave_bars = wave_bars.push(bar);
+        }
+
+        let waveform_container = container(scrollable(wave_bars).direction(scrollable::Direction::Horizontal(scrollable::Scrollbar::default())))
+            .width(Length::Fill)
+            .height(Length::Fixed(200.0))
+            .padding(6)
+            .style(|_t| self.theme.inner_well_style());
+
+        let telemetry_row = row![
+            text(format!("Markers: {} points", ed.markers.len())).size(9).color(Color::from_rgb8(0x8a, 0x90, 0x9c)),
+            Space::new().width(Length::Fill),
+            text(format!(
+                "Selection: {} .. {} ({} samples)",
+                sel_start,
+                sel_end,
+                sel_end.saturating_sub(sel_start)
+            ))
+            .size(9),
+        ]
+        .spacing(6);
+
+        container(column![header, waveform_container, telemetry_row].spacing(6))
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .padding(8)
+            .style(|_t| self.theme.panel_container_style())
+            .into()
+    }
+
+    /// Dedicated FPC (Fruity Pad Controller) 16-Pad MPC Drum Sampler Window
+    pub fn view_fpc_window(&self) -> Element<'_, UiMessage> {
+        let fpc = &self.fpc;
+        let header = row![
+            container(
+                text("FPC — 16-PAD DRUM SAMPLER")
+                    .size(11)
+                    .color(Color::from_rgb8(0xff, 0x88, 0x00)),
+            )
+            .padding(3),
+            Space::new().width(Length::Fixed(12.0)),
+            text(format!("Kit: {}", fpc.active_kit_name)).size(10),
+            Space::new().width(Length::Fill),
+            row![
+                text("Vol:").size(9),
+                slider(0.0..=1.25, fpc.master_volume, UiMessage::FpcSetVolume)
+                    .step(0.02_f32)
+                    .width(Length::Fixed(70.0)),
+                text(format!("{:.0}%", fpc.master_volume * 100.0)).size(9),
+            ]
+            .spacing(3)
+            .align_y(iced::Alignment::Center),
+        ]
+        .spacing(6)
+        .align_y(iced::Alignment::Center);
+
+        let mut pad_grid_col = column![].spacing(6);
+        for row_idx in (0..4).rev() {
+            let mut pad_row = row![].spacing(6);
+            for col_idx in 0..4 {
+                let pad_id = row_idx * 4 + col_idx;
+                if let Some(pad) = fpc.pads.get(pad_id) {
+                    let p_col = Color::from_rgb8(
+                        pad.color_rgb[0],
+                        pad.color_rgb[1],
+                        pad.color_rgb[2],
+                    );
+                    let is_trig = pad.is_triggered;
+                    let pad_card = button(
+                        column![
+                            row![
+                                text(format!("{:02}", pad.id + 1))
+                                    .size(8)
+                                    .color(Color::from_rgba(1.0, 1.0, 1.0, 0.6)),
+                                Space::new().width(Length::Fill),
+                                text(format!("MIDI {}", pad.note_number))
+                                    .size(8)
+                                    .color(Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
+                            ],
+                            Space::new().height(Length::Fill),
+                            text(&pad.name).size(10),
+                            text(&pad.sample_name)
+                                .size(8)
+                                .color(Color::from_rgba(1.0, 1.0, 1.0, 0.7)),
+                        ]
+                        .padding(4),
+                    )
+                    .width(Length::Fixed(125.0))
+                    .height(Length::Fixed(75.0))
+                    .style(self.theme.fl_pad_style(p_col, is_trig))
+                    .on_press(UiMessage::FpcTriggerPad(pad_id));
+
+                    pad_row = pad_row.push(pad_card);
+                }
+            }
+            pad_grid_col = pad_grid_col.push(pad_row);
+        }
+
+        container(column![header, container(pad_grid_col).padding(6)].spacing(8))
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .padding(8)
+            .style(|_t| self.theme.panel_container_style())
+            .into()
+    }
+
+    /// Dedicated Slicex Beat & Transient Slicer Window
+    pub fn view_slicex_window(&self) -> Element<'_, UiMessage> {
+        let sl = &self.slicex;
+        let header = row![
+            container(
+                text("SLICEX — BEAT & TRANSIENT SLICER")
+                    .size(11)
+                    .color(Color::from_rgb8(0xff, 0x88, 0x00)),
+            )
+            .padding(3),
+            Space::new().width(Length::Fixed(12.0)),
+            text(format!("Loop: {}", sl.sample_name)).size(10),
+            Space::new().width(Length::Fill),
+            text(format!("Sens: {:.0}%", sl.sensitivity * 100.0)).size(9),
+        ]
+        .spacing(6)
+        .align_y(iced::Alignment::Center);
+
+        let mut slice_wave_row = row![].spacing(3).align_y(iced::Alignment::Center);
+        for marker in &sl.markers {
+            let is_act = sl.active_slice_id == Some(marker.id);
+            let col = if is_act {
+                Color::from_rgb8(0xff, 0x88, 0x00)
+            } else {
+                Color::from_rgb8(0x00, 0xf2, 0xfe)
+            };
+            let slice_box = container(
+                column![
+                    text(&marker.name).size(9).color(col),
+                    text(format!("Note: {}", marker.trigger_key)).size(8),
+                    Space::new().height(Length::Fixed(30.0)),
+                ]
+                .padding(3),
+            )
+            .width(Length::Fixed(75.0))
+            .height(Length::Fixed(90.0))
+            .style(|_t| self.theme.inner_well_style());
+
+            slice_wave_row = slice_wave_row.push(slice_box);
+        }
+
+        let mut trigger_row = row![].spacing(4);
+        for marker in &sl.markers {
+            let mid = marker.id;
+            let is_act = sl.active_slice_id == Some(mid);
+            let btn = button(text(format!("Slice {}", mid + 1)).size(9))
+                .padding(4)
+                .style(self.theme.button_style(is_act))
+                .on_press(UiMessage::SlicexTriggerSlice(mid));
+            trigger_row = trigger_row.push(btn);
+        }
+
+        container(
+            column![
+                header,
+                container(slice_wave_row)
+                    .padding(6)
+                    .style(|_t| self.theme.inner_well_style()),
+                row![text("Trigger:").size(10), trigger_row]
+                    .spacing(6)
+                    .align_y(iced::Alignment::Center),
+            ]
+            .spacing(8),
+        )
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .padding(8)
+        .style(|_t| self.theme.panel_container_style())
+        .into()
+    }
+
+    /// Dedicated Modular Patcher Routing Graph Window
+    pub fn view_patcher_window(&self) -> Element<'_, UiMessage> {
+        let p = &self.patcher;
+        let header = row![
+            container(
+                text("PATCHER — MODULAR DSP ROUTING")
+                    .size(11)
+                    .color(Color::from_rgb8(0xff, 0x88, 0x00)),
+            )
+            .padding(3),
+            Space::new().width(Length::Fill),
+            text(format!(
+                "{} Nodes • {} Cables",
+                p.nodes.len(),
+                p.cables.len()
+            ))
+            .size(9)
+            .color(Color::from_rgb8(0x9a, 0xa0, 0xaa)),
+        ]
+        .align_y(iced::Alignment::Center);
+
+        let mut nodes_row = row![].spacing(12).align_y(iced::Alignment::Center);
+        for node in &p.nodes {
+            let (k_label, k_color) = match node.kind {
+                crate::fl_studio::PatcherNodeKind::FromFL => {
+                    ("HOST IN", Color::from_rgb8(0x38, 0xef, 0x7d))
+                }
+                crate::fl_studio::PatcherNodeKind::ToFL => {
+                    ("HOST OUT", Color::from_rgb8(0xe7, 0x4c, 0x3c))
+                }
+                crate::fl_studio::PatcherNodeKind::GeneratorPlugin => {
+                    ("SYNTH", Color::from_rgb8(0x00, 0xf2, 0xfe))
+                }
+                crate::fl_studio::PatcherNodeKind::EffectPlugin => {
+                    ("FX", Color::from_rgb8(0xff, 0x88, 0x00))
+                }
+                crate::fl_studio::PatcherNodeKind::Splitter => {
+                    ("SPLIT", Color::from_rgb8(0x9b, 0x59, 0xb6))
+                }
+            };
+
+            let node_box = container(
+                column![
+                    container(text(k_label).size(8).color(Color::WHITE))
+                        .padding(2)
+                        .style(move |_t| container::Style {
+                            background: Some(iced::Background::Color(k_color)),
+                            border: iced::Border {
+                                radius: 2.0.into(),
+                                ..Default::default()
+                            },
+                            ..container::Style::default()
+                        }),
+                    text(&node.name).size(10),
+                    text("In: Audio/Midi")
+                        .size(8)
+                        .color(Color::from_rgb8(0x7a, 0x80, 0x8c)),
+                    text("Out: Audio/Midi")
+                        .size(8)
+                        .color(Color::from_rgb8(0x7a, 0x80, 0x8c)),
+                ]
+                .spacing(3),
+            )
+            .padding(6)
+            .width(Length::Fixed(120.0))
+            .style(|_t| self.theme.inner_well_style());
+
+            nodes_row = nodes_row.push(node_box);
+        }
+
+        container(
+            column![
+                header,
+                container(nodes_row)
+                    .padding(12)
+                    .style(|_t| self.theme.sunken_container_style()),
+            ]
+            .spacing(8),
+        )
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .padding(8)
+        .style(|_t| self.theme.panel_container_style())
         .into()
     }
 
