@@ -556,4 +556,177 @@ impl UiTheme {
         ];
         TRACK_PALETTE[index % TRACK_PALETTE.len()]
     }
+
+    /// Authentic FL Studio amber neon readout container style
+    pub fn vfd_amber_display_style(&self) -> container::Style {
+        container::Style {
+            background: Some(Background::Color(Color::from_rgb8(0x0a, 0x09, 0x07))),
+            text_color: Some(Color::from_rgb8(0xff, 0xb8, 0x33)),
+            border: Border {
+                color: Color::from_rgba8(0xff, 0x88, 0x00, 0.45),
+                width: 1.0,
+                radius: Radius::from(4.0),
+            },
+            shadow: Shadow::default(),
+            ..container::Style::default()
+        }
+    }
+
+    /// Electric cyan telemetry display container style
+    pub fn vfd_cyan_display_style(&self) -> container::Style {
+        container::Style {
+            background: Some(Background::Color(Color::from_rgb8(0x06, 0x09, 0x0d))),
+            text_color: Some(Color::from_rgb8(0x5a, 0xe0, 0xff)),
+            border: Border {
+                color: Color::from_rgba8(0x00, 0xa8, 0xff, 0.40),
+                width: 1.0,
+                radius: Radius::from(4.0),
+            },
+            shadow: Shadow::default(),
+            ..container::Style::default()
+        }
+    }
+
+    /// Transport pill button style for PAT / SONG and cycle
+    pub fn transport_pill_style<'a>(
+        &'a self,
+        active: bool,
+        accent: Color,
+    ) -> impl Fn(&iced::Theme, button::Status) -> button::Style + 'a {
+        move |_theme, status| {
+            let bg = if active {
+                accent
+            } else {
+                match status {
+                    button::Status::Hovered => Color {
+                        r: (self.surface_elevated.r * 1.25).min(1.0),
+                        g: (self.surface_elevated.g * 1.25).min(1.0),
+                        b: (self.surface_elevated.b * 1.25).min(1.0),
+                        a: self.surface_elevated.a,
+                    },
+                    button::Status::Pressed => self.surface,
+                    _ => self.surface_elevated,
+                }
+            };
+            button::Style {
+                background: Some(Background::Color(bg)),
+                text_color: if active {
+                    Color::BLACK
+                } else {
+                    self.text_primary
+                },
+                border: Border {
+                    color: if active { Color::WHITE } else { self.border },
+                    width: if active { 1.5 } else { 1.0 },
+                    radius: Radius::from(10.0),
+                },
+                shadow: Shadow::default(),
+                ..button::Style::default()
+            }
+        }
+    }
+
+    /// LED status jewel dot container style (Mute/Solo green, Record red, Windows amber)
+    pub fn led_jewel_style(&self, active: bool, color: Color) -> container::Style {
+        let bg = if active {
+            color
+        } else {
+            Color::from_rgba(color.r * 0.25, color.g * 0.25, color.b * 0.25, 0.4)
+        };
+        let border_col = if active {
+            Color::from_rgba(color.r, color.g, color.b, 0.8)
+        } else {
+            Color::from_rgba(0.2, 0.2, 0.2, 0.5)
+        };
+        container::Style {
+            background: Some(Background::Color(bg)),
+            border: Border {
+                color: border_col,
+                width: 1.0,
+                radius: Radius::from(4.0),
+            },
+            shadow: Shadow::default(),
+            ..container::Style::default()
+        }
+    }
+
+    /// Channel row button style with left accent highlight
+    pub fn fl_channel_button_style<'a>(
+        &'a self,
+        selected: bool,
+    ) -> impl Fn(&iced::Theme, button::Status) -> button::Style + 'a {
+        move |_theme, status| {
+            let bg = if selected {
+                Color::from_rgb8(0x28, 0x2d, 0x38)
+            } else {
+                match status {
+                    button::Status::Hovered => Color::from_rgb8(0x24, 0x27, 0x30),
+                    button::Status::Pressed => Color::from_rgb8(0x18, 0x1a, 0x20),
+                    _ => Color::from_rgb8(0x1e, 0x20, 0x27),
+                }
+            };
+            button::Style {
+                background: Some(Background::Color(bg)),
+                text_color: if selected {
+                    Color::WHITE
+                } else {
+                    self.text_primary
+                },
+                border: Border {
+                    color: if selected {
+                        self.accent
+                    } else {
+                        Color::from_rgba(1.0, 1.0, 1.0, 0.08)
+                    },
+                    width: if selected { 1.5 } else { 1.0 },
+                    radius: Radius::from(3.0),
+                },
+                shadow: Shadow::default(),
+                ..button::Style::default()
+            }
+        }
+    }
+
+    /// Mixer channel strip container style
+    pub fn mixer_strip_style(&self, is_master: bool, is_selected: bool) -> container::Style {
+        let bg = if is_master {
+            Color::from_rgb8(0x16, 0x19, 0x22)
+        } else if is_selected {
+            Color::from_rgb8(0x20, 0x24, 0x2e)
+        } else {
+            self.surface
+        };
+        let border_col = if is_selected {
+            self.accent
+        } else if is_master {
+            Color::from_rgba8(0x5a, 0xe0, 0xff, 0.4)
+        } else {
+            self.border
+        };
+        container::Style {
+            background: Some(Background::Color(bg)),
+            text_color: Some(self.text_primary),
+            border: Border {
+                color: border_col,
+                width: if is_selected { 1.5 } else { 1.0 },
+                radius: Radius::from(4.0),
+            },
+            shadow: Shadow::default(),
+            ..container::Style::default()
+        }
+    }
+
+    /// Recessed dark well for mini controls / knobs
+    pub fn knob_well_style(&self) -> container::Style {
+        container::Style {
+            background: Some(Background::Color(Color::from_rgb8(0x0c, 0x0d, 0x11))),
+            border: Border {
+                color: Color::from_rgba(1.0, 1.0, 1.0, 0.08),
+                width: 1.0,
+                radius: Radius::from(3.0),
+            },
+            shadow: Shadow::default(),
+            ..container::Style::default()
+        }
+    }
 }

@@ -50,6 +50,19 @@ pub struct CrystalWaveApp {
     pub audio_backend: crate::ui::message::AudioBackend,
     pub audio_buffer_size: usize,
     pub audio_sample_rate_selection: u32,
+    pub is_song_mode: bool,
+    pub current_pattern_index: usize,
+    pub metronome_enabled: bool,
+    pub typing_keyboard_to_piano: bool,
+    pub precount_enabled: bool,
+    pub blend_recording_enabled: bool,
+    pub master_volume: f32,
+    pub master_pitch_cents: i32,
+    pub active_channel_settings: Option<usize>,
+    pub graph_editor_open: bool,
+    pub channel_rack_step_count: usize,
+    pub active_playlist_tool: crate::ui::message::PlaylistTool,
+    pub active_pianoroll_tool: crate::ui::message::PianoRollTool,
 }
 
 impl Default for CrystalWaveApp {
@@ -186,6 +199,19 @@ impl CrystalWaveApp {
             audio_backend: crate::ui::message::AudioBackend::PipeWire,
             audio_buffer_size: 256,
             audio_sample_rate_selection: 44100,
+            is_song_mode: true,
+            current_pattern_index: 1,
+            metronome_enabled: false,
+            typing_keyboard_to_piano: true,
+            precount_enabled: false,
+            blend_recording_enabled: true,
+            master_volume: 1.0,
+            master_pitch_cents: 0,
+            active_channel_settings: None,
+            graph_editor_open: false,
+            channel_rack_step_count: 16,
+            active_playlist_tool: crate::ui::message::PlaylistTool::Draw,
+            active_pianoroll_tool: crate::ui::message::PianoRollTool::Draw,
         }
     }
 
@@ -1012,6 +1038,92 @@ impl CrystalWaveApp {
                         .underrun_count
                         .store(0, std::sync::atomic::Ordering::Relaxed);
                 }
+                self.dirty = true;
+            }
+
+            UiMessage::TogglePatternSongMode => {
+                self.is_song_mode = !self.is_song_mode;
+                self.dirty = true;
+            }
+            UiMessage::SelectPattern(idx) => {
+                self.current_pattern_index = idx.max(1);
+                self.dirty = true;
+            }
+            UiMessage::ToggleMetronome => {
+                self.metronome_enabled = !self.metronome_enabled;
+                self.dirty = true;
+            }
+            UiMessage::ToggleTypingKeyboard => {
+                self.typing_keyboard_to_piano = !self.typing_keyboard_to_piano;
+                self.dirty = true;
+            }
+            UiMessage::TogglePrecount => {
+                self.precount_enabled = !self.precount_enabled;
+                self.dirty = true;
+            }
+            UiMessage::ToggleBlendRecording => {
+                self.blend_recording_enabled = !self.blend_recording_enabled;
+                self.dirty = true;
+            }
+            UiMessage::SetMasterVolume(vol) => {
+                self.master_volume = vol.clamp(0.0, 1.25);
+                self.mixer.master_strip.volume_fader_db = (self.master_volume - 1.0) * 12.0;
+                self.dirty = true;
+            }
+            UiMessage::SetMasterPitchCents(cents) => {
+                self.master_pitch_cents = cents.clamp(-1200, 1200);
+                self.dirty = true;
+            }
+            UiMessage::OpenChannelSettings(chan_id) => {
+                self.active_channel_settings = Some(chan_id);
+                self.dirty = true;
+            }
+            UiMessage::CloseChannelSettings => {
+                self.active_channel_settings = None;
+                self.dirty = true;
+            }
+            UiMessage::ChannelSettingsSetPitch {
+                channel_id,
+                pitch_cents,
+            } => {
+                if let Some(ch) = self.channel_rack.channels.get_mut(channel_id) {
+                    ch.pitch_semitones = (pitch_cents / 100).clamp(-12, 12) as i8;
+                }
+                self.dirty = true;
+            }
+            UiMessage::ChannelSettingsSetPan { channel_id, pan } => {
+                if let Some(ch) = self.channel_rack.channels.get_mut(channel_id) {
+                    ch.pan = pan.clamp(-1.0, 1.0);
+                }
+                self.dirty = true;
+            }
+            UiMessage::ChannelSettingsSetVolume { channel_id, volume } => {
+                if let Some(ch) = self.channel_rack.channels.get_mut(channel_id) {
+                    ch.volume = volume.clamp(0.0, 1.25);
+                }
+                self.dirty = true;
+            }
+            UiMessage::ChannelSettingsSetMixerTrack { channel_id, track } => {
+                if let Some(ch) = self.channel_rack.channels.get_mut(channel_id) {
+                    ch.target_mixer_track = track;
+                }
+                let _ = self.mixer.ensure_channel_exists(track);
+                self.dirty = true;
+            }
+            UiMessage::ToggleChannelRackGraphEditor => {
+                self.graph_editor_open = !self.graph_editor_open;
+                self.dirty = true;
+            }
+            UiMessage::SetChannelRackStepCount(steps) => {
+                self.channel_rack_step_count = steps.max(16);
+                self.dirty = true;
+            }
+            UiMessage::SetPlaylistTool(tool) => {
+                self.active_playlist_tool = tool;
+                self.dirty = true;
+            }
+            UiMessage::SetPianoRollTool(tool) => {
+                self.active_pianoroll_tool = tool;
                 self.dirty = true;
             }
 

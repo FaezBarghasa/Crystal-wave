@@ -268,6 +268,98 @@ pub enum UiMessage {
         channel_id: usize,
         step_index: usize,
     },
+
+    // FL Studio Transport & Pattern/Song Mode
+    TogglePatternSongMode,
+    SelectPattern(usize),
+    ToggleMetronome,
+    ToggleTypingKeyboard,
+    TogglePrecount,
+    ToggleBlendRecording,
+    SetMasterVolume(f32),
+    SetMasterPitchCents(i32),
+
+    // FL Studio Channel Settings / Fruity Wrapper
+    OpenChannelSettings(usize),
+    CloseChannelSettings,
+    ChannelSettingsSetPitch {
+        channel_id: usize,
+        pitch_cents: i32,
+    },
+    ChannelSettingsSetPan {
+        channel_id: usize,
+        pan: f32,
+    },
+    ChannelSettingsSetVolume {
+        channel_id: usize,
+        volume: f32,
+    },
+    ChannelSettingsSetMixerTrack {
+        channel_id: usize,
+        track: usize,
+    },
+
+    // FL Studio Channel Rack Extended
+    ToggleChannelRackGraphEditor,
+    SetChannelRackStepCount(usize),
+
+    // FL Studio Tool Strips
+    SetPlaylistTool(PlaylistTool),
+    SetPianoRollTool(PianoRollTool),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PlaylistTool {
+    #[default]
+    Draw, // P
+    Paint,  // B
+    Delete, // D
+    Mute,   // T
+    Slip,   // S
+    Slice,  // C
+    Select, // E
+    Zoom,   // Z
+}
+
+impl PlaylistTool {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Draw => "Draw (P)",
+            Self::Paint => "Paint (B)",
+            Self::Delete => "Delete (D)",
+            Self::Mute => "Mute (T)",
+            Self::Slip => "Slip (S)",
+            Self::Slice => "Slice (C)",
+            Self::Select => "Select (E)",
+            Self::Zoom => "Zoom (Z)",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PianoRollTool {
+    #[default]
+    Draw, // P
+    Paint,  // B
+    Delete, // D
+    Mute,   // T
+    Slice,  // C
+    Select, // E
+    Zoom,   // Z
+}
+
+impl PianoRollTool {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Draw => "Draw (P)",
+            Self::Paint => "Paint (B)",
+            Self::Delete => "Delete (D)",
+            Self::Mute => "Mute (T)",
+            Self::Slice => "Slice (C)",
+            Self::Select => "Select (E)",
+            Self::Zoom => "Zoom (Z)",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
