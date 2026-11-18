@@ -180,7 +180,8 @@ impl Default for FlBrowser {
                     vendor: "Image-Line / CrystalWave".into(),
                     category: PluginCategory::Synth,
                     is_generator: true,
-                    description: "Subtractive 3-oscillator synth with stereo detune and noise".into(),
+                    description: "Subtractive 3-oscillator synth with stereo detune and noise"
+                        .into(),
                 },
                 PluginCatalogItem {
                     id: 2002,
@@ -212,7 +213,8 @@ impl Default for FlBrowser {
                     vendor: "Image-Line / CrystalWave".into(),
                     category: PluginCategory::Dynamics,
                     is_generator: false,
-                    description: "Hyperbolic tangent saturation with strict -0.1 dBFS ceiling".into(),
+                    description: "Hyperbolic tangent saturation with strict -0.1 dBFS ceiling"
+                        .into(),
                 },
                 PluginCatalogItem {
                     id: 1006,
@@ -220,7 +222,8 @@ impl Default for FlBrowser {
                     vendor: "Image-Line / CrystalWave".into(),
                     category: PluginCategory::Utility,
                     is_generator: false,
-                    description: "Time and volume gating buffer with half-speed and tape stop".into(),
+                    description: "Time and volume gating buffer with half-speed and tape stop"
+                        .into(),
                 },
                 PluginCatalogItem {
                     id: 1005,
@@ -228,7 +231,8 @@ impl Default for FlBrowser {
                     vendor: "Apple / PureRust".into(),
                     category: PluginCategory::Reverb,
                     is_generator: false,
-                    description: "Algorithmic circular reverb with high-damping room simulation".into(),
+                    description: "Algorithmic circular reverb with high-damping room simulation"
+                        .into(),
                 },
                 PluginCatalogItem {
                     id: 1001,
@@ -302,7 +306,9 @@ impl FlBrowser {
                         s.category == "Kicks" || s.category == "Snares" || s.category == "HiHats"
                     }
                     BrowserTab::Bass => s.category == "808",
-                    BrowserTab::Instruments => s.category == "Instruments" || s.category == "Vocals",
+                    BrowserTab::Instruments => {
+                        s.category == "Instruments" || s.category == "Vocals"
+                    }
                     BrowserTab::Fx => s.category == "FX",
                     BrowserTab::Plugins | BrowserTab::Presets => false,
                 };

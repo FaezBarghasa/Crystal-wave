@@ -46,6 +46,10 @@ pub struct CrystalWaveApp {
     pub plugin_picker_search: String,
     pub plugin_picker_category: Option<crate::plugins::plugin_descriptor::PluginCategory>,
     pub plugin_picker_target_slot: Option<(usize, usize)>,
+    pub audio_settings_open: bool,
+    pub audio_backend: crate::ui::message::AudioBackend,
+    pub audio_buffer_size: usize,
+    pub audio_sample_rate_selection: u32,
 }
 
 impl Default for CrystalWaveApp {
@@ -178,6 +182,10 @@ impl CrystalWaveApp {
             plugin_picker_search: String::new(),
             plugin_picker_category: None,
             plugin_picker_target_slot: None,
+            audio_settings_open: false,
+            audio_backend: crate::ui::message::AudioBackend::PipeWire,
+            audio_buffer_size: 256,
+            audio_sample_rate_selection: 44100,
         }
     }
 
@@ -972,6 +980,38 @@ impl CrystalWaveApp {
                     }
                 }
                 self.fl_windows.plugin_picker_visible = false;
+                self.dirty = true;
+            }
+
+            UiMessage::ToggleAudioSettings => {
+                self.audio_settings_open = !self.audio_settings_open;
+            }
+            UiMessage::SetAudioBackend(backend) => {
+                self.audio_backend = backend;
+                self.dirty = true;
+            }
+            UiMessage::SetAudioBufferSize(size) => {
+                self.audio_buffer_size = size;
+                self.dirty = true;
+            }
+            UiMessage::SetAudioSampleRate(sr) => {
+                self.audio_sample_rate_selection = sr;
+                self.audio_scheduler.set_sample_rate(sr as f32);
+                self.mixer.sample_rate = sr as f32;
+                self.dirty = true;
+            }
+            UiMessage::ResetAudioXruns => {
+                if let Some(ref mut worker) = self.audio_worker {
+                    worker
+                        .state
+                        .underruns
+                        .store(0, std::sync::atomic::Ordering::Relaxed);
+                }
+                if let Some(ref mut driver) = self.audio_driver {
+                    driver
+                        .underrun_count
+                        .store(0, std::sync::atomic::Ordering::Relaxed);
+                }
                 self.dirty = true;
             }
 

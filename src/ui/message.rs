@@ -2,6 +2,26 @@ use crate::timeline::arrangement_view::CatchPlayheadMode;
 use crate::ui::telemetry::TelemetryBatch;
 use crate::ui_state::{EditorDrawerTab, LcdDisplayMode, ListAreaTab};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum AudioBackend {
+    #[default]
+    PipeWire,
+    Alsa,
+    PulseAudio,
+    Jack,
+}
+
+impl AudioBackend {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::PipeWire => "PipeWire (Pro Audio Low-Latency)",
+            Self::Alsa => "ALSA Direct Hardware",
+            Self::PulseAudio => "PulseAudio Standard",
+            Self::Jack => "JACK Audio Connection Kit",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum UiMessage {
     // Window & Drawer Toggles (Logic Pro shortcuts: I, E, X, O, F, Y)
@@ -116,6 +136,13 @@ pub enum UiMessage {
         track_id: usize,
         slot_id: usize,
     },
+
+    // FL Studio F10 Audio Settings Modal & Hardware Engine Telemetry
+    ToggleAudioSettings,
+    SetAudioBackend(AudioBackend),
+    SetAudioBufferSize(usize),
+    SetAudioSampleRate(u32),
+    ResetAudioXruns,
 
     // FL Studio Channel Rack Step Sequencer & Drag-and-Drop
     ChannelRackToggleStep {

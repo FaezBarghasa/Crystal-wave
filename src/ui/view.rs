@@ -22,6 +22,16 @@ impl CrystalWaveApp {
         .height(Length::Fill)
         .spacing(1);
 
+        if self.fl_windows.plugin_picker_visible {
+            let picker = self.view_plugin_picker();
+            main_col = main_col.push(container(picker).padding(8));
+        }
+
+        if self.audio_settings_open {
+            let audio_modal = self.view_audio_settings_modal();
+            main_col = main_col.push(container(audio_modal).padding(8));
+        }
+
         if self.command_palette_open {
             let palette = self.view_command_palette();
             main_col = main_col.push(container(palette).padding(8));
@@ -132,9 +142,19 @@ impl CrystalWaveApp {
         .style(self.theme.button_style(self.workspace.inspector_open))
         .on_press(UiMessage::ToggleInspector);
 
-        let win_plugins = button(text("Plugins [L]").size(11))
-            .style(self.theme.button_style(false))
-            .on_press(UiMessage::ToggleLibraryBrowser);
+        let win_plugins = button(
+            text(if self.fl_windows.plugin_picker_visible {
+                "● Plugins [F8]"
+            } else {
+                "○ Plugins [F8]"
+            })
+            .size(11),
+        )
+        .style(
+            self.theme
+                .button_style(self.fl_windows.plugin_picker_visible),
+        )
+        .on_press(UiMessage::ToggleFlPluginPicker);
 
         // Theme Switcher & Snap Toggle
         let theme_btn = button(
@@ -214,7 +234,18 @@ impl CrystalWaveApp {
         .style(|_t| self.theme.machined_capsule_style())
         .padding(3);
 
-        let capsule_system = container(row![theme_btn, cmd_palette_btn,].spacing(4))
+        let audio_btn = button(
+            text(if self.audio_settings_open {
+                "● Audio [F10]"
+            } else {
+                "⚙ Audio [F10]"
+            })
+            .size(11),
+        )
+        .style(self.theme.button_style(self.audio_settings_open))
+        .on_press(UiMessage::ToggleAudioSettings);
+
+        let capsule_system = container(row![audio_btn, theme_btn, cmd_palette_btn,].spacing(4))
             .style(|_t| self.theme.machined_capsule_style())
             .padding(3);
 
@@ -357,40 +388,171 @@ impl CrystalWaveApp {
     fn view_main_workspace(&self) -> Element<'_, UiMessage> {
         let mut content = row![].spacing(4).width(Length::Fill).height(Length::Fill);
 
-        // 1. FL Studio Browser (Alt+F8 / F8) - Drag and Drop sample library
+        // 1. FL Studio Browser (Alt+F8 / F8) - Samples, Presets & Plugins Library
         if self.fl_windows.browser_visible {
-            let mut sample_list = column![
-                row![
-                    text("Browser / Samples").size(12),
-                    button(text("x").size(10)).on_press(UiMessage::ToggleFlBrowser),
-                ]
-                .spacing(8),
-                text("Click sample to load into Rack").size(10),
-            ]
-            .spacing(4);
+            let tabs = [
+                (crate::fl_studio::browser::BrowserTab::All, "All"),
+                (crate::fl_studio::browser::BrowserTab::Drums, "Drums"),
+                (crate::fl_studio::browser::BrowserTab::Bass, "808"),
+                (crate::fl_studio::browser::BrowserTab::Instruments, "Inst"),
+                (crate::fl_studio::browser::BrowserTab::Fx, "FX"),
+                (crate::fl_studio::browser::BrowserTab::Plugins, "Plugins"),
+                (crate::fl_studio::browser::BrowserTab::Presets, "Presets"),
+            ];
 
-            for sample in &self.browser.samples {
-                let sample_id = sample.id;
-                let sample_card = button(
-                    column![
-                        text(&sample.name).size(11),
-                        text(format!(
-                            "{} | {:.1}s",
-                            sample.category, sample.duration_seconds
-                        ))
-                        .size(9),
-                    ]
-                    .spacing(2),
-                )
-                .on_press(UiMessage::ChannelRackDropSample { sample_id })
-                .width(Length::Fill);
-
-                sample_list = sample_list.push(sample_card);
+            let mut tab_row = row![].spacing(2);
+            for (tab_variant, tab_lbl) in tabs {
+                let is_active = self.browser.active_tab == tab_variant;
+                let tab_btn = button(text(tab_lbl).size(9))
+                    .padding(3)
+                    .style(self.theme.button_style(is_active))
+                    .on_press(UiMessage::BrowserSelectTab(tab_variant));
+                tab_row = tab_row.push(tab_btn);
             }
 
-            let browser_panel = container(scrollable(sample_list))
-                .width(Length::Fixed(190.0))
-                .padding(6);
+            let search_input = text_input("Search library...", &self.browser.search_query)
+                .on_input(UiMessage::BrowserSetSearchQuery)
+                .padding(4)
+                .size(10);
+
+            let mut items_col = column![].spacing(3).width(Length::Fill);
+
+            match self.browser.active_tab {
+                crate::fl_studio::browser::BrowserTab::Presets => {
+                    for preset in self.browser.filtered_presets() {
+                        let card = container(
+                            row![
+                                column![
+                                    text(&preset.name).size(10),
+                                    text(format!("{} • {}", preset.category, preset.plugin_name))
+                                        .size(8)
+                                        .color(Color::from_rgb8(0x8a, 0x90, 0x9a)),
+                                ]
+                                .spacing(1)
+                                .width(Length::Fill),
+                            ]
+                            .spacing(4)
+                            .align_y(iced::Alignment::Center),
+                        )
+                        .padding(4)
+                        .style(|_t| self.theme.inner_well_style());
+                        items_col = items_col.push(card);
+                    }
+                }
+                crate::fl_studio::browser::BrowserTab::Plugins => {
+                    for plugin in self
+                        .browser
+                        .filtered_plugins(&self.browser.search_query, None)
+                    {
+                        let pid = plugin.id;
+                        let is_gen = plugin.is_generator;
+                        let card = container(
+                            row![
+                                column![
+                                    text(&plugin.name).size(10),
+                                    text(format!("{:?} • {}", plugin.category, plugin.vendor))
+                                        .size(8)
+                                        .color(Color::from_rgb8(0x8a, 0x90, 0x9a)),
+                                ]
+                                .spacing(1)
+                                .width(Length::Fill),
+                                button(text("+ Load").size(9))
+                                    .padding(3)
+                                    .style(self.theme.accent_button_style(self.theme.accent))
+                                    .on_press(UiMessage::PluginPickerLoadPlugin {
+                                        plugin_id: pid,
+                                        is_generator: is_gen,
+                                    }),
+                            ]
+                            .spacing(4)
+                            .align_y(iced::Alignment::Center),
+                        )
+                        .padding(4)
+                        .style(|_t| self.theme.inner_well_style());
+                        items_col = items_col.push(card);
+                    }
+                }
+                _ => {
+                    for sample in self.browser.filtered_samples() {
+                        let sample_id = sample.id;
+                        let is_previewing = self.browser.previewing_sample_id == Some(sample_id);
+
+                        let audition_btn =
+                            button(text(if is_previewing { "■" } else { "▶" }).size(9))
+                                .padding(3)
+                                .style(
+                                    self.theme.toggle_accent_button_style(
+                                        is_previewing,
+                                        self.theme.record,
+                                    ),
+                                )
+                                .on_press(if is_previewing {
+                                    UiMessage::BrowserStopAudition
+                                } else {
+                                    UiMessage::BrowserAuditionSample(sample_id)
+                                });
+
+                        let rack_btn = button(text("+Rack").size(8))
+                            .padding(2)
+                            .on_press(UiMessage::ChannelRackDropSample { sample_id });
+
+                        let lane_btn = button(text("+Lane").size(8)).padding(2).on_press(
+                            UiMessage::BrowserDropSampleToPlaylist {
+                                sample_id,
+                                track_id: self.workspace.selected_track_id,
+                                start_tick: self.playhead_tick,
+                            },
+                        );
+
+                        let card = container(
+                            row![
+                                audition_btn,
+                                column![
+                                    text(&sample.name).size(10),
+                                    text(format!(
+                                        "{} | {:.1}s",
+                                        sample.category, sample.duration_seconds
+                                    ))
+                                    .size(8)
+                                    .color(Color::from_rgb8(0x8a, 0x90, 0x9a)),
+                                ]
+                                .spacing(1)
+                                .width(Length::Fill),
+                                rack_btn,
+                                lane_btn,
+                            ]
+                            .spacing(3)
+                            .align_y(iced::Alignment::Center),
+                        )
+                        .padding(3)
+                        .style(|_t| self.theme.inner_well_style());
+
+                        items_col = items_col.push(card);
+                    }
+                }
+            }
+
+            let browser_header = row![
+                text("BROWSER / LIBRARY").size(11),
+                Space::new().width(Length::Fill),
+                button(text("✕").size(9))
+                    .padding(2)
+                    .on_press(UiMessage::ToggleFlBrowser),
+            ]
+            .align_y(iced::Alignment::Center);
+
+            let browser_panel = container(
+                column![
+                    browser_header,
+                    tab_row,
+                    search_input,
+                    scrollable(items_col).height(Length::Fill),
+                ]
+                .spacing(4),
+            )
+            .width(Length::Fixed(260.0))
+            .padding(6)
+            .style(|_t| self.theme.sunken_container_style());
 
             content = content.push(browser_panel);
         }
@@ -1647,6 +1809,324 @@ impl CrystalWaveApp {
         )
         .style(|_t| self.theme.panel_container_style())
         .width(Length::Fixed(440.0))
+        .into()
+    }
+
+    fn view_plugin_picker(&self) -> Element<'_, UiMessage> {
+        let title_bar = row![
+            text("VISUAL PLUGIN PICKER [F8]").size(13),
+            Space::new().width(Length::Fill),
+            button(text("✕").size(11))
+                .padding(3)
+                .on_press(UiMessage::ToggleFlPluginPicker),
+        ]
+        .align_y(iced::Alignment::Center);
+
+        let search_box = text_input(
+            "Search plugins by name, vendor, or category...",
+            &self.plugin_picker_search,
+        )
+        .on_input(UiMessage::PluginPickerSetSearch)
+        .padding(6)
+        .size(11);
+
+        let categories = [
+            (None, "All"),
+            (
+                Some(crate::plugins::plugin_descriptor::PluginCategory::Synth),
+                "Synths",
+            ),
+            (
+                Some(crate::plugins::plugin_descriptor::PluginCategory::Sampler),
+                "Samplers",
+            ),
+            (
+                Some(crate::plugins::plugin_descriptor::PluginCategory::Dynamics),
+                "Dynamics",
+            ),
+            (
+                Some(crate::plugins::plugin_descriptor::PluginCategory::Equalizer),
+                "EQ",
+            ),
+            (
+                Some(crate::plugins::plugin_descriptor::PluginCategory::Reverb),
+                "Reverbs",
+            ),
+            (
+                Some(crate::plugins::plugin_descriptor::PluginCategory::Delay),
+                "Delays",
+            ),
+            (
+                Some(crate::plugins::plugin_descriptor::PluginCategory::Utility),
+                "Utility",
+            ),
+        ];
+
+        let mut cat_row = row![].spacing(4);
+        for (cat_val, cat_label) in categories {
+            let is_sel = self.plugin_picker_category == cat_val;
+            let cat_btn = button(text(cat_label).size(10))
+                .padding(4)
+                .style(self.theme.button_style(is_sel))
+                .on_press(UiMessage::PluginPickerSelectCategory(cat_val));
+            cat_row = cat_row.push(cat_btn);
+        }
+
+        let filtered = self
+            .browser
+            .filtered_plugins(&self.plugin_picker_search, self.plugin_picker_category);
+
+        let mut cards_col = column![].spacing(6).width(Length::Fill);
+
+        for plugin in filtered {
+            let pid = plugin.id;
+            let is_gen = plugin.is_generator;
+
+            let cat_badge_color = if is_gen {
+                Color::from_rgb8(0xff, 0x88, 0x00) // Neon orange for generators/synths
+            } else {
+                Color::from_rgb8(0x00, 0xa8, 0xff) // Neon cyan for effects
+            };
+
+            let type_text = if is_gen { "GENERATOR" } else { "EFFECT" };
+
+            let target_hint = if let Some((trk, slot)) = self.plugin_picker_target_slot {
+                if !is_gen {
+                    format!("Assign to Track {} Slot {}", trk, slot + 1)
+                } else {
+                    "Load as Generator Channel".into()
+                }
+            } else if is_gen {
+                "Add to Channel Rack".into()
+            } else {
+                "Add to Selected Insert".into()
+            };
+
+            let card = container(
+                row![
+                    container(
+                        column![
+                            text(type_text).size(8).color(cat_badge_color),
+                            text(format!("{:?}", plugin.category))
+                                .size(8)
+                                .color(Color::from_rgb8(0x8a, 0x90, 0x9a)),
+                        ]
+                        .spacing(2),
+                    )
+                    .width(Length::Fixed(80.0))
+                    .padding(4)
+                    .style(|_t| self.theme.inner_well_style()),
+                    column![
+                        row![
+                            text(&plugin.name).size(12),
+                            Space::new().width(Length::Fixed(6.0)),
+                            text(&plugin.vendor)
+                                .size(9)
+                                .color(Color::from_rgb8(0x70, 0x75, 0x80)),
+                        ]
+                        .align_y(iced::Alignment::Center),
+                        text(&plugin.description)
+                            .size(9)
+                            .color(Color::from_rgb8(0xa0, 0xa5, 0xb0)),
+                    ]
+                    .spacing(2)
+                    .width(Length::Fill),
+                    column![
+                        button(text("+ Load").size(10))
+                            .padding(4)
+                            .style(self.theme.accent_button_style(cat_badge_color))
+                            .on_press(UiMessage::PluginPickerLoadPlugin {
+                                plugin_id: pid,
+                                is_generator: is_gen,
+                            }),
+                        text(target_hint)
+                            .size(7)
+                            .color(Color::from_rgb8(0x70, 0x75, 0x80)),
+                    ]
+                    .spacing(2)
+                    .align_x(iced::Alignment::End),
+                ]
+                .spacing(8)
+                .align_y(iced::Alignment::Center),
+            )
+            .padding(6)
+            .style(|_t| self.theme.outer_bezel_style());
+
+            cards_col = cards_col.push(card);
+        }
+
+        container(
+            column![
+                title_bar,
+                search_box,
+                cat_row,
+                scrollable(cards_col).height(Length::Fixed(240.0)),
+            ]
+            .spacing(8),
+        )
+        .style(|_t| self.theme.oled_vfd_display_style())
+        .width(Length::Fixed(680.0))
+        .padding(10)
+        .into()
+    }
+
+    fn view_audio_settings_modal(&self) -> Element<'_, UiMessage> {
+        let title_bar = row![
+            text("AUDIO HARDWARE & ENGINE SETTINGS [F10]").size(13),
+            Space::new().width(Length::Fill),
+            button(text("✕").size(11))
+                .padding(3)
+                .on_press(UiMessage::ToggleAudioSettings),
+        ]
+        .align_y(iced::Alignment::Center);
+
+        // 1. Audio Backend
+        let backends = [
+            (
+                crate::ui::message::AudioBackend::PipeWire,
+                "PipeWire (Pro Audio)",
+            ),
+            (
+                crate::ui::message::AudioBackend::Alsa,
+                "ALSA (Direct Kernel)",
+            ),
+            (crate::ui::message::AudioBackend::PulseAudio, "PulseAudio"),
+            (
+                crate::ui::message::AudioBackend::Jack,
+                "JACK Audio Connection Kit",
+            ),
+        ];
+        let mut backend_row = row![].spacing(6);
+        for (b_val, b_label) in backends {
+            let is_sel = self.audio_backend == b_val;
+            let b_btn = button(text(b_label).size(10))
+                .padding(5)
+                .style(self.theme.button_style(is_sel))
+                .on_press(UiMessage::SetAudioBackend(b_val));
+            backend_row = backend_row.push(b_btn);
+        }
+
+        // 2. Buffer Size & Latency Math: \tau = (buffer / f_s) * 1000 ms
+        let buffer_sizes = [64, 128, 256, 512, 1024, 2048];
+        let mut buf_row = row![].spacing(4);
+        for size in buffer_sizes {
+            let is_sel = self.audio_buffer_size == size;
+            let btn = button(text(format!("{}", size)).size(10))
+                .padding(4)
+                .style(self.theme.button_style(is_sel))
+                .on_press(UiMessage::SetAudioBufferSize(size));
+            buf_row = buf_row.push(btn);
+        }
+
+        let latency_ms = (self.audio_buffer_size as f32
+            / self.audio_sample_rate_selection.max(1) as f32)
+            * 1000.0;
+        let latency_str = format!(
+            "Computed Roundtrip Buffer Latency: {:.2} ms ({} frames @ {} Hz)",
+            latency_ms, self.audio_buffer_size, self.audio_sample_rate_selection
+        );
+
+        // 3. Sample Rate
+        let sample_rates = [44100, 48000, 96000];
+        let mut sr_row = row![].spacing(6);
+        for sr in sample_rates {
+            let is_sel = self.audio_sample_rate_selection == sr;
+            let btn = button(text(format!("{} Hz", sr)).size(10))
+                .padding(4)
+                .style(self.theme.button_style(is_sel))
+                .on_press(UiMessage::SetAudioSampleRate(sr));
+            sr_row = sr_row.push(btn);
+        }
+
+        // 4. Hardware Telemetry & Real-Time Underrun Protection
+        let cpu_pct = if let Some(ref worker) = self.audio_worker {
+            worker
+                .state
+                .cpu_load_percent
+                .load(std::sync::atomic::Ordering::Relaxed) as f32
+                / 10.0
+        } else {
+            0.4
+        };
+
+        let worker_xruns = self
+            .audio_worker
+            .as_ref()
+            .map(|w| w.state.underruns.load(std::sync::atomic::Ordering::Relaxed))
+            .unwrap_or(0);
+        let driver_xruns = self
+            .audio_driver
+            .as_ref()
+            .map(|d| d.underrun_count.load(std::sync::atomic::Ordering::Relaxed))
+            .unwrap_or(0);
+        let total_xruns = worker_xruns + driver_xruns;
+
+        let xruns_color = if total_xruns > 0 {
+            Color::from_rgb8(0xe7, 0x4c, 0x3c) // Warning red
+        } else {
+            Color::from_rgb8(0x2e, 0xcc, 0x71) // Safe green
+        };
+
+        let telemetry_panel = container(
+            column![
+                row![
+                    text("Real-Time DSP Worker CPU Load:").size(10),
+                    text(format!("{:.1}%", cpu_pct))
+                        .size(10)
+                        .color(if cpu_pct > 75.0 {
+                            Color::from_rgb8(0xe7, 0x4c, 0x3c)
+                        } else {
+                            Color::from_rgb8(0x5a, 0xe0, 0xff)
+                        }),
+                    Space::new().width(Length::Fixed(16.0)),
+                    text("Buffer Underruns (XRUNs):").size(10),
+                    text(format!("{}", total_xruns)).size(10).color(xruns_color),
+                    button(text("Reset Counter").size(9))
+                        .padding(2)
+                        .on_press(UiMessage::ResetAudioXruns),
+                ]
+                .spacing(6)
+                .align_y(iced::Alignment::Center),
+                row![
+                    text("Audio Engine Architecture:")
+                        .size(9)
+                        .color(Color::from_rgb8(0x8a, 0x90, 0x9a)),
+                    text("FTZ/DAZ Enabled (Denormals-Are-Zero: ACTIVE)")
+                        .size(9)
+                        .color(Color::from_rgb8(0x2e, 0xcc, 0x71)),
+                    Space::new().width(Length::Fixed(12.0)),
+                    text("Priority: Real-Time FIFO / Cosmic Wayland")
+                        .size(9)
+                        .color(Color::from_rgb8(0x8a, 0x90, 0x9a)),
+                ]
+                .spacing(4)
+                .align_y(iced::Alignment::Center),
+            ]
+            .spacing(6),
+        )
+        .padding(8)
+        .style(|_t| self.theme.inner_well_style());
+
+        container(
+            column![
+                title_bar,
+                text("Audio Output Driver Backend:").size(11),
+                backend_row,
+                text("Hardware Buffer Size (Samples):").size(11),
+                buf_row,
+                text(latency_str)
+                    .size(10)
+                    .color(Color::from_rgb8(0x5a, 0xe0, 0xff)),
+                text("Master Sample Rate:").size(11),
+                sr_row,
+                text("Engine Telemetry & Hardware Status:").size(11),
+                telemetry_panel,
+            ]
+            .spacing(8),
+        )
+        .style(|_t| self.theme.oled_vfd_display_style())
+        .width(Length::Fixed(640.0))
+        .padding(12)
         .into()
     }
 }
