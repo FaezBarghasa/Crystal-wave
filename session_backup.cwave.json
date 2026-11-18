@@ -1,0 +1,17 @@
+{
+  "metadata": {
+    "name": "Crystal Wave Session",
+    "author": "Producer",
+    "sample_rate": 44100.0,
+    "bpm": 120.0,
+    "time_signature": [
+      4,
+      4
+    ],
+    "format_version": "12.3.1"
+  },
+  "tracks": [],
+  "cycle_loop_start_tick": 0,
+  "cycle_loop_end_tick": 15360,
+  "cycle_loop_enabled": false
+}

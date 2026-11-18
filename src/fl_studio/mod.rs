@@ -1,16 +1,22 @@
 pub mod automation_clip;
 pub mod browser;
 pub mod channel_rack;
+pub mod edison;
+pub mod fpc;
 pub mod gross_beat;
 pub mod history;
 pub mod patcher;
 pub mod piano_roll;
 pub mod playlist;
+pub mod slicex;
 pub mod soft_clipper;
+pub mod wrapper;
 
 pub use automation_clip::{AutomationClip, SplineNode};
 pub use browser::{BrowserTab, FlBrowser, PluginCatalogItem, PresetEntry, SampleEntry};
 pub use channel_rack::{ChannelRack, RackChannel, StepProperties};
+pub use edison::{EdisonEditor, EdisonMarker, EdisonTool};
+pub use fpc::{FpcEngine, FpcPad};
 pub use gross_beat::{GrossBeatEngine, GrossBeatTimePreset, GrossBeatVolumePreset};
 pub use history::{FlHistoryManager, HistoryAction, MAX_HISTORY_STEPS};
 pub use patcher::{FlPatcher, PatcherCable, PatcherMacroKnob, PatcherNode, PatcherNodeKind};
@@ -18,7 +24,9 @@ pub use piano_roll::{
     ArpDirection, EventLaneTarget, FlPianoRollNote, FlPianoRollTools, GhostNote, MusicalScale,
 };
 pub use playlist::{FlPattern, FlPlaylist, PlaylistItem, PlaylistTrackLane};
+pub use slicex::{SlicexEngine, SlicexMarker};
 pub use soft_clipper::FruitySoftClipper;
+pub use wrapper::{AdsrEnvelope, FruityWrapperState, PolyphonyMode, WrapperTab};
 
 /// FL Studio Free Windows Architecture (Detachable, independent windows)
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -31,6 +39,9 @@ pub struct FlWindowManager {
     pub patcher_visible: bool,
     pub history_visible: bool,
     pub plugin_picker_visible: bool, // Visual Plugin Picker grid modal
+    pub edison_visible: bool,        // Edison sample editor
+    pub fpc_visible: bool,           // FPC 16-pad drum machine
+    pub slicex_visible: bool,        // Slicex beat slicer
 }
 
 impl Default for FlWindowManager {
@@ -44,6 +55,9 @@ impl Default for FlWindowManager {
             patcher_visible: false,
             history_visible: false,
             plugin_picker_visible: false,
+            edison_visible: false,
+            fpc_visible: false,
+            slicex_visible: false,
         }
     }
 }
@@ -83,5 +97,17 @@ impl FlWindowManager {
 
     pub fn toggle_plugin_picker(&mut self) {
         self.plugin_picker_visible = !self.plugin_picker_visible;
+    }
+
+    pub fn toggle_edison(&mut self) {
+        self.edison_visible = !self.edison_visible;
+    }
+
+    pub fn toggle_fpc(&mut self) {
+        self.fpc_visible = !self.fpc_visible;
+    }
+
+    pub fn toggle_slicex(&mut self) {
+        self.slicex_visible = !self.slicex_visible;
     }
 }

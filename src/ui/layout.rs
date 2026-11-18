@@ -1,9 +1,41 @@
 //! Docking, Panel Layout and Multi-Pane Window Management
 //!
-//! Blends Logic Pro's single-window collapsible inspector/browser/drawer layout
-//! with FL Studio's detachable/floating multi-window panel paradigm.
+//! Clean-room implementation of FL Studio's modular multi-window layout system:
+//! Top toolbar, detachable panels (Channel Rack, Piano Roll, Playlist, Mixer, Browser,
+//! Edison, FPC, Slicex, Patcher) with instant F-key focus switching.
 
 use serde::{Deserialize, Serialize};
+
+/// Active primary view in the main workspace
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum FlActiveView {
+    #[default]
+    Playlist,    // F5
+    ChannelRack, // F6
+    PianoRoll,   // F7
+    Browser,     // Alt+F8
+    Mixer,       // F9
+    Edison,      // Audio Editor
+    Fpc,         // 16-pad drum machine
+    Slicex,      // Beat slicer
+    Patcher,     // Modular node routing
+}
+
+impl FlActiveView {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Playlist => "Playlist [F5]",
+            Self::ChannelRack => "Channel Rack [F6]",
+            Self::PianoRoll => "Piano Roll [F7]",
+            Self::Browser => "Browser [Alt+F8]",
+            Self::Mixer => "Mixer [F9]",
+            Self::Edison => "Edison Editor",
+            Self::Fpc => "FPC Drums",
+            Self::Slicex => "Slicex Slicer",
+            Self::Patcher => "Modular Patcher",
+        }
+    }
+}
 
 /// Identifiers for major DAW functional panels
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -16,6 +48,9 @@ pub enum PanelId {
     ChannelRack,
     Patcher,
     PluginRack,
+    Edison,
+    Fpc,
+    Slicex,
 }
 
 /// Docking anchor for panels
@@ -79,6 +114,7 @@ impl PanelState {
 /// Complete Workspace Layout State
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LayoutState {
+    pub active_view: FlActiveView,
     pub browser: PanelState,
     pub inspector: PanelState,
     pub bottom_drawer: PanelState,
@@ -92,6 +128,7 @@ pub struct LayoutState {
 impl Default for LayoutState {
     fn default() -> Self {
         Self {
+            active_view: FlActiveView::Playlist,
             browser: PanelState::new(PanelId::Browser, DockPosition::Left, 0.20, true),
             inspector: PanelState::new(PanelId::Inspector, DockPosition::Left, 0.18, false),
             bottom_drawer: PanelState::new(PanelId::EditorDrawer, DockPosition::Bottom, 0.35, true),
@@ -100,10 +137,10 @@ impl Default for LayoutState {
                 PanelId::ChannelRack,
                 DockPosition::Float,
                 0.30,
-                false,
+                true,
             ),
             patcher_panel: PanelState::new(PanelId::Patcher, DockPosition::Float, 0.50, false),
-            active_drawer_tab: DrawerTab::PianoRoll,
+            active_drawer_tab: DrawerTab::StepSequencer,
             detached_to_os_window: Vec::new(),
         }
     }

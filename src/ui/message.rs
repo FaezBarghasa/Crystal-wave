@@ -113,6 +113,52 @@ pub enum UiMessage {
     ToggleFlBrowser,
     ToggleFlPatcher,
     ToggleFlPluginPicker,
+    ToggleFlEdison,
+    ToggleFlFpc,
+    ToggleFlSlicex,
+    SelectFlView(crate::ui::layout::FlActiveView),
+
+    // Edison Operations
+    EdisonNormalize,
+    EdisonReverse,
+    EdisonFadeIn,
+    EdisonFadeOut,
+    EdisonCut,
+    EdisonCopy,
+    EdisonPaste,
+    EdisonSelectAll,
+
+    // FPC Drum Triggers
+    FpcTriggerPad(usize),
+    FpcSetVolume(f32),
+
+    // Slicex Triggers
+    SlicexTriggerSlice(usize),
+
+    // Tap Tempo & Transport
+    TapTempo,
+    NudgeTempo(f32),
+
+    // Mixer Routing Sends
+    MixerToggleSend {
+        from_track: usize,
+        to_track: usize,
+    },
+    MixerSetSendLevel {
+        from_track: usize,
+        to_track: usize,
+        level: f32,
+    },
+
+    // Fruity Wrapper
+    WrapperSetTab(crate::fl_studio::wrapper::WrapperTab),
+    WrapperSetAdsr {
+        channel_id: usize,
+        attack: f32,
+        decay: f32,
+        sustain: f32,
+        release: f32,
+    },
 
     // FL Studio Browser & Sample Audition
     BrowserSetSearchQuery(String),

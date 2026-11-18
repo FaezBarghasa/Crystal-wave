@@ -1,0 +1,1 @@
+AafSession { project_name: "ExportedSession", sample_rate: 44100.0, frame_rate: Fps24, tracks: [], edl_events: [] }

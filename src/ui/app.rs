@@ -63,6 +63,12 @@ pub struct CrystalWaveApp {
     pub channel_rack_step_count: usize,
     pub active_playlist_tool: crate::ui::message::PlaylistTool,
     pub active_pianoroll_tool: crate::ui::message::PianoRollTool,
+    pub edison: crate::fl_studio::EdisonEditor,
+    pub fpc: crate::fl_studio::FpcEngine,
+    pub slicex: crate::fl_studio::SlicexEngine,
+    pub wrapper_state: crate::fl_studio::FruityWrapperState,
+    pub tap_tempo_times: Vec<std::time::Instant>,
+    pub mixer_sends: Vec<Vec<f32>>,
 }
 
 impl Default for CrystalWaveApp {

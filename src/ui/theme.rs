@@ -729,4 +729,135 @@ impl UiTheme {
             ..container::Style::default()
         }
     }
+
+    /// FL Studio 2026 Top Modular Bar Container Style
+    pub fn fl_top_bar_style(&self) -> container::Style {
+        container::Style {
+            background: Some(Background::Color(Color::from_rgb8(0x13, 0x15, 0x1b))),
+            text_color: Some(self.text_primary),
+            border: Border {
+                color: Color::from_rgba8(255, 255, 255, 18),
+                width: 1.0,
+                radius: Radius::from(0.0),
+            },
+            shadow: Shadow {
+                color: Color::from_rgba(0.0, 0.0, 0.0, 0.5),
+                offset: iced::Vector::new(0.0, 2.0),
+                blur_radius: 8.0,
+            },
+            ..container::Style::default()
+        }
+    }
+
+    /// FPC (Fruity Pad Controller) 4x4 drum pad style
+    pub fn fl_pad_style<'a>(
+        &'a self,
+        base_color: Color,
+        is_triggered: bool,
+    ) -> impl Fn(&iced::Theme, button::Status) -> button::Style + 'a {
+        move |_theme, status| {
+            let bg = if is_triggered {
+                Color::WHITE
+            } else {
+                match status {
+                    button::Status::Hovered => Color {
+                        r: (base_color.r * 1.25).min(1.0),
+                        g: (base_color.g * 1.25).min(1.0),
+                        b: (base_color.b * 1.25).min(1.0),
+                        a: 1.0,
+                    },
+                    button::Status::Pressed => Color::WHITE,
+                    _ => Color {
+                        r: base_color.r * 0.75,
+                        g: base_color.g * 0.75,
+                        b: base_color.b * 0.75,
+                        a: 0.95,
+                    },
+                }
+            };
+            button::Style {
+                background: Some(Background::Color(bg)),
+                text_color: if is_triggered {
+                    Color::BLACK
+                } else {
+                    Color::WHITE
+                },
+                border: Border {
+                    color: if is_triggered {
+                        self.accent
+                    } else {
+                        Color::from_rgba(0.0, 0.0, 0.0, 0.6)
+                    },
+                    width: if is_triggered { 2.0 } else { 1.0 },
+                    radius: Radius::from(4.0),
+                },
+                shadow: Shadow::default(),
+                ..button::Style::default()
+            }
+        }
+    }
+
+    /// Insert FX Rack Slot style
+    pub fn fl_fx_slot_style(&self, active: bool) -> container::Style {
+        container::Style {
+            background: Some(Background::Color(if active {
+                Color::from_rgb8(0x18, 0x1b, 0x22)
+            } else {
+                Color::from_rgb8(0x12, 0x13, 0x17)
+            })),
+            text_color: Some(if active {
+                Color::from_rgb8(0xe4, 0xe8, 0xf0)
+            } else {
+                Color::from_rgb8(0x72, 0x78, 0x86)
+            }),
+            border: Border {
+                color: if active {
+                    Color::from_rgba8(0x38, 0xef, 0x7d, 0.25)
+                } else {
+                    Color::from_rgba8(255, 255, 255, 12)
+                },
+                width: 1.0,
+                radius: Radius::from(3.0),
+            },
+            shadow: Shadow::default(),
+            ..container::Style::default()
+        }
+    }
+
+    /// F-Key Toolbar Button style with status jewel LED
+    pub fn fl_fkey_button_style<'a>(
+        &'a self,
+        active: bool,
+    ) -> impl Fn(&iced::Theme, button::Status) -> button::Style + 'a {
+        move |_theme, status| {
+            let bg = if active {
+                Color::from_rgb8(0x22, 0x27, 0x33)
+            } else {
+                match status {
+                    button::Status::Hovered => Color::from_rgb8(0x1c, 0x1e, 0x26),
+                    button::Status::Pressed => Color::from_rgb8(0x10, 0x12, 0x16),
+                    _ => Color::from_rgb8(0x15, 0x17, 0x1d),
+                }
+            };
+            button::Style {
+                background: Some(Background::Color(bg)),
+                text_color: if active {
+                    Color::WHITE
+                } else {
+                    self.text_secondary
+                },
+                border: Border {
+                    color: if active {
+                        self.accent
+                    } else {
+                        Color::from_rgba(1.0, 1.0, 1.0, 0.08)
+                    },
+                    width: if active { 1.5 } else { 1.0 },
+                    radius: Radius::from(3.0),
+                },
+                shadow: Shadow::default(),
+                ..button::Style::default()
+            }
+        }
+    }
 }
