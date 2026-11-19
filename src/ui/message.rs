@@ -127,10 +127,26 @@ pub enum UiMessage {
     EdisonCopy,
     EdisonPaste,
     EdisonSelectAll,
+    EdisonSetSelection {
+        start: usize,
+        end: usize,
+    },
+    EdisonSetCursor(usize),
 
     // FPC Drum Triggers
     FpcTriggerPad(usize),
     FpcSetVolume(f32),
+    FpcSelectPad(usize),
+    FpcSetPadVolume {
+        pad_id: usize,
+        volume: f32,
+    },
+    FpcSetPadPan {
+        pad_id: usize,
+        pan: f32,
+    },
+    FpcTogglePadMute(usize),
+    FpcTogglePadSolo(usize),
 
     // Slicex Triggers
     SlicexTriggerSlice(usize),

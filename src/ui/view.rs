@@ -1,6 +1,9 @@
 use crate::ui::app::CrystalWaveApp;
 use crate::ui::message::{MenuCommand, PianoRollTool, PlaylistTool, UiMessage};
-use iced::widget::{Space, button, column, container, row, scrollable, slider, text, text_input};
+use iced::widget::{
+    Space, button, column, container, row, scrollable, slider, stack, text, text_input,
+    vertical_slider,
+};
 use iced::{Color, Element, Length};
 
 impl CrystalWaveApp {
@@ -8,10 +11,27 @@ impl CrystalWaveApp {
         let menu_bar = self.view_menu_bar();
         let control_bar = self.view_control_bar();
         let main_workspace = self.view_main_workspace();
-        let bottom_drawer = self.view_bottom_drawer();
+
+        // Suppress bottom drawer when the workspace already displays that view
+        let is_redundant_drawer = matches!(
+            self.layout.active_view,
+            crate::ui::layout::FlActiveView::PianoRoll
+                | crate::ui::layout::FlActiveView::Mixer
+                | crate::ui::layout::FlActiveView::ChannelRack
+                | crate::ui::layout::FlActiveView::Edison
+                | crate::ui::layout::FlActiveView::Fpc
+                | crate::ui::layout::FlActiveView::Slicex
+        );
+
+        let bottom_drawer: Element<'_, UiMessage> = if is_redundant_drawer {
+            column![].into()
+        } else {
+            self.view_bottom_drawer()
+        };
+
         let status_bar = self.view_status_bar();
 
-        let mut main_col = column![
+        let main_col = column![
             menu_bar,
             control_bar,
             main_workspace,
@@ -22,31 +42,69 @@ impl CrystalWaveApp {
         .height(Length::Fill)
         .spacing(1);
 
-        if let Some(chan_id) = self.active_channel_settings {
-            let settings_modal = self.view_channel_settings_modal(chan_id);
-            main_col = main_col.push(container(settings_modal).padding(8));
-        }
-
-        if self.fl_windows.plugin_picker_visible {
-            let picker = self.view_plugin_picker();
-            main_col = main_col.push(container(picker).padding(8));
-        }
-
-        if self.audio_settings_open {
-            let audio_modal = self.view_audio_settings_modal();
-            main_col = main_col.push(container(audio_modal).padding(8));
-        }
-
-        if self.command_palette_open {
-            let palette = self.view_command_palette();
-            main_col = main_col.push(container(palette).padding(8));
-        }
-
-        container(main_col)
+        let base_content = container(main_col)
             .style(|_t| self.theme.header_container_style())
             .width(Length::Fill)
-            .height(Length::Fill)
-            .into()
+            .height(Length::Fill);
+
+        // Centered Floating Modal Overlays with Dimmed Backdrop (FL Studio / Modern 2026 UX)
+        let mut root_stack = stack![base_content];
+
+        if let Some(chan_id) = self.active_channel_settings {
+            let settings_modal = self.view_channel_settings_modal(chan_id);
+            let overlay = container(settings_modal)
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .center(Length::Fill)
+                .style(|_t| container::Style {
+                    background: Some(iced::Background::Color(Color::from_rgba(
+                        0.0, 0.0, 0.0, 0.70,
+                    ))),
+                    ..Default::default()
+                });
+            root_stack = root_stack.push(overlay);
+        } else if self.fl_windows.plugin_picker_visible {
+            let picker = self.view_plugin_picker();
+            let overlay = container(picker)
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .center(Length::Fill)
+                .style(|_t| container::Style {
+                    background: Some(iced::Background::Color(Color::from_rgba(
+                        0.0, 0.0, 0.0, 0.70,
+                    ))),
+                    ..Default::default()
+                });
+            root_stack = root_stack.push(overlay);
+        } else if self.audio_settings_open {
+            let audio_modal = self.view_audio_settings_modal();
+            let overlay = container(audio_modal)
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .center(Length::Fill)
+                .style(|_t| container::Style {
+                    background: Some(iced::Background::Color(Color::from_rgba(
+                        0.0, 0.0, 0.0, 0.70,
+                    ))),
+                    ..Default::default()
+                });
+            root_stack = root_stack.push(overlay);
+        } else if self.command_palette_open {
+            let palette = self.view_command_palette();
+            let overlay = container(palette)
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .center(Length::Fill)
+                .style(|_t| container::Style {
+                    background: Some(iced::Background::Color(Color::from_rgba(
+                        0.0, 0.0, 0.0, 0.70,
+                    ))),
+                    ..Default::default()
+                });
+            root_stack = root_stack.push(overlay);
+        }
+
+        root_stack.into()
     }
 
     fn view_menu_bar(&self) -> Element<'_, UiMessage> {
@@ -1238,52 +1296,75 @@ impl CrystalWaveApp {
             )
             .on_press(UiMessage::ToggleTrackMute(9999));
 
-        let m_fader = slider(-60.0..=6.0, m_ch.volume_fader_db, |v| {
+        let m_fader = vertical_slider(-60.0..=6.0, m_ch.volume_fader_db, |v| {
             UiMessage::SetTrackFader {
                 track_id: 9999,
                 volume_db: v,
             }
         })
         .step(0.5_f32)
-        .width(Length::Fixed(60.0));
+        .width(22.0)
+        .height(Length::Fixed(240.0));
 
-        let m_meters = column![
-            render_led_meter(
+        let m_meters = row![
+            render_vertical_led_meter(
                 m_ch.meter.peak_db,
                 m_ch.meter.rms_db,
                 m_ch.meter.peak_hold_db,
                 m_ch.meter.auto_mute_tripped,
             ),
-            render_led_meter(
+            render_vertical_led_meter(
                 m_ch.meter.rms_db,
                 m_ch.meter.rms_db,
                 m_ch.meter.peak_hold_db,
                 m_ch.meter.auto_mute_tripped,
             ),
         ]
-        .spacing(2);
+        .spacing(1);
 
         let m_strip = container(
             column![
                 m_header_btn,
                 row![m_phase_btn, m_swap_btn, m_clipper_btn].spacing(2),
-                text("Stereo Out").size(10),
-                row![m_fader, m_meters].spacing(4),
+                text("Master Out").size(10),
+                row![m_fader, m_meters]
+                    .spacing(4)
+                    .align_y(iced::Alignment::Center),
                 text(format!("{:.1} dB", m_ch.volume_fader_db)).size(10),
                 m_mute_btn,
+                text("OUT: DAC 1/2")
+                    .size(8)
+                    .color(Color::from_rgb8(0x7a, 0x80, 0x8c)),
             ]
-            .spacing(3),
+            .spacing(3)
+            .align_x(iced::Alignment::Center),
         )
         .style(move |_t| self.theme.mixer_strip_style(true, m_selected))
         .padding(4)
-        .width(Length::Fixed(112.0));
+        .width(Length::Fixed(96.0));
 
-        // 2. Scrollable Insert Channel Strips
-        let mut channel_strips = row![].spacing(6).padding(4);
+        // 2. Scrollable Insert Channel Strips (125 Channels)
+        let mut channel_strips = row![].spacing(4).padding(4);
 
-        for (idx, ch) in self.mixer.channels.iter().enumerate() {
+        let total_inserts = 125.max(self.mixer.channels.len());
+        for idx in 0..total_inserts {
             let is_selected = selected_id == idx;
             let strip_accent = self.theme.track_accent_color(idx);
+
+            let ch = self.mixer.channels.get(idx);
+            let ch_name = ch
+                .map(|c| c.name.clone())
+                .unwrap_or_else(|| format!("Insert {}", idx + 1));
+            let vol_db = ch.map(|c| c.volume_fader_db).unwrap_or(0.0);
+            let pan_val = ch.map(|c| c.pan.balance).unwrap_or(0.0);
+            let is_muted = ch.map(|c| c.muted).unwrap_or(false);
+            let is_solo = ch.map(|c| c.solo).unwrap_or(false);
+            let is_phase_inv = ch.map(|c| c.phase_invert).unwrap_or(false);
+            let is_swap = ch.map(|c| c.swap_channels).unwrap_or(false);
+            let peak_db = ch.map(|c| c.meter.peak_db).unwrap_or(-60.0);
+            let rms_db = ch.map(|c| c.meter.rms_db).unwrap_or(-60.0);
+            let peak_hold_db = ch.map(|c| c.meter.peak_hold_db).unwrap_or(-60.0);
+            let auto_mute_tripped = ch.map(|c| c.meter.auto_mute_tripped).unwrap_or(false);
 
             let header_btn = button(
                 row![
@@ -1294,7 +1375,7 @@ impl CrystalWaveApp {
                             background: Some(iced::Background::Color(strip_accent)),
                             ..container::Style::default()
                         }),
-                    text(format!("CH {:02}", idx + 1)).size(9),
+                    text(format!("{:02}", idx + 1)).size(9),
                 ]
                 .spacing(3),
             )
@@ -1302,79 +1383,68 @@ impl CrystalWaveApp {
             .style(self.theme.button_style(is_selected))
             .on_press(UiMessage::SelectMixerTrack(idx));
 
-            let phase_btn = button(text("Ø").size(9))
-                .padding(2)
-                .style(self.theme.toggle_accent_button_style(
-                    ch.phase_invert,
-                    Color::from_rgb8(0x38, 0xef, 0x7d),
-                ))
-                .on_press(UiMessage::ToggleTrackPhaseInvert(idx));
+            let phase_btn =
+                button(text("Ø").size(9))
+                    .padding(2)
+                    .style(self.theme.toggle_accent_button_style(
+                        is_phase_inv,
+                        Color::from_rgb8(0x38, 0xef, 0x7d),
+                    ))
+                    .on_press(UiMessage::ToggleTrackPhaseInvert(idx));
 
             let swap_btn = button(text("⇄").size(9))
                 .padding(2)
-                .style(self.theme.toggle_accent_button_style(
-                    ch.swap_channels,
-                    Color::from_rgb8(0x00, 0xf2, 0xfe),
-                ))
-                .on_press(UiMessage::ToggleTrackSwapChannels(idx));
-
-            let mute_btn = button(text("M").size(10))
-                .padding(3)
                 .style(
                     self.theme
-                        .toggle_accent_button_style(ch.muted, self.theme.mute),
+                        .toggle_accent_button_style(is_swap, Color::from_rgb8(0x00, 0xf2, 0xfe)),
+                )
+                .on_press(UiMessage::ToggleTrackSwapChannels(idx));
+
+            let mute_btn = button(text("M").size(9))
+                .padding(2)
+                .style(
+                    self.theme
+                        .toggle_accent_button_style(is_muted, self.theme.mute),
                 )
                 .on_press(UiMessage::ToggleTrackMute(idx));
 
-            let solo_btn = button(text("S").size(10))
-                .padding(3)
+            let solo_btn = button(text("S").size(9))
+                .padding(2)
                 .style(
                     self.theme
-                        .toggle_accent_button_style(ch.solo, self.theme.solo),
+                        .toggle_accent_button_style(is_solo, self.theme.solo),
                 )
                 .on_press(UiMessage::ToggleTrackSolo(idx));
 
-            let fader_slider = slider(-60.0..=6.0, ch.volume_fader_db, move |vol| {
-                UiMessage::SetTrackFader {
+            let fader_slider =
+                vertical_slider(-60.0..=6.0, vol_db, move |vol| UiMessage::SetTrackFader {
                     track_id: idx,
                     volume_db: vol,
-                }
-            })
-            .step(0.5_f32)
-            .width(Length::Fixed(60.0));
+                })
+                .step(0.5_f32)
+                .width(20.0)
+                .height(Length::Fixed(240.0));
 
-            let pan_slider = slider(-1.0..=1.0, ch.pan.balance, move |p| {
-                UiMessage::SetTrackPan {
-                    track_id: idx,
-                    pan: p,
-                }
+            let pan_slider = slider(-1.0..=1.0, pan_val, move |p| UiMessage::SetTrackPan {
+                track_id: idx,
+                pan: p,
             })
             .step(0.05_f32)
-            .width(Length::Fixed(60.0));
+            .width(Length::Fixed(56.0));
 
-            let pan_txt = if ch.pan.balance.abs() < 0.05 {
-                "Pan: C".to_string()
-            } else if ch.pan.balance < 0.0 {
-                format!("Pan: L{:.0}%", (-ch.pan.balance) * 100.0)
+            let pan_txt = if pan_val.abs() < 0.05 {
+                "C".to_string()
+            } else if pan_val < 0.0 {
+                format!("L{:.0}%", (-pan_val) * 100.0)
             } else {
-                format!("Pan: R{:.0}%", ch.pan.balance * 100.0)
+                format!("R{:.0}%", pan_val * 100.0)
             };
 
-            let meter_bars = column![
-                render_led_meter(
-                    ch.meter.peak_db,
-                    ch.meter.rms_db,
-                    ch.meter.peak_hold_db,
-                    ch.meter.auto_mute_tripped,
-                ),
-                render_led_meter(
-                    ch.meter.rms_db,
-                    ch.meter.rms_db,
-                    ch.meter.peak_hold_db,
-                    ch.meter.auto_mute_tripped,
-                ),
+            let meter_bars = row![
+                render_vertical_led_meter(peak_db, rms_db, peak_hold_db, auto_mute_tripped),
+                render_vertical_led_meter(rms_db, rms_db, peak_hold_db, auto_mute_tripped),
             ]
-            .spacing(2);
+            .spacing(1);
 
             let is_sending_master = self
                 .mixer_sends
@@ -1406,18 +1476,28 @@ impl CrystalWaveApp {
                 column![
                     header_btn,
                     row![phase_btn, swap_btn].spacing(2),
-                    text(ch.name.clone()).size(11),
-                    text(pan_txt).size(9),
+                    container(text(ch_name).size(10)).height(Length::Fixed(14.0)),
+                    row![text("Pan:").size(8), text(pan_txt).size(8)].spacing(2),
                     pan_slider,
-                    row![fader_slider, meter_bars].spacing(4),
-                    text(format!("{:.1} dB", ch.volume_fader_db)).size(10),
-                    row![mute_btn, solo_btn, send_btn].spacing(3),
+                    row![fader_slider, meter_bars]
+                        .spacing(3)
+                        .align_y(iced::Alignment::Center),
+                    text(format!("{:.1} dB", vol_db)).size(9),
+                    row![mute_btn, solo_btn, send_btn].spacing(2),
+                    text(if is_sending_master {
+                        "→ Master"
+                    } else {
+                        "→ Unrouted"
+                    })
+                    .size(8)
+                    .color(Color::from_rgb8(0x7a, 0x80, 0x8c)),
                 ]
-                .spacing(2),
+                .spacing(2)
+                .align_x(iced::Alignment::Center),
             )
             .style(move |_t| self.theme.mixer_strip_style(false, is_selected))
             .padding(4)
-            .width(Length::Fixed(110.0));
+            .width(Length::Fixed(82.0));
 
             channel_strips = channel_strips.push(strip);
         }
@@ -1600,24 +1680,44 @@ impl CrystalWaveApp {
         .padding(4)
         .width(Length::Fixed(240.0));
 
-        column![
-            row![
-                text("FL Studio 24 Studio Mixer Console (125 Inserts + Master Strip)").size(11),
-                Space::new().width(Length::Fill),
-                text(format!(
-                    "Target: [{}]",
-                    if is_master_selected {
-                        "Master".to_string()
-                    } else {
-                        format!("CH {:02}", selected_id + 1)
-                    }
-                ))
-                .size(10),
-            ]
-            .spacing(6),
-            row![m_strip, scrollable(channel_strips), fx_inspector].spacing(8),
+        let content = row![
+            m_strip,
+            scrollable(channel_strips)
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .direction(scrollable::Direction::Horizontal(
+                    scrollable::Scrollbar::default(),
+                )),
+            fx_inspector,
         ]
-        .spacing(4)
+        .spacing(6)
+        .height(Length::Fill);
+
+        container(
+            column![
+                row![
+                    text("FL Studio 24 Studio Mixer Console (125 Inserts + Master Strip)").size(11),
+                    Space::new().width(Length::Fill),
+                    text(format!(
+                        "Target: [{}]",
+                        if is_master_selected {
+                            "Master".to_string()
+                        } else {
+                            format!("CH {:02}", selected_id + 1)
+                        }
+                    ))
+                    .size(10)
+                    .color(Color::from_rgb8(0xff, 0x85, 0x00)),
+                ]
+                .spacing(6),
+                content,
+            ]
+            .spacing(4),
+        )
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .padding(4)
+        .style(|_t| self.theme.panel_container_style())
         .into()
     }
 
@@ -2214,40 +2314,21 @@ impl CrystalWaveApp {
 
         // Waveform visualization container
         let (sel_start, sel_end) = ed.active_range();
-        let num_bars = 140;
-        let step = (ed.samples_l.len() / num_bars).max(1);
-        let mut wave_bars = row![].spacing(1).align_y(iced::Alignment::Center);
-        for b in 0..num_bars {
-            let idx = (b * step).min(ed.samples_l.len().saturating_sub(1));
-            let amp = ed.samples_l.get(idx).copied().unwrap_or(0.0).abs();
-            let h = (amp * 140.0).max(4.0);
-            let in_sel = idx >= sel_start && idx <= sel_end;
-            let col = if in_sel {
-                Color::from_rgb8(0xff, 0x88, 0x00)
-            } else {
-                Color::from_rgb8(0x00, 0xf2, 0xfe)
-            };
-            let bar = container(column![])
-                .width(Length::Fixed(4.0))
-                .height(Length::Fixed(h))
-                .style(move |_t| container::Style {
-                    background: Some(iced::Background::Color(col)),
-                    border: iced::Border {
-                        radius: 1.0.into(),
-                        ..Default::default()
-                    },
-                    ..container::Style::default()
-                });
-            wave_bars = wave_bars.push(bar);
-        }
+        let waveform_canvas = crate::ui::canvas_edison::view_canvas_edison(
+            &ed.samples_l,
+            &ed.samples_r,
+            ed.sample_rate,
+            ed.selection_start,
+            ed.selection_end,
+            ed.cursor_pos,
+            &ed.markers,
+        );
 
-        let waveform_container = container(scrollable(wave_bars).direction(
-            scrollable::Direction::Horizontal(scrollable::Scrollbar::default()),
-        ))
-        .width(Length::Fill)
-        .height(Length::Fixed(200.0))
-        .padding(6)
-        .style(|_t| self.theme.inner_well_style());
+        let waveform_container = container(waveform_canvas)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .padding(4)
+            .style(|_t| self.theme.inner_well_style());
 
         let telemetry_row = row![
             text(format!("Markers: {} points", ed.markers.len()))
@@ -2275,6 +2356,9 @@ impl CrystalWaveApp {
     /// Dedicated FPC (Fruity Pad Controller) 16-Pad MPC Drum Sampler Window
     pub fn view_fpc_window(&self) -> Element<'_, UiMessage> {
         let fpc = &self.fpc;
+        let selected_pad_id = self.selected_fpc_pad.min(fpc.pads.len().saturating_sub(1));
+        let selected_pad = fpc.pads.get(selected_pad_id);
+
         let header = row![
             container(
                 text("FPC — 16-PAD DRUM SAMPLER")
@@ -2286,18 +2370,19 @@ impl CrystalWaveApp {
             text(format!("Kit: {}", fpc.active_kit_name)).size(10),
             Space::new().width(Length::Fill),
             row![
-                text("Vol:").size(9),
+                text("Master Vol:").size(9),
                 slider(0.0..=1.25, fpc.master_volume, UiMessage::FpcSetVolume)
                     .step(0.02_f32)
-                    .width(Length::Fixed(70.0)),
+                    .width(Length::Fixed(80.0)),
                 text(format!("{:.0}%", fpc.master_volume * 100.0)).size(9),
             ]
-            .spacing(3)
+            .spacing(4)
             .align_y(iced::Alignment::Center),
         ]
         .spacing(6)
         .align_y(iced::Alignment::Center);
 
+        // 1. Left Section: 4x4 MPC Drum Pad Matrix
         let mut pad_grid_col = column![].spacing(6);
         for row_idx in (0..4).rev() {
             let mut pad_row = row![].spacing(6);
@@ -2307,12 +2392,15 @@ impl CrystalWaveApp {
                     let p_col =
                         Color::from_rgb8(pad.color_rgb[0], pad.color_rgb[1], pad.color_rgb[2]);
                     let is_trig = pad.is_triggered;
+                    let is_selected = pad_id == selected_pad_id;
+
+                    let base_style = self.theme.fl_pad_style(p_col, is_trig);
                     let pad_card = button(
                         column![
                             row![
                                 text(format!("{:02}", pad.id + 1))
                                     .size(8)
-                                    .color(Color::from_rgba(1.0, 1.0, 1.0, 0.6)),
+                                    .color(Color::from_rgba(1.0, 1.0, 1.0, 0.7)),
                                 Space::new().width(Length::Fill),
                                 text(format!("MIDI {}", pad.note_number))
                                     .size(8)
@@ -2322,13 +2410,20 @@ impl CrystalWaveApp {
                             text(&pad.name).size(10),
                             text(&pad.sample_name)
                                 .size(8)
-                                .color(Color::from_rgba(1.0, 1.0, 1.0, 0.7)),
+                                .color(Color::from_rgba(1.0, 1.0, 1.0, 0.8)),
                         ]
                         .padding(4),
                     )
-                    .width(Length::Fixed(125.0))
-                    .height(Length::Fixed(75.0))
-                    .style(self.theme.fl_pad_style(p_col, is_trig))
+                    .width(Length::Fixed(130.0))
+                    .height(Length::Fixed(80.0))
+                    .style(move |theme, status| {
+                        let mut st = base_style(theme, status);
+                        if is_selected {
+                            st.border.color = Color::from_rgb8(0x00, 0xf2, 0xfe);
+                            st.border.width = 2.0;
+                        }
+                        st
+                    })
                     .on_press(UiMessage::FpcTriggerPad(pad_id));
 
                     pad_row = pad_row.push(pad_card);
@@ -2337,7 +2432,140 @@ impl CrystalWaveApp {
             pad_grid_col = pad_grid_col.push(pad_row);
         }
 
-        container(column![header, container(pad_grid_col).padding(6)].spacing(8))
+        let pad_matrix_container = container(pad_grid_col)
+            .padding(6)
+            .style(|_t| self.theme.inner_well_style());
+
+        // 2. Right Section: Selected Pad Inspector & Sample Layer Controls
+        let pad_inspector: Element<'_, UiMessage> = if let Some(pad) = selected_pad {
+            let p_col = Color::from_rgb8(pad.color_rgb[0], pad.color_rgb[1], pad.color_rgb[2]);
+
+            let pad_header = container(
+                row![
+                    container(column![])
+                        .width(Length::Fixed(4.0))
+                        .height(Length::Fixed(16.0))
+                        .style(move |_t| container::Style {
+                            background: Some(iced::Background::Color(p_col)),
+                            ..container::Style::default()
+                        }),
+                    text(format!(
+                        "PAD {:02}: {} [MIDI {}]",
+                        pad.id + 1,
+                        pad.name,
+                        pad.note_number
+                    ))
+                    .size(11),
+                    Space::new().width(Length::Fill),
+                    button(text("▶ PREVIEW").size(9))
+                        .padding(3)
+                        .style(self.theme.accent_button_style(self.theme.accent))
+                        .on_press(UiMessage::FpcTriggerPad(pad.id)),
+                ]
+                .spacing(6)
+                .align_y(iced::Alignment::Center),
+            )
+            .padding(4)
+            .style(|_t| self.theme.machined_capsule_style());
+
+            let vol_slider = slider(0.0..=1.25, pad.volume, move |v| {
+                UiMessage::FpcSetPadVolume {
+                    pad_id: pad.id,
+                    volume: v,
+                }
+            })
+            .step(0.01_f32)
+            .width(Length::Fixed(120.0));
+
+            let pan_slider = slider(-1.0..=1.0, pad.pan, move |p| UiMessage::FpcSetPadPan {
+                pad_id: pad.id,
+                pan: p,
+            })
+            .step(0.05_f32)
+            .width(Length::Fixed(120.0));
+
+            let pan_txt = if pad.pan.abs() < 0.05 {
+                "Center".to_string()
+            } else if pad.pan < 0.0 {
+                format!("Left {:.0}%", (-pad.pan) * 100.0)
+            } else {
+                format!("Right {:.0}%", pad.pan * 100.0)
+            };
+
+            let mute_btn = button(text("MUTE").size(9))
+                .padding(4)
+                .style(
+                    self.theme
+                        .toggle_accent_button_style(pad.muted, self.theme.mute),
+                )
+                .on_press(UiMessage::FpcTogglePadMute(pad.id));
+
+            let solo_btn = button(text("SOLO").size(9))
+                .padding(4)
+                .style(
+                    self.theme
+                        .toggle_accent_button_style(pad.solo, self.theme.solo),
+                )
+                .on_press(UiMessage::FpcTogglePadSolo(pad.id));
+
+            let sample_info = container(
+                column![
+                    text("SAMPLE LAYER DETAILS")
+                        .size(9)
+                        .color(Color::from_rgb8(0x9a, 0xa0, 0xaa)),
+                    text(format!("File: {}", pad.sample_name)).size(10),
+                    text("Format: 24-bit 44.1 kHz PCM WAV")
+                        .size(9)
+                        .color(Color::from_rgb8(0x7a, 0x80, 0x8c)),
+                    text(format!("Target Mixer Insert: CH {:02}", pad.id + 1))
+                        .size(9)
+                        .color(Color::from_rgb8(0x00, 0xf2, 0xfe)),
+                ]
+                .spacing(3),
+            )
+            .padding(6)
+            .style(|_t| self.theme.inner_well_style());
+
+            container(
+                column![
+                    pad_header,
+                    sample_info,
+                    row![
+                        text("Pad Level:").size(10),
+                        vol_slider,
+                        text(format!("{:.0}%", pad.volume * 100.0)).size(9),
+                    ]
+                    .spacing(4)
+                    .align_y(iced::Alignment::Center),
+                    row![text("Pad Pan:").size(10), pan_slider, text(pan_txt).size(9),]
+                        .spacing(4)
+                        .align_y(iced::Alignment::Center),
+                    row![mute_btn, solo_btn].spacing(6),
+                ]
+                .spacing(6),
+            )
+            .width(Length::Fill)
+            .padding(6)
+            .style(|_t| container::Style {
+                background: Some(iced::Background::Color(Color::from_rgb8(0x13, 0x15, 0x1a))),
+                border: iced::Border {
+                    color: Color::from_rgb8(0x28, 0x2c, 0x38),
+                    width: 1.0,
+                    radius: 4.0.into(),
+                },
+                text_color: Some(Color::from_rgb8(0xec, 0xf0, 0xf1)),
+                ..container::Style::default()
+            })
+            .into()
+        } else {
+            column![].into()
+        };
+
+        let body = row![pad_matrix_container, pad_inspector,]
+            .spacing(10)
+            .height(Length::Fill);
+
+        container(column![header, body].spacing(8))
             .width(Length::Fill)
             .height(Length::Fill)
             .padding(8)
@@ -2738,10 +2966,22 @@ impl CrystalWaveApp {
             main_rack = main_rack.push(graph_drawer);
         }
 
-        container(main_rack)
-            .style(|_t| self.theme.panel_container_style())
-            .padding(6)
+        if is_window {
+            container(main_rack)
+                .style(|_t| self.theme.panel_container_style())
+                .padding(6)
+                .into()
+        } else {
+            container(
+                container(main_rack)
+                    .style(|_t| self.theme.panel_container_style())
+                    .padding(8),
+            )
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .padding(12)
             .into()
+        }
     }
 
     pub fn view_channel_settings_modal(&self, chan_id: usize) -> Element<'_, UiMessage> {
@@ -3049,4 +3289,72 @@ pub fn render_led_meter<'a>(
         .spacing(3)
         .align_y(iced::Alignment::Center)
         .into()
+}
+
+/// 16-segment vertical graduated LED ladder meter with peak hold and clip overload indicator
+pub fn render_vertical_led_meter<'a>(
+    peak_db: f32,
+    _rms_db: f32,
+    peak_hold_db: f32,
+    auto_mute_tripped: bool,
+) -> Element<'a, UiMessage> {
+    const THRESHOLDS: [f32; 16] = [
+        0.0, -0.5, -1.0, -2.0, -3.0, -4.5, -6.0, -9.0, -12.0, -15.0, -18.0, -24.0, -30.0, -36.0,
+        -48.0, -60.0,
+    ];
+
+    let mut segments = column![].spacing(1);
+
+    for (i, &thresh) in THRESHOLDS.iter().enumerate() {
+        let is_lit = peak_db >= thresh || (auto_mute_tripped && i == 0);
+        let higher_thresh = if i == 0 { 100.0 } else { THRESHOLDS[i - 1] };
+        let is_peak_hold = peak_hold_db >= thresh && peak_hold_db < higher_thresh;
+
+        let seg_color = match i {
+            0..=1 => {
+                if is_lit || is_peak_hold || auto_mute_tripped || peak_db > 0.0 {
+                    Color::from_rgb8(0xe7, 0x4c, 0x3c) // Active Red (0 to -0.5 dBFS / CLIP)
+                } else {
+                    Color::from_rgb8(0x38, 0x14, 0x14) // Dim Red
+                }
+            }
+            2 => {
+                if is_lit || is_peak_hold {
+                    Color::from_rgb8(0xe6, 0x64, 0x14) // Active Orange (-1 dBFS)
+                } else {
+                    Color::from_rgb8(0x38, 0x1a, 0x08) // Dim Orange
+                }
+            }
+            3..=6 => {
+                if is_lit || is_peak_hold {
+                    Color::from_rgb8(0xf3, 0x9c, 0x12) // Active Amber (-2 to -6 dBFS)
+                } else {
+                    Color::from_rgb8(0x38, 0x24, 0x0a) // Dim Amber
+                }
+            }
+            _ => {
+                if is_lit || is_peak_hold {
+                    Color::from_rgb8(0x2e, 0xcc, 0x71) // Active Green (-9 to -60 dBFS)
+                } else {
+                    Color::from_rgb8(0x13, 0x2e, 0x1d) // Dim Green
+                }
+            }
+        };
+
+        let seg_box = container(column![])
+            .width(Length::Fixed(4.0))
+            .height(Length::Fixed(14.0))
+            .style(move |_t| container::Style {
+                background: Some(iced::Background::Color(seg_color)),
+                border: iced::Border {
+                    radius: 1.0.into(),
+                    ..Default::default()
+                },
+                ..container::Style::default()
+            });
+
+        segments = segments.push(seg_box);
+    }
+
+    segments.into()
 }

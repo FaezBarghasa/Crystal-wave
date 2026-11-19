@@ -65,6 +65,7 @@ pub struct CrystalWaveApp {
     pub active_pianoroll_tool: crate::ui::message::PianoRollTool,
     pub edison: crate::fl_studio::EdisonEditor,
     pub fpc: crate::fl_studio::FpcEngine,
+    pub selected_fpc_pad: usize,
     pub slicex: crate::fl_studio::SlicexEngine,
     pub wrapper_state: crate::fl_studio::FruityWrapperState,
     pub tap_tempo_times: Vec<std::time::Instant>,
@@ -126,6 +127,7 @@ impl CrystalWaveApp {
         let mut mixer = MixingEngine::new(sample_rate).expect("Mixer init");
         let _ = mixer.add_channel("Audio 1");
         let _ = mixer.add_channel("Inst 1");
+        let _ = mixer.init_fl_insert_tracks(125);
 
         let mut audio_driver = AudioHardwareDriver::new().ok();
         let audio_producer = audio_driver
@@ -220,6 +222,7 @@ impl CrystalWaveApp {
             active_pianoroll_tool: crate::ui::message::PianoRollTool::Draw,
             edison: crate::fl_studio::EdisonEditor::new(sample_rate),
             fpc: crate::fl_studio::FpcEngine::new(),
+            selected_fpc_pad: 0,
             slicex: crate::fl_studio::SlicexEngine::new(sample_rate),
             wrapper_state: crate::fl_studio::FruityWrapperState::default(),
             tap_tempo_times: Vec::new(),
@@ -1057,13 +1060,43 @@ impl CrystalWaveApp {
             UiMessage::EdisonCopy => self.edison.copy(),
             UiMessage::EdisonPaste => self.edison.paste(),
             UiMessage::EdisonSelectAll => self.edison.select_all(),
+            UiMessage::EdisonSetSelection { start, end } => {
+                self.edison.set_selection(start, end);
+            }
+            UiMessage::EdisonSetCursor(pos) => {
+                self.edison.cursor_pos = pos.min(self.edison.len());
+            }
 
             // FPC Drum Triggers
             UiMessage::FpcTriggerPad(pad_id) => {
+                self.selected_fpc_pad = pad_id;
                 self.fpc.trigger_pad(pad_id);
+            }
+            UiMessage::FpcSelectPad(pad_id) => {
+                self.selected_fpc_pad = pad_id;
             }
             UiMessage::FpcSetVolume(vol) => {
                 self.fpc.master_volume = vol.clamp(0.0, 1.25);
+            }
+            UiMessage::FpcSetPadVolume { pad_id, volume } => {
+                if let Some(pad) = self.fpc.pads.get_mut(pad_id) {
+                    pad.volume = volume.clamp(0.0, 1.25);
+                }
+            }
+            UiMessage::FpcSetPadPan { pad_id, pan } => {
+                if let Some(pad) = self.fpc.pads.get_mut(pad_id) {
+                    pad.pan = pan.clamp(-1.0, 1.0);
+                }
+            }
+            UiMessage::FpcTogglePadMute(pad_id) => {
+                if let Some(pad) = self.fpc.pads.get_mut(pad_id) {
+                    pad.muted = !pad.muted;
+                }
+            }
+            UiMessage::FpcTogglePadSolo(pad_id) => {
+                if let Some(pad) = self.fpc.pads.get_mut(pad_id) {
+                    pad.solo = !pad.solo;
+                }
             }
 
             // Slicex Triggers
