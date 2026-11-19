@@ -96,3 +96,18 @@ impl FruityWrapperState {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_wrapper_defaults() {
+        let wrapper = FruityWrapperState::new(3);
+        assert_eq!(wrapper.channel_id, 3);
+        assert_eq!(wrapper.target_mixer_track, 4);
+        assert_eq!(wrapper.active_tab, WrapperTab::Sampler);
+        assert_eq!(wrapper.polyphony_mode, PolyphonyMode::Poly);
+        assert_eq!(wrapper.volume_env.sustain_level, 0.7);
+    }
+}

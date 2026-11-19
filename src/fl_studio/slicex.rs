@@ -74,3 +74,24 @@ impl SlicexEngine {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_slicex_markers_and_triggers() {
+        let mut slicex = SlicexEngine::new(44100.0);
+        assert_eq!(slicex.markers.len(), 8);
+        assert_eq!(slicex.active_slice_id, None);
+
+        slicex.trigger_slice(2);
+        assert_eq!(slicex.active_slice_id, Some(2));
+        assert!(slicex.markers[2].is_active);
+        assert!(!slicex.markers[1].is_active);
+
+        slicex.reset_triggers();
+        assert_eq!(slicex.active_slice_id, None);
+        assert!(!slicex.markers[2].is_active);
+    }
+}

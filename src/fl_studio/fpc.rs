@@ -96,3 +96,28 @@ impl FpcEngine {
         self.active_kit_name = kit_name.to_string();
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_fpc_pad_triggers() {
+        let mut fpc = FpcEngine::new();
+        assert_eq!(fpc.pads.len(), 16);
+        assert!(!fpc.pads[0].is_triggered);
+
+        fpc.trigger_pad(0);
+        assert!(fpc.pads[0].is_triggered);
+
+        fpc.reset_triggers();
+        assert!(!fpc.pads[0].is_triggered);
+    }
+
+    #[test]
+    fn test_fpc_kit_load() {
+        let mut fpc = FpcEngine::new();
+        fpc.load_kit("808 Trap Kit");
+        assert_eq!(fpc.active_kit_name, "808 Trap Kit");
+    }
+}

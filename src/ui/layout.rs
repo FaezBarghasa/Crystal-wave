@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum FlActiveView {
     #[default]
-    Playlist,    // F5
+    Playlist, // F5
     ChannelRack, // F6
     PianoRoll,   // F7
     Browser,     // Alt+F8
@@ -140,7 +140,7 @@ impl Default for LayoutState {
                 true,
             ),
             patcher_panel: PanelState::new(PanelId::Patcher, DockPosition::Float, 0.50, false),
-            active_drawer_tab: DrawerTab::StepSequencer,
+            active_drawer_tab: DrawerTab::PianoRoll,
             detached_to_os_window: Vec::new(),
         }
     }

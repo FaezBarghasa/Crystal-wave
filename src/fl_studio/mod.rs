@@ -42,6 +42,7 @@ pub struct FlWindowManager {
     pub edison_visible: bool,        // Edison sample editor
     pub fpc_visible: bool,           // FPC 16-pad drum machine
     pub slicex_visible: bool,        // Slicex beat slicer
+    pub audio_settings_visible: bool, // F10 Audio Interface settings
 }
 
 impl Default for FlWindowManager {
@@ -58,6 +59,7 @@ impl Default for FlWindowManager {
             edison_visible: false,
             fpc_visible: false,
             slicex_visible: false,
+            audio_settings_visible: false,
         }
     }
 }
@@ -109,5 +111,9 @@ impl FlWindowManager {
 
     pub fn toggle_slicex(&mut self) {
         self.slicex_visible = !self.slicex_visible;
+    }
+
+    pub fn toggle_audio_settings(&mut self) {
+        self.audio_settings_visible = !self.audio_settings_visible;
     }
 }

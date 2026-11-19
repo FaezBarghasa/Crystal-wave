@@ -127,7 +127,9 @@ impl EdisonEditor {
 
         let mut peak: f32 = 0.0;
         for i in start..end {
-            peak = peak.max(self.samples_l[i].abs()).max(self.samples_r[i].abs());
+            peak = peak
+                .max(self.samples_l[i].abs())
+                .max(self.samples_r[i].abs());
         }
 
         if peak > 1e-6 {
@@ -153,13 +155,13 @@ impl EdisonEditor {
     /// Linear fade in across the active selection
     pub fn fade_in(&mut self) {
         let (start, end) = self.active_range();
-        let len = (end - start) as f32;
-        if len <= 1.0 {
+        if end <= start + 1 {
             return;
         }
+        let denom = (end - start - 1) as f32;
 
         for (idx, i) in (start..end).enumerate() {
-            let t = idx as f32 / len;
+            let t = idx as f32 / denom;
             self.samples_l[i] *= t;
             self.samples_r[i] *= t;
         }
@@ -168,13 +170,13 @@ impl EdisonEditor {
     /// Linear fade out across the active selection
     pub fn fade_out(&mut self) {
         let (start, end) = self.active_range();
-        let len = (end - start) as f32;
-        if len <= 1.0 {
+        if end <= start + 1 {
             return;
         }
+        let denom = (end - start - 1) as f32;
 
         for (idx, i) in (start..end).enumerate() {
-            let t = 1.0 - (idx as f32 / len);
+            let t = 1.0 - (idx as f32 / denom);
             self.samples_l[i] *= t;
             self.samples_r[i] *= t;
         }
@@ -220,5 +222,54 @@ impl EdisonEditor {
         } else {
             (0, self.samples_l.len())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_edison_normalize_and_reverse() {
+        let mut edison = EdisonEditor::new(44100.0);
+        edison.samples_l = vec![0.1, 0.5, -0.25, 0.0];
+        edison.samples_r = vec![0.1, 0.5, -0.25, 0.0];
+        edison.select_all();
+        edison.normalize();
+        assert!((edison.samples_l[1] - 1.0).abs() < 1e-4);
+
+        edison.reverse();
+        assert!((edison.samples_l[2] - 1.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn test_edison_copy_paste() {
+        let mut edison = EdisonEditor::new(44100.0);
+        edison.samples_l = vec![0.1, 0.2, 0.3, 0.4];
+        edison.samples_r = vec![0.1, 0.2, 0.3, 0.4];
+        edison.set_selection(1, 3);
+        edison.copy();
+        assert_eq!(edison.clipboard_l.len(), 2);
+        assert_eq!(edison.clipboard_l, vec![0.2, 0.3]);
+
+        edison.cursor_pos = 4;
+        edison.paste();
+        assert_eq!(edison.samples_l.len(), 6);
+        assert_eq!(edison.samples_l[4], 0.2);
+        assert_eq!(edison.samples_l[5], 0.3);
+    }
+
+    #[test]
+    fn test_edison_fade_in_fade_out() {
+        let mut edison = EdisonEditor::new(44100.0);
+        edison.samples_l = vec![1.0, 1.0, 1.0, 1.0, 1.0];
+        edison.samples_r = vec![1.0, 1.0, 1.0, 1.0, 1.0];
+        edison.set_selection(0, 5);
+        edison.fade_in();
+        assert_eq!(edison.samples_l[0], 0.0);
+        assert!(edison.samples_l[4] > 0.7);
+
+        edison.fade_out();
+        assert_eq!(edison.samples_l[4], 0.0);
     }
 }
