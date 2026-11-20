@@ -70,6 +70,7 @@ pub struct CrystalWaveApp {
     pub wrapper_state: crate::fl_studio::FruityWrapperState,
     pub tap_tempo_times: Vec<std::time::Instant>,
     pub mixer_sends: Vec<Vec<f32>>,
+    pub audio_snapshot: crate::audio::AudioSnapshotHandle,
 }
 
 impl Default for CrystalWaveApp {
@@ -127,17 +128,19 @@ impl CrystalWaveApp {
         let mut mixer = MixingEngine::new(sample_rate).expect("Mixer init");
         let _ = mixer.add_channel("Audio 1");
         let _ = mixer.add_channel("Inst 1");
-        let _ = mixer.init_fl_insert_tracks(125);
 
         let mut audio_driver = AudioHardwareDriver::new().ok();
         let audio_producer = audio_driver
             .as_mut()
             .and_then(|d| d.start_stream(4096).ok());
 
+        let audio_snapshot = crate::audio::AudioSnapshotHandle::default();
+
         let audio_worker = Some(crate::audio::spawn_audio_worker(
             sample_rate,
             256,
             audio_producer,
+            audio_snapshot.clone(),
         ));
 
         let mut channel_rack = crate::fl_studio::ChannelRack::new(16);
@@ -159,7 +162,7 @@ impl CrystalWaveApp {
 
         let audio_scheduler = crate::audio::TimelineAudioScheduler::new(sample_rate, 120.0);
 
-        Self {
+        let app = Self {
             workspace: WorkspaceState::default(),
             inspector: DualChannelInspector::new(0, 0),
             arrangement,
@@ -233,7 +236,48 @@ impl CrystalWaveApp {
                 }
                 sends
             },
-        }
+            audio_snapshot,
+        };
+
+        app.sync_audio_snapshot();
+        app
+    }
+
+    /// Publishes current timeline tracks, notes, and mixer state to the real-time audio thread
+    pub fn sync_audio_snapshot(&self) {
+        let mixer_channels = self
+            .mixer
+            .channels
+            .iter()
+            .map(|ch| crate::audio::ChannelStripSnapshot {
+                id: ch.id,
+                volume_fader_db: ch.volume_fader_db,
+                pan_balance: ch.pan.balance,
+                muted: ch.muted,
+                solo: ch.solo,
+                phase_invert: ch.phase_invert,
+                swap_channels: ch.swap_channels,
+                output_bus: ch.output_bus,
+                vca_group: ch.vca_group,
+                latency_samples: 0,
+            })
+            .collect();
+
+        let snapshot = crate::audio::AudioProjectSnapshot {
+            tracks: self.arrangement.timeline.tracks.clone(),
+            piano_roll_notes: self.piano_roll_notes.clone(),
+            mixer_channels,
+            master_volume_fader_db: self.mixer.master_strip.volume_fader_db,
+            master_soft_clipper_enabled: self.mixer.master_soft_clipper_enabled,
+            mixer_sends: self.mixer_sends.clone(),
+            tempo_bpm: self.workspace.lcd_diagnostic.project_tempo_bpm,
+            sample_rate: self.mixer.sample_rate,
+            swing_amount: 0.0,
+            pdc_enabled: self.mixer.pdc_enabled,
+            pdc_delays: self.mixer.channel_latencies_samples.clone(),
+        };
+
+        self.audio_snapshot.store(snapshot);
     }
 
     /// Pure Elm Architecture State Reducer with Input Hardening & Sanitization
@@ -1897,6 +1941,10 @@ impl CrystalWaveApp {
                 self.channel_rack.toggle_step(channel_id, step_index);
                 self.dirty = true;
             }
+        }
+
+        if self.dirty {
+            self.sync_audio_snapshot();
         }
     }
 

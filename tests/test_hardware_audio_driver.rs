@@ -1,4 +1,4 @@
-use Crystal_wave::audio::{AudioHardwareDriver, spawn_audio_worker};
+use Crystal_wave::audio::{AudioHardwareDriver, AudioSnapshotHandle, spawn_audio_worker};
 use std::thread;
 use std::time::Duration;
 
@@ -28,7 +28,8 @@ fn test_audio_hardware_driver_initialization_and_metrics() {
 
 #[test]
 fn test_audio_worker_realtime_decoupling_and_telemetry() {
-    let mut worker = spawn_audio_worker(44100.0, 256, None);
+    let snapshot = AudioSnapshotHandle::default();
+    let mut worker = spawn_audio_worker(44100.0, 256, None, snapshot);
     assert!(!worker.is_playing());
     assert_eq!(worker.playhead_frame(), 0);
     assert_eq!(worker.underruns(), 0);
