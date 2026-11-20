@@ -32,6 +32,42 @@ impl DecodedAudio {
 pub struct AudioDecoder;
 
 impl AudioDecoder {
+    /// Decodes a WAV file from disk via hound
+    pub fn decode_wav_file<P: AsRef<std::path::Path>>(path: P) -> Result<DecodedAudio, String> {
+        let mut reader =
+            hound::WavReader::open(path.as_ref()).map_err(|e| format!("WavReaderOpenError: {e}"))?;
+        let spec = reader.spec();
+        let channels = spec.channels as usize;
+        let sample_rate = spec.sample_rate;
+
+        let samples_interleaved: Vec<f32> = match spec.sample_format {
+            hound::SampleFormat::Float => {
+                reader.samples::<f32>().map(|s| s.unwrap_or(0.0)).collect()
+            }
+            hound::SampleFormat::Int => match spec.bits_per_sample {
+                16 => reader
+                    .samples::<i16>()
+                    .map(|s| s.map(|v| v as f32 / 32768.0).unwrap_or(0.0))
+                    .collect(),
+                24 => reader
+                    .samples::<i32>()
+                    .map(|s| s.map(|v| v as f32 / 8388608.0).unwrap_or(0.0))
+                    .collect(),
+                32 => reader
+                    .samples::<i32>()
+                    .map(|s| s.map(|v| v as f32 / 2147483648.0).unwrap_or(0.0))
+                    .collect(),
+                _ => return Err("UnsupportedBitDepth".to_string()),
+            },
+        };
+
+        Ok(DecodedAudio {
+            channels,
+            sample_rate,
+            samples_interleaved,
+        })
+    }
+
     /// Decodes WAV audio samples via hound
     pub fn decode_wav_bytes(bytes: &[u8]) -> Result<DecodedAudio, String> {
         let cursor = std::io::Cursor::new(bytes);

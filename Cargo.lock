@@ -6,6 +6,7 @@ version = 4
 name = "Crystal-wave"
 version = "0.1.0"
 dependencies = [
+ "arc-swap",
  "atomic_float",
  "basedrop",
  "bytemuck",
@@ -202,6 +203,15 @@ dependencies = [
  "anstyle",
  "once_cell_polyfill",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "arc-swap"
+version = "1.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "84a22b5d51209f6de83d37a0b33d320acb8da88823e42a94c075140708f032a5"
+dependencies = [
+ "rustversion",
 ]
 
 [[package]]

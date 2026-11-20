@@ -1,9 +1,11 @@
+use crate::audio::wav_pool::WavBufferPool;
 use crate::fl_studio::FlPianoRollNote;
 use crate::instruments::virtual_instrument::{AdsrEnvelope, OscillatorWaveform, PolyphonicSynth};
 use crate::mixing::MixingEngine;
 use crate::timeline::region::{FadeCurve, RegionKind};
 use crate::timeline::track::{Track, TrackType};
 use std::f32::consts::PI;
+use std::path::Path;
 
 pub const PPQN: f64 = 960.0;
 
@@ -13,8 +15,12 @@ pub struct TimelineAudioScheduler {
     pub tempo_bpm: f32,
     pub swing_amount: f32,
     pub synth: PolyphonicSynth,
+    pub wav_pool: WavBufferPool,
     track_buffer_l: Vec<f32>,
     track_buffer_r: Vec<f32>,
+    pdc_delay_lines_l: Vec<Vec<f32>>,
+    pdc_delay_lines_r: Vec<Vec<f32>>,
+    pdc_write_pos: Vec<usize>,
 }
 
 impl TimelineAudioScheduler {
@@ -40,8 +46,12 @@ impl TimelineAudioScheduler {
             tempo_bpm: safe_bpm,
             swing_amount: 0.0,
             synth,
+            wav_pool: WavBufferPool::new(),
             track_buffer_l: vec![0.0; 2048],
             track_buffer_r: vec![0.0; 2048],
+            pdc_delay_lines_l: Vec::new(),
+            pdc_delay_lines_r: Vec::new(),
+            pdc_write_pos: Vec::new(),
         }
     }
 
@@ -251,12 +261,19 @@ impl TimelineAudioScheduler {
                         );
 
                         let (raw_l, raw_r) = match &region.kind {
-                            RegionKind::Audio { .. } => Self::synthesize_take_sample(
-                                region.id,
-                                trk_idx,
-                                frame_in_reg,
-                                self.sample_rate,
-                            ),
+                            RegionKind::Audio { file_path, sample_offset, .. } => {
+                                if let Some(ref path_str) = file_path {
+                                    let actual_frame = sample_offset + frame_in_reg as usize;
+                                    self.wav_pool.get_sample(Path::new(path_str), actual_frame)
+                                } else {
+                                    Self::synthesize_take_sample(
+                                        region.id,
+                                        trk_idx,
+                                        frame_in_reg,
+                                        self.sample_rate,
+                                    )
+                                }
+                            }
                             RegionKind::Midi { .. } | RegionKind::Pattern { .. } => {
                                 // Tone generation for MIDI/Pattern clip regions
                                 let t = frame_in_reg as f32 / self.sample_rate;
