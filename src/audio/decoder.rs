@@ -34,8 +34,8 @@ pub struct AudioDecoder;
 impl AudioDecoder {
     /// Decodes a WAV file from disk via hound
     pub fn decode_wav_file<P: AsRef<std::path::Path>>(path: P) -> Result<DecodedAudio, String> {
-        let mut reader =
-            hound::WavReader::open(path.as_ref()).map_err(|e| format!("WavReaderOpenError: {e}"))?;
+        let mut reader = hound::WavReader::open(path.as_ref())
+            .map_err(|e| format!("WavReaderOpenError: {e}"))?;
         let spec = reader.spec();
         let channels = spec.channels as usize;
         let sample_rate = spec.sample_rate;

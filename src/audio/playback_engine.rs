@@ -261,7 +261,11 @@ impl TimelineAudioScheduler {
                         );
 
                         let (raw_l, raw_r) = match &region.kind {
-                            RegionKind::Audio { file_path, sample_offset, .. } => {
+                            RegionKind::Audio {
+                                file_path,
+                                sample_offset,
+                                ..
+                            } => {
                                 if let Some(path_str) = file_path {
                                     let actual_frame = sample_offset + frame_in_reg as usize;
                                     self.wav_pool.get_sample(Path::new(path_str), actual_frame)
@@ -375,33 +379,60 @@ impl TimelineAudioScheduler {
                             self.pdc_delay_lines_r.push(Vec::new());
                             self.pdc_write_pos.push(0);
                         }
+                if let Some(&delay_frames) = pdc_delays.get(trk_idx)
+                    && delay_frames > 0
+                {
+                    while self.pdc_delay_lines_l.len() <= trk_idx {
+                        self.pdc_delay_lines_l.push(Vec::new());
+                        self.pdc_delay_lines_r.push(Vec::new());
+                        self.pdc_write_pos.push(0);
+                    }
 
                         let buffer_size = (delay_frames + len).max(4096);
                         if self.pdc_delay_lines_l[trk_idx].len() < buffer_size {
                             self.pdc_delay_lines_l[trk_idx].resize(buffer_size, 0.0);
                             self.pdc_delay_lines_r[trk_idx].resize(buffer_size, 0.0);
                         }
+                    let buffer_size = (delay_frames + len).max(4096);
+                    if self.pdc_delay_lines_l[trk_idx].len() < buffer_size {
+                        self.pdc_delay_lines_l[trk_idx].resize(buffer_size, 0.0);
+                        self.pdc_delay_lines_r[trk_idx].resize(buffer_size, 0.0);
+                    }
 
                         let delay_line_l = &mut self.pdc_delay_lines_l[trk_idx];
                         let delay_line_r = &mut self.pdc_delay_lines_r[trk_idx];
                         let buf_cap = delay_line_l.len();
                         let mut w_pos = self.pdc_write_pos[trk_idx];
+                    let delay_line_l = &mut self.pdc_delay_lines_l[trk_idx];
+                    let delay_line_r = &mut self.pdc_delay_lines_r[trk_idx];
+                    let buf_cap = delay_line_l.len();
+                    let mut w_pos = self.pdc_write_pos[trk_idx];
 
                         for j in 0..len {
                             let in_l = self.track_buffer_l[j];
                             let in_r = self.track_buffer_r[j];
+                    for j in 0..len {
+                        let in_l = self.track_buffer_l[j];
+                        let in_r = self.track_buffer_r[j];
 
                             delay_line_l[w_pos] = in_l;
                             delay_line_r[w_pos] = in_r;
+                        delay_line_l[w_pos] = in_l;
+                        delay_line_r[w_pos] = in_r;
 
                             let r_pos = (w_pos + buf_cap - delay_frames) % buf_cap;
                             self.track_buffer_l[j] = delay_line_l[r_pos];
                             self.track_buffer_r[j] = delay_line_r[r_pos];
+                        let r_pos = (w_pos + buf_cap - delay_frames) % buf_cap;
+                        self.track_buffer_l[j] = delay_line_l[r_pos];
+                        self.track_buffer_r[j] = delay_line_r[r_pos];
 
                             w_pos = (w_pos + 1) % buf_cap;
                         }
                         self.pdc_write_pos[trk_idx] = w_pos;
+                        w_pos = (w_pos + 1) % buf_cap;
                     }
+                    self.pdc_write_pos[trk_idx] = w_pos;
                 }
             }
 

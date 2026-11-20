@@ -161,9 +161,8 @@ pub fn spawn_audio_worker(
                 Duration::from_secs_f64(block_size as f64 / sample_rate.max(8000.0) as f64);
 
             let mut scheduler = TimelineAudioScheduler::new(sample_rate, 120.0);
-            let mut mixer = MixingEngine::new(sample_rate).unwrap_or_else(|_| {
-                MixingEngine::new(44100.0).expect("Fallback mixer creation")
-            });
+            let mut mixer = MixingEngine::new(sample_rate)
+                .unwrap_or_else(|_| MixingEngine::new(44100.0).expect("Fallback mixer creation"));
             let mut master_buf_l = vec![0.0f32; block_size];
             let mut master_buf_r = vec![0.0f32; block_size];
 

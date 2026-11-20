@@ -26,7 +26,10 @@ impl PlanarStereoAudio {
     #[inline]
     pub fn get_sample(&self, frame: usize) -> (f32, f32) {
         if frame < self.left.len() {
-            (self.left[frame], self.right.get(frame).copied().unwrap_or(self.left[frame]))
+            (
+                self.left[frame],
+                self.right.get(frame).copied().unwrap_or(self.left[frame]),
+            )
         } else {
             (0.0, 0.0)
         }
@@ -70,7 +73,11 @@ impl WavBufferPool {
     }
 
     /// Insert raw in-memory WAV bytes (e.g. for synthetic takes or tests)
-    pub fn insert_bytes(&self, key: impl Into<PathBuf>, wav_bytes: &[u8]) -> Result<PlanarStereoAudio, String> {
+    pub fn insert_bytes(
+        &self,
+        key: impl Into<PathBuf>,
+        wav_bytes: &[u8],
+    ) -> Result<PlanarStereoAudio, String> {
         let decoded = AudioDecoder::decode_wav_bytes(wav_bytes)?;
         let (left, right) = decoded.to_planar_stereo();
         let planar = PlanarStereoAudio {
@@ -85,10 +92,10 @@ impl WavBufferPool {
 
     /// Read sample safely for an audio file path without locking if already cached
     pub fn get_sample(&self, path: &Path, frame: usize) -> (f32, f32) {
-        if let Ok(r) = self.cache.read() {
-            if let Some(audio) = r.get(path) {
-                return audio.get_sample(frame);
-            }
+        if let Ok(r) = self.cache.read()
+            && let Some(audio) = r.get(path)
+        {
+            return audio.get_sample(frame);
         }
         (0.0, 0.0)
     }
