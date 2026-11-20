@@ -49,6 +49,14 @@ pub struct UiTheme {
     pub record: Color,
     pub step_even: Color,
     pub step_odd: Color,
+    pub step_active: Color,
+    pub step_active_dim: Color,
+    pub channel_name_bg: Color,
+    pub channel_name_sel: Color,
+    pub window_titlebar: Color,
+    pub knob_track: Color,
+    pub knob_thumb: Color,
+    pub grid_background: Color,
     pub meters: [Color; 6],
     pub note_colors: [Color; 16],
 }
@@ -90,6 +98,14 @@ impl UiTheme {
             record: Color::from_rgb8(0xe0, 0x31, 0x31), // Crimson Red
             step_even: Color::from_rgb8(0x34, 0x3a, 0x46),
             step_odd: Color::from_rgb8(0x25, 0x2a, 0x33),
+            step_active: Color::from_rgb8(0x00, 0x7a, 0xff),
+            step_active_dim: Color::from_rgb8(0x00, 0x55, 0xb3),
+            channel_name_bg: Color::from_rgb8(0x28, 0x2c, 0x37),
+            channel_name_sel: Color::from_rgb8(0x36, 0x3c, 0x4a),
+            window_titlebar: Color::from_rgb8(0x1b, 0x1d, 0x24),
+            knob_track: Color::from_rgb8(0x10, 0x11, 0x14),
+            knob_thumb: Color::from_rgb8(0xc8, 0xca, 0xd0),
+            grid_background: Color::from_rgb8(0x14, 0x16, 0x1b),
             meters: [
                 Color::from_rgb8(0x1e, 0x82, 0x4c), // -48 dB Dark Green
                 Color::from_rgb8(0x2e, 0xcc, 0x71), // -18 dB Emerald Green
@@ -119,53 +135,61 @@ impl UiTheme {
         }
     }
 
-    /// FL Studio 2025 Dark Orange Theme (.flstheme inspired)
+    /// FL Studio 2025 Dark Orange Theme (Exact .flstheme Delphi TColor calibration)
     pub fn fl_dark_orange() -> Self {
         Self {
             preset: ThemePreset::FlDarkOrange,
-            background: Color::from_rgb8(0x15, 0x15, 0x18),
-            surface: Color::from_rgb8(0x1e, 0x1e, 0x24),
-            surface_elevated: Color::from_rgb8(0x28, 0x28, 0x32),
-            surface_sunken: Color::from_rgb8(0x11, 0x11, 0x14),
-            border: Color::from_rgb8(0x38, 0x38, 0x44),
+            background: Color::from_rgb8(0x1a, 0x1a, 0x1f),
+            surface: Color::from_rgb8(0x23, 0x23, 0x29),
+            surface_elevated: Color::from_rgb8(0x2d, 0x2d, 0x35),
+            surface_sunken: Color::from_rgb8(0x0f, 0x0f, 0x12),
+            border: Color::from_rgb8(0x3e, 0x3e, 0x4a),
             border_focus: Color::from_rgb8(0xf8, 0x8a, 0x36), // FL Iconic Orange
-            text_primary: Color::from_rgb8(0xf4, 0xf4, 0xf6),
+            text_primary: Color::from_rgb8(209, 207, 206),    // TextColor: -3223599 (#d1cfce)
             text_secondary: Color::from_rgb8(0xbf, 0xc0, 0xca),
             text_muted: Color::from_rgb8(0x6e, 0x70, 0x7c),
             accent: Color::from_rgb8(0xf8, 0x8a, 0x36), // FL Vibrant Orange
             accent_active: Color::from_rgb8(0xff, 0xa7, 0x60),
-            selected: Color::from_rgb8(0xf8, 0x8a, 0x36),
-            highlight: Color::from_rgb8(0x49, 0x77, 0xf6), // FL Secondary Highlight Blue
-            mute: Color::from_rgb8(0x4a, 0x36, 0x28),
+            selected: Color::from_rgb8(54, 138, 248), // Selected: -488906 (#368af8)
+            highlight: Color::from_rgb8(246, 119, 73), // Highlight: -11962378 (#f67749)
+            mute: Color::from_rgb8(200, 52, 16),      // Mute: -15715128 (#c83410)
             solo: Color::from_rgb8(0xf3, 0x9c, 0x12),
             record: Color::from_rgb8(0xd6, 0x30, 0x31),
-            step_even: Color::from_rgb8(0x52, 0x55, 0x65), // FL StepEven
-            step_odd: Color::from_rgb8(0x32, 0x34, 0x40),  // FL StepOdd
+            step_even: Color::from_rgb8(237, 126, 81), // StepEven: -11436307 (#ed7e51)
+            step_odd: Color::from_rgb8(198, 85, 17),   // StepOdd: -15641146 (#c65511)
+            step_active: Color::from_rgb8(0xd4, 0x69, 0x7b), // FL StepActive (Rose/Pink)
+            step_active_dim: Color::from_rgb8(0x8c, 0x3f, 0x4a), // FL StepActive on dark beats
+            channel_name_bg: Color::from_rgb8(0x35, 0x38, 0x40), // FL Channel Name Pill
+            channel_name_sel: Color::from_rgb8(0x41, 0x44, 0x50), // FL Selected Channel
+            window_titlebar: Color::from_rgb8(0x20, 0x22, 0x28), // Sub-window header
+            knob_track: Color::from_rgb8(0x11, 0x13, 0x18),
+            knob_thumb: Color::from_rgb8(0xc8, 0xca, 0xd0),
+            grid_background: Color::from_rgb8(52, 68, 78), // PRGridback / PLGridback: 5129268 (#34444e)
             meters: [
-                Color::from_rgb8(0x0e, 0x6a, 0x38),
-                Color::from_rgb8(0x1e, 0xbb, 0x5d),
-                Color::from_rgb8(0x8e, 0xd0, 0x38),
-                Color::from_rgb8(0xf3, 0x9c, 0x12),
-                Color::from_rgb8(0xe6, 0x7e, 0x22),
-                Color::from_rgb8(0xd6, 0x30, 0x31),
+                Color::from_rgb8(170, 57, 11),   // Meter0: -16041558 (#aa390b)
+                Color::from_rgb8(248, 119, 36),  // Meter1: -14387208 (#f87724)
+                Color::from_rgb8(246, 161, 3),   // Meter2: -16539146 (#f6a103)
+                Color::from_rgb8(238, 197, 78),  // Meter3: -11614738 (#eec54e)
+                Color::from_rgb8(255, 255, 255), // Meter4: -1 (#ffffff)
+                Color::from_rgb8(255, 255, 255), // Meter5: -1 (#ffffff)
             ],
             note_colors: [
-                Color::from_rgb8(0x49, 0x77, 0xf6), // 0: FL Note 0
-                Color::from_rgb8(0xf8, 0x8a, 0x36), // 1: FL Orange
-                Color::from_rgb8(0x2e, 0xcc, 0x71), // 2: Lime Green
-                Color::from_rgb8(0x9b, 0x59, 0xb6), // 3: Purple
-                Color::from_rgb8(0x1a, 0xbc, 0x9c), // 4: Turquoise
-                Color::from_rgb8(0xe6, 0x7e, 0x22), // 5: Dark Orange
-                Color::from_rgb8(0x34, 0x98, 0xdb), // 6: Blue
-                Color::from_rgb8(0xe7, 0x4c, 0x3c), // 7: Red
-                Color::from_rgb8(0xf1, 0xc4, 0x0f), // 8: Yellow
-                Color::from_rgb8(0x16, 0xa0, 0x85), // 9: Green Sea
-                Color::from_rgb8(0x8e, 0x44, 0xad), // 10: Wisteria
-                Color::from_rgb8(0xd3, 0x54, 0x00), // 11: Pumpkin
-                Color::from_rgb8(0x29, 0x80, 0xb9), // 12: Belize Hole
-                Color::from_rgb8(0xc0, 0x39, 0x2b), // 13: Pomegranate
-                Color::from_rgb8(0xbd, 0xc3, 0xc7), // 14: Silver
-                Color::from_rgb8(0x7f, 0x8c, 0x8d), // 15: Asbestos
+                Color::from_rgb8(241, 68, 3),    // NoteColor0: -16562959 (#f14403)
+                Color::from_rgb8(229, 99, 58),   // NoteColor1: -12950555 (#e5633a)
+                Color::from_rgb8(206, 121, 93),  // NoteColor2: -10651186 (#ce795d)
+                Color::from_rgb8(197, 163, 154), // NoteColor3: -6642747 (#c5a39a)
+                Color::from_rgb8(255, 165, 5),   // NoteColor4: -16407041 (#ffa505)
+                Color::from_rgb8(231, 167, 32),  // NoteColor5: -14637081 (#e7a720)
+                Color::from_rgb8(196, 147, 71),  // NoteColor6: -12086332 (#c49347)
+                Color::from_rgb8(177, 143, 90),  // NoteColor7: -10842191 (#b18f5a)
+                Color::from_rgb8(183, 225, 0),   // NoteColor8: -16719433 (#b7e100)
+                Color::from_rgb8(168, 207, 34),  // NoteColor9: -14495832 (#a8cf22)
+                Color::from_rgb8(125, 175, 68),  // NoteColor10: -12275843 (#7daf44)
+                Color::from_rgb8(92, 136, 65),   // NoteColor11: -12482468 (#5c8841)
+                Color::from_rgb8(0, 222, 55),    // NoteColor12: -13115904 (#00de37)
+                Color::from_rgb8(49, 209, 94),   // NoteColor13: -10563279 (#31d15e)
+                Color::from_rgb8(86, 177, 119),  // NoteColor14: -8933034 (#56b177)
+                Color::from_rgb8(140, 227, 139), // NoteColor15: -7609460 (#8ce38b)
             ],
         }
     }
@@ -192,6 +216,14 @@ impl UiTheme {
             record: Color::from_rgb8(0xe7, 0x4c, 0x3c),
             step_even: Color::from_rgb8(0x25, 0x29, 0x32), // Beats 2 & 4 (Graphite)
             step_odd: Color::from_rgb8(0x18, 0x1a, 0x20),  // Beats 1 & 3 (Obsidian)
+            step_active: Color::from_rgb8(0xd4, 0x69, 0x7b), // FL StepActive (Rose/Pink)
+            step_active_dim: Color::from_rgb8(0x8c, 0x3f, 0x4a),
+            channel_name_bg: Color::from_rgb8(0x28, 0x2c, 0x34),
+            channel_name_sel: Color::from_rgb8(0x38, 0x3c, 0x46),
+            window_titlebar: Color::from_rgb8(0x19, 0x1b, 0x22),
+            knob_track: Color::from_rgb8(0x0e, 0x10, 0x14),
+            knob_thumb: Color::from_rgb8(0xd0, 0xd4, 0xdc),
+            grid_background: Color::from_rgb8(0x18, 0x1a, 0x20),
             meters: [
                 Color::from_rgb8(0x0e, 0x6a, 0x38), // -48 dB Dark Green
                 Color::from_rgb8(0x1e, 0xbb, 0x5d), // -18 dB Emerald Green
@@ -473,40 +505,27 @@ impl UiTheme {
         is_even_beat: bool,
     ) -> impl Fn(&iced::Theme, button::Status) -> button::Style + 'a {
         move |_theme, status| {
-            let (bg, border_col) = if active {
-                let col = self.accent;
-                match status {
-                    button::Status::Hovered => (
-                        Color {
-                            r: (col.r * 1.2).min(1.0),
-                            g: (col.g * 1.2).min(1.0),
-                            b: (col.b * 1.2).min(1.0),
-                            a: 1.0,
-                        },
-                        Color::WHITE,
-                    ),
-                    _ => (col, self.accent_active),
-                }
-            } else {
-                let base = if is_even_beat {
-                    self.step_even
-                } else {
-                    self.step_odd
-                };
-                match status {
-                    button::Status::Hovered => (
-                        Color {
-                            r: (base.r * 1.25).min(1.0),
-                            g: (base.g * 1.25).min(1.0),
-                            b: (base.b * 1.25).min(1.0),
-                            a: base.a,
-                        },
-                        self.border_focus,
-                    ),
-                    _ => (base, self.border),
-                }
+            let base = match (active, is_even_beat) {
+                (true, true) => self.step_active,
+                (true, false) => self.step_active_dim,
+                (false, true) => self.step_even,
+                (false, false) => self.step_odd,
             };
-
+            let bg = match status {
+                button::Status::Hovered => Color {
+                    r: (base.r * 1.15).min(1.0),
+                    g: (base.g * 1.15).min(1.0),
+                    b: (base.b * 1.15).min(1.0),
+                    a: base.a,
+                },
+                button::Status::Pressed => Color {
+                    r: base.r * 0.85,
+                    g: base.g * 0.85,
+                    b: base.b * 0.85,
+                    a: base.a,
+                },
+                _ => base,
+            };
             button::Style {
                 background: Some(Background::Color(bg)),
                 text_color: if active {
@@ -515,9 +534,13 @@ impl UiTheme {
                     self.text_muted
                 },
                 border: Border {
-                    color: border_col,
-                    width: if active { 1.5 } else { 1.0 },
-                    radius: Radius::from(3.0),
+                    color: if active {
+                        Color::from_rgba8(255, 255, 255, 0.4)
+                    } else {
+                        self.border
+                    },
+                    width: 0.5,
+                    radius: Radius::from(2.0),
                 },
                 shadow: Shadow::default(),
                 ..button::Style::default()
@@ -821,6 +844,105 @@ impl UiTheme {
             },
             shadow: Shadow::default(),
             ..container::Style::default()
+        }
+    }
+
+    /// Sub-window header / titlebar style
+    pub fn window_titlebar_style(&self) -> container::Style {
+        container::Style {
+            background: Some(Background::Color(self.window_titlebar)),
+            text_color: Some(self.text_primary),
+            border: Border {
+                color: self.border,
+                width: 1.0,
+                radius: Radius::from(0.0),
+            },
+            shadow: Shadow::default(),
+            ..container::Style::default()
+        }
+    }
+
+    /// Channel name pill button style
+    pub fn channel_pill_style<'a>(
+        &'a self,
+        selected: bool,
+    ) -> impl Fn(&iced::Theme, button::Status) -> button::Style + 'a {
+        move |_theme, status| {
+            let base = if selected {
+                self.channel_name_sel
+            } else {
+                self.channel_name_bg
+            };
+            let bg = match status {
+                button::Status::Hovered => Color {
+                    r: (base.r * 1.15).min(1.0),
+                    g: (base.g * 1.15).min(1.0),
+                    b: (base.b * 1.15).min(1.0),
+                    a: base.a,
+                },
+                button::Status::Pressed => Color {
+                    r: base.r * 0.85,
+                    g: base.g * 0.85,
+                    b: base.b * 0.85,
+                    a: base.a,
+                },
+                _ => base,
+            };
+            button::Style {
+                background: Some(Background::Color(bg)),
+                text_color: if selected {
+                    Color::WHITE
+                } else {
+                    self.text_primary
+                },
+                border: Border {
+                    color: if selected { self.accent } else { self.border },
+                    width: 1.0,
+                    radius: Radius::from(4.0),
+                },
+                shadow: Shadow::default(),
+                ..button::Style::default()
+            }
+        }
+    }
+
+    /// Circular transport button style (Play, Stop, Record, Loop)
+    pub fn circular_transport_btn_style<'a>(
+        &'a self,
+        face_color: Color,
+        active: bool,
+    ) -> impl Fn(&iced::Theme, button::Status) -> button::Style + 'a {
+        move |_theme, status| {
+            let bg = if active {
+                face_color
+            } else {
+                match status {
+                    button::Status::Hovered => Color {
+                        r: (self.surface_elevated.r * 1.25).min(1.0),
+                        g: (self.surface_elevated.g * 1.25).min(1.0),
+                        b: (self.surface_elevated.b * 1.25).min(1.0),
+                        a: self.surface_elevated.a,
+                    },
+                    button::Status::Pressed => self.surface_sunken,
+                    _ => self.surface_elevated,
+                }
+            };
+            let text_color = if active {
+                Color::WHITE
+            } else {
+                self.text_secondary
+            };
+            button::Style {
+                background: Some(Background::Color(bg)),
+                text_color,
+                border: Border {
+                    color: if active { face_color } else { self.border },
+                    width: 1.0,
+                    radius: Radius::from(14.0),
+                },
+                shadow: Shadow::default(),
+                ..button::Style::default()
+            }
         }
     }
 

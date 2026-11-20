@@ -1,5 +1,6 @@
 pub mod app;
 pub mod canvas_edison;
+pub mod canvas_knob;
 pub mod canvas_piano_roll;
 pub mod canvas_timeline;
 pub mod layout;

@@ -709,6 +709,13 @@ impl<Theme> canvas::Program<UiMessage, Theme> for ArrangementCanvasProgram {
                 } else {
                     Color::from_rgb8(0x23, 0x2a, 0x36) // Highlighted selected track
                 }
+            } else if self.is_fl_theme {
+                // Calibrated to PLGridback: 5129268 / #34444e base shading
+                if i % 2 == 0 {
+                    Color::from_rgb8(0x21, 0x25, 0x2d)
+                } else {
+                    Color::from_rgb8(0x26, 0x2b, 0x34)
+                }
             } else if i % 2 == 0 {
                 Color::from_rgb8(0x1a, 0x1c, 0x22)
             } else {

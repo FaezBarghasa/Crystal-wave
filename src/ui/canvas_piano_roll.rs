@@ -483,9 +483,9 @@ impl<Theme> canvas::Program<UiMessage, Theme> for PianoRollCanvasProgram {
     ) -> Vec<Geometry> {
         let mut frame = Frame::new(renderer, bounds.size());
 
-        // 1. Overall Dark Viewport Background
+        // 1. Overall Dark Viewport Background (Calibrated to PRGridback: 5129268 / #34444e)
         let base_bg = if self.is_fl_theme {
-            Color::from_rgb8(0x18, 0x1a, 0x1e)
+            Color::from_rgb8(0x23, 0x27, 0x30)
         } else {
             Color::from_rgb8(0x14, 0x16, 0x1b)
         };
@@ -503,7 +503,13 @@ impl<Theme> canvas::Program<UiMessage, Theme> for PianoRollCanvasProgram {
             let row_bg = if !in_scale {
                 Color::from_rgba8(0x05, 0x07, 0x0a, 0.65)
             } else if is_black {
-                Color::from_rgba8(0x0a, 0x0c, 0x10, 0.40)
+                if self.is_fl_theme {
+                    Color::from_rgba8(0x18, 0x1b, 0x22, 0.70)
+                } else {
+                    Color::from_rgba8(0x0a, 0x0c, 0x10, 0.40)
+                }
+            } else if self.is_fl_theme {
+                Color::from_rgba8(0x34, 0x44, 0x4e, 0.35)
             } else {
                 Color::from_rgba8(0xff, 0xff, 0xff, 0.02)
             };
@@ -516,7 +522,13 @@ impl<Theme> canvas::Program<UiMessage, Theme> for PianoRollCanvasProgram {
             // Subtle row divider line
             let divider_color = if key % 12 == 0 {
                 // Octave C line: slightly brighter
-                Color::from_rgba8(0xff, 0xff, 0xff, 0.12)
+                if self.is_fl_theme {
+                    Color::from_rgba8(0xf8, 0x8a, 0x36, 0.35)
+                } else {
+                    Color::from_rgba8(0xff, 0xff, 0xff, 0.12)
+                }
+            } else if self.is_fl_theme {
+                Color::from_rgba8(0x34, 0x44, 0x4e, 0.50)
             } else {
                 Color::from_rgba8(0xff, 0xff, 0xff, 0.03)
             };
@@ -853,14 +865,24 @@ impl<Theme> canvas::Program<UiMessage, Theme> for PianoRollCanvasProgram {
                         .with_width(1.0),
                 );
 
-                // High-contrast C note marker with octave number (e.g. C4, C5)
+                // Note labels for white keys (C, D, E, F, G, A, B)
+                let note_str = midi_key_to_name(key);
                 if key % 12 == 0 {
-                    let note_str = midi_key_to_name(key);
+                    // High-contrast C note marker with octave number (e.g. C4, C5)
                     frame.fill_text(canvas::Text {
                         content: note_str,
                         position: Point::new(KEYBOARD_WIDTH - 24.0, y + 2.5),
-                        color: Color::from_rgb8(0x18, 0x1a, 0x20),
+                        color: Color::from_rgb8(0xfa, 0x82, 0x31), // FL Orange accent for C
                         size: 9.5.into(),
+                        ..Default::default()
+                    });
+                } else {
+                    let note_letter = note_str.chars().take(1).collect::<String>();
+                    frame.fill_text(canvas::Text {
+                        content: note_letter,
+                        position: Point::new(KEYBOARD_WIDTH - 14.0, y + 3.0),
+                        color: Color::from_rgba8(0x18, 0x1a, 0x20, 0.45),
+                        size: 8.5.into(),
                         ..Default::default()
                     });
                 }
