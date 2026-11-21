@@ -759,15 +759,20 @@ impl<Theme> canvas::Program<UiMessage, Theme> for PianoRollCanvasProgram {
                 );
             }
 
-            // FL Studio Slide Triangle Glyph on top-left of note
+            // FL Studio Slide Triangle Glyph on top-right of note
             if note.is_slide {
+                let right_x = note_rect.x + note_rect.width - 2.0;
                 let tri_path = Path::new(|builder| {
-                    builder.move_to(Point::new(note_rect.x + 2.0, note_rect.y + 2.0));
-                    builder.line_to(Point::new(note_rect.x + 9.0, note_rect.y + 2.0));
-                    builder.line_to(Point::new(note_rect.x + 2.0, note_rect.y + 9.0));
+                    builder.move_to(Point::new(right_x, note_rect.y + 2.0));
+                    builder.line_to(Point::new(right_x - 8.0, note_rect.y + 2.0));
+                    builder.line_to(Point::new(right_x, note_rect.y + 10.0));
                     builder.close();
                 });
-                frame.fill(&tri_path, Color::WHITE);
+                frame.fill(&tri_path, Color::from_rgb8(0x38, 0xef, 0x7d));
+                frame.stroke(
+                    &tri_path,
+                    Stroke::default().with_color(Color::WHITE).with_width(0.75),
+                );
             }
 
             // Note Name label inside body if wide enough
@@ -878,69 +883,103 @@ impl<Theme> canvas::Program<UiMessage, Theme> for PianoRollCanvasProgram {
         }
 
         // 8. Vertical Keyboard Sidebar (The 128-Key Rake on the left)
-        let kb_bg = Color::from_rgb8(0x1c, 0x1e, 0x24);
+        let kb_bg = Color::from_rgb8(0x18, 0x1a, 0x22);
         frame.fill_rectangle(
             Point::ORIGIN,
             Size::new(KEYBOARD_WIDTH, bounds.height),
             kb_bg,
         );
 
+        // 8a. Draw White Keys first
         for key in 0..128u8 {
             let y = self.key_to_y(key);
             if y + KEY_HEIGHT < 0.0 || y > bounds.height {
                 continue;
             }
 
-            let is_black = is_black_key(key);
-            if is_black {
-                // Black Piano Key (narrower width 60%)
-                let black_w = KEYBOARD_WIDTH * 0.62;
-                frame.fill_rectangle(
-                    Point::new(0.0, y),
-                    Size::new(black_w, KEY_HEIGHT),
-                    Color::from_rgb8(0x22, 0x24, 0x2b),
-                );
-                frame.stroke(
-                    &Path::rectangle(Point::new(0.0, y), Size::new(black_w, KEY_HEIGHT)),
-                    Stroke::default()
-                        .with_color(Color::from_rgb8(0x11, 0x12, 0x16))
-                        .with_width(1.0),
-                );
-            } else {
+            if !is_black_key(key) {
                 // White Piano Key (full width)
                 frame.fill_rectangle(
                     Point::new(0.0, y),
                     Size::new(KEYBOARD_WIDTH, KEY_HEIGHT),
-                    Color::from_rgb8(0xeb, 0xee, 0xf2),
+                    Color::from_rgb8(0xe6, 0xeb, 0xf2),
                 );
+
+                // Top highlight line
+                let top_line = Path::line(Point::new(0.0, y), Point::new(KEYBOARD_WIDTH, y));
                 frame.stroke(
-                    &Path::rectangle(Point::new(0.0, y), Size::new(KEYBOARD_WIDTH, KEY_HEIGHT)),
+                    &top_line,
                     Stroke::default()
-                        .with_color(Color::from_rgb8(0xba, 0xbe, 0xc6))
+                        .with_color(Color::from_rgba8(0xff, 0xff, 0xff, 0.60))
                         .with_width(1.0),
                 );
 
-                // Note labels for white keys (C, D, E, F, G, A, B)
-                let note_str = midi_key_to_name(key);
+                // Bottom bevel shadow
+                let bot_line = Path::line(
+                    Point::new(0.0, y + KEY_HEIGHT - 1.0),
+                    Point::new(KEYBOARD_WIDTH, y + KEY_HEIGHT - 1.0),
+                );
+                frame.stroke(
+                    &bot_line,
+                    Stroke::default()
+                        .with_color(Color::from_rgba8(0x9a, 0xa0, 0xae, 0.60))
+                        .with_width(1.0),
+                );
+
+                // Note labels: ONLY C keys have octave markers (1:1 FL Studio ground truth)
                 if key % 12 == 0 {
-                    // High-contrast C note marker with octave number (e.g. C4, C5)
+                    let note_str = midi_key_to_name(key);
                     frame.fill_text(canvas::Text {
                         content: note_str,
-                        position: Point::new(KEYBOARD_WIDTH - 24.0, y + 2.5),
-                        color: Color::from_rgb8(0xfa, 0x82, 0x31), // FL Orange accent for C
-                        size: 9.5.into(),
-                        ..Default::default()
-                    });
-                } else {
-                    let note_letter = note_str.chars().take(1).collect::<String>();
-                    frame.fill_text(canvas::Text {
-                        content: note_letter,
-                        position: Point::new(KEYBOARD_WIDTH - 14.0, y + 3.0),
-                        color: Color::from_rgba8(0x18, 0x1a, 0x20, 0.45),
-                        size: 8.5.into(),
+                        position: Point::new(KEYBOARD_WIDTH - 25.0, y + 2.5),
+                        color: Color::from_rgb8(0xfa, 0x82, 0x31), // FL Studio signature orange accent
+                        size: 10.0.into(),
                         ..Default::default()
                     });
                 }
+            }
+        }
+
+        // 8b. Draw Elevated Black Keys with 3D Drop Shadow on top
+        for key in 0..128u8 {
+            let y = self.key_to_y(key);
+            if y + KEY_HEIGHT < 0.0 || y > bounds.height {
+                continue;
+            }
+
+            if is_black_key(key) {
+                let black_w = KEYBOARD_WIDTH * 0.62;
+
+                // 3D Drop Shadow cast onto white keys (bottom and right)
+                frame.fill_rectangle(
+                    Point::new(1.0, y + 1.5),
+                    Size::new(black_w + 2.0, KEY_HEIGHT),
+                    Color::from_rgba8(0x00, 0x00, 0x00, 0.50),
+                );
+
+                // Black Key Body
+                frame.fill_rectangle(
+                    Point::new(0.0, y),
+                    Size::new(black_w, KEY_HEIGHT),
+                    Color::from_rgb8(0x19, 0x1b, 0x22),
+                );
+
+                // Top highlight bevel
+                let top_hl = Path::line(Point::new(0.0, y + 0.5), Point::new(black_w, y + 0.5));
+                frame.stroke(
+                    &top_hl,
+                    Stroke::default()
+                        .with_color(Color::from_rgba8(0xff, 0xff, 0xff, 0.22))
+                        .with_width(1.0),
+                );
+
+                // Border outline
+                frame.stroke(
+                    &Path::rectangle(Point::new(0.0, y), Size::new(black_w, KEY_HEIGHT)),
+                    Stroke::default()
+                        .with_color(Color::from_rgb8(0x0a, 0x0b, 0x0f))
+                        .with_width(1.0),
+                );
             }
         }
 
@@ -952,7 +991,7 @@ impl<Theme> canvas::Program<UiMessage, Theme> for PianoRollCanvasProgram {
         frame.stroke(
             &sep_line,
             Stroke::default()
-                .with_color(Color::from_rgba8(0x00, 0x00, 0x00, 0.60))
+                .with_color(Color::from_rgba8(0x00, 0x00, 0x00, 0.70))
                 .with_width(2.0),
         );
 
@@ -966,13 +1005,30 @@ impl<Theme> canvas::Program<UiMessage, Theme> for PianoRollCanvasProgram {
                 Size::new(bounds.width, lane_h),
                 Color::from_rgb8(0x10, 0x12, 0x17),
             );
+
+            // Splitter Handle Bar with Grip Dots
+            let handle_rect =
+                Rectangle::new(Point::new(0.0, lane_y - 2.0), Size::new(bounds.width, 5.0));
+            frame.fill_rectangle(
+                handle_rect.position(),
+                handle_rect.size(),
+                Color::from_rgb8(0x28, 0x2d, 0x3a),
+            );
+            frame.fill_text(canvas::Text {
+                content: "••••••••".into(),
+                position: Point::new((bounds.width * 0.5) - 16.0, lane_y - 6.0),
+                color: Color::from_rgba8(0xff, 0xff, 0xff, 0.35),
+                size: 8.0.into(),
+                ..Default::default()
+            });
+
             // Top border divider
             let lane_sep = Path::line(Point::new(0.0, lane_y), Point::new(bounds.width, lane_y));
             frame.stroke(
                 &lane_sep,
                 Stroke::default()
-                    .with_color(Color::from_rgb8(0x2d, 0x33, 0x42))
-                    .with_width(1.5),
+                    .with_color(Color::from_rgb8(0x35, 0x3b, 0x4c))
+                    .with_width(1.0),
             );
 
             // Left header label in the keyboard column
@@ -1019,7 +1075,7 @@ impl<Theme> canvas::Program<UiMessage, Theme> for PianoRollCanvasProgram {
                     continue;
                 }
 
-                let (stem_y_top, stem_y_bottom, node_val_str) = match self.event_target {
+                let (stem_y_top, stem_y_bottom, _node_val_str) = match self.event_target {
                     EventLaneTarget::Velocity => {
                         let h = (note.velocity * stem_usable_h).clamp(2.0, stem_usable_h);
                         (
@@ -1064,18 +1120,15 @@ impl<Theme> canvas::Program<UiMessage, Theme> for PianoRollCanvasProgram {
                         .with_width(1.5),
                 );
 
-                // Circular node cap at the top of the stem
-                let cap_circle = Path::circle(Point::new(nx, stem_y_top), 3.0);
+                // Circular node cap at the top of the stem (FL Studio round handle)
+                let cap_circle = Path::circle(Point::new(nx, stem_y_top), 3.5);
                 frame.fill(&cap_circle, Color::from_rgb8(0xfa, 0x82, 0x31));
-
-                // Value readout if room
-                frame.fill_text(canvas::Text {
-                    content: node_val_str,
-                    position: Point::new(nx + 3.0, (stem_y_top - 6.0).max(lane_y + 2.0)),
-                    color: Color::from_rgba8(0xff, 0xff, 0xff, 0.50),
-                    size: 8.0.into(),
-                    ..Default::default()
-                });
+                frame.stroke(
+                    &cap_circle,
+                    Stroke::default()
+                        .with_color(Color::from_rgba8(255, 255, 255, 0.70))
+                        .with_width(0.75),
+                );
             }
         }
 

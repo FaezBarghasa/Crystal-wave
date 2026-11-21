@@ -99,6 +99,8 @@ pub enum UiMessage {
     NewProject,
     SaveProject,
     MenuAction(MenuCommand),
+    ToggleMenuDropdown(Option<crate::ui::layout::ActiveMenuDropdown>),
+    CloseMenuDropdown,
 
     // Plugin Lifecycle Management
     RemovePlugin(u32),
@@ -183,6 +185,8 @@ pub enum UiMessage {
     BrowserSelectTab(crate::fl_studio::browser::BrowserTab),
     BrowserAuditionSample(usize),
     BrowserStopAudition,
+    BrowserToggleFolder(String),
+    BrowserSelectSample(usize),
     BrowserDropSampleToPlaylist {
         sample_id: usize,
         track_id: usize,

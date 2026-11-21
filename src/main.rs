@@ -51,6 +51,7 @@ fn main() -> iced::Result {
     let open_f10 =
         args.contains(&"--audio-settings".to_string()) || args.contains(&"--f10".to_string());
     let open_wrapper = args.contains(&"--wrapper".to_string());
+    let open_dual = args.contains(&"--dual".to_string()) || args.contains(&"--split".to_string());
 
     iced::application(
         move || {
@@ -78,6 +79,18 @@ fn main() -> iced::Result {
                     }
                     _ => {}
                 }
+            }
+            if open_dual {
+                let sec = match app.layout.active_view {
+                    Crystal_wave::ui::layout::FlActiveView::ChannelRack => {
+                        Crystal_wave::ui::layout::FlActiveView::PianoRoll
+                    }
+                    Crystal_wave::ui::layout::FlActiveView::PianoRoll => {
+                        Crystal_wave::ui::layout::FlActiveView::ChannelRack
+                    }
+                    _ => Crystal_wave::ui::layout::FlActiveView::ChannelRack,
+                };
+                app.layout.secondary_view = Some(sec);
             }
             if open_f10 {
                 app.audio_settings_open = true;

@@ -111,11 +111,25 @@ impl PanelState {
     }
 }
 
+/// Active menu dropdown in top menu bar
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ActiveMenuDropdown {
+    File,
+    Edit,
+    Add,
+    Patterns,
+    View,
+    Options,
+    Tools,
+    Help,
+}
+
 /// Complete Workspace Layout State
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LayoutState {
     pub active_view: FlActiveView,
     pub secondary_view: Option<FlActiveView>,
+    pub active_dropdown: Option<ActiveMenuDropdown>,
     pub browser: PanelState,
     pub inspector: PanelState,
     pub bottom_drawer: PanelState,
@@ -131,6 +145,7 @@ impl Default for LayoutState {
         Self {
             active_view: FlActiveView::Playlist,
             secondary_view: None,
+            active_dropdown: None,
             browser: PanelState::new(PanelId::Browser, DockPosition::Left, 0.20, true),
             inspector: PanelState::new(PanelId::Inspector, DockPosition::Left, 0.18, false),
             bottom_drawer: PanelState::new(PanelId::EditorDrawer, DockPosition::Bottom, 0.35, true),

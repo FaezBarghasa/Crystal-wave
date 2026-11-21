@@ -10,7 +10,7 @@
 
 use iced::mouse;
 use iced::widget::canvas::{self, Action, Canvas, Frame, Geometry, Path, Stroke};
-use iced::{Color, Element, Length, Point, Rectangle};
+use iced::{Color, Element, Length, Point, Rectangle, Size};
 use std::f32::consts::PI;
 
 /// Interaction state for rotary knob dragging
@@ -397,4 +397,475 @@ where
         .width(Length::Fixed(config.size))
         .height(Length::Fixed(config.size))
         .into()
+}
+
+/// Compact Inline Oscilloscope / Spectrogram Program (FL Studio 2026 140x30px toolbar widget)
+#[derive(Debug, Clone)]
+pub struct CompactOscilloscopeProgram {
+    pub is_playing: bool,
+    pub playhead_tick: u64,
+    pub accent_color: Color,
+}
+
+impl<Message, Theme> canvas::Program<Message, Theme, iced::Renderer>
+    for CompactOscilloscopeProgram
+{
+    type State = ();
+
+    fn draw(
+        &self,
+        _state: &Self::State,
+        renderer: &iced::Renderer,
+        _theme: &Theme,
+        bounds: Rectangle,
+        _cursor: iced::mouse::Cursor,
+    ) -> Vec<Geometry> {
+        let mut frame = Frame::new(renderer, bounds.size());
+
+        // Dark recessed background
+        frame.fill_rectangle(
+            Point::ORIGIN,
+            bounds.size(),
+            Color::from_rgb8(0x0e, 0x10, 0x15),
+        );
+        frame.stroke(
+            &Path::rectangle(Point::ORIGIN, bounds.size()),
+            Stroke::default()
+                .with_color(Color::from_rgb8(0x24, 0x27, 0x32))
+                .with_width(1.0),
+        );
+
+        // Center zero line
+        let mid_y = bounds.height * 0.5;
+        let center_line = Path::line(Point::new(0.0, mid_y), Point::new(bounds.width, mid_y));
+        frame.stroke(
+            &center_line,
+            Stroke::default()
+                .with_color(Color::from_rgba8(0x35, 0x3d, 0x4d, 0.45))
+                .with_width(1.0),
+        );
+
+        if self.is_playing {
+            // Draw dynamic synthesized audio waveform curve
+            let points_count = 60;
+            let step_x = bounds.width / points_count as f32;
+            let time = self.playhead_tick as f32 * 0.05;
+
+            let path = Path::new(|builder| {
+                builder.move_to(Point::new(0.0, mid_y));
+                for i in 1..=points_count {
+                    let x = i as f32 * step_x;
+                    let phase = x * 0.12 + time;
+                    let y_offset =
+                        (phase.sin() * 0.65 + (phase * 2.3).sin() * 0.35) * (mid_y * 0.75);
+                    builder.line_to(Point::new(x, mid_y + y_offset));
+                }
+            });
+
+            // Outer glow line
+            frame.stroke(
+                &path,
+                Stroke::default()
+                    .with_color(Color::from_rgba(
+                        self.accent_color.r,
+                        self.accent_color.g,
+                        self.accent_color.b,
+                        0.35,
+                    ))
+                    .with_width(3.0),
+            );
+
+            // Core neon line
+            frame.stroke(
+                &path,
+                Stroke::default()
+                    .with_color(self.accent_color)
+                    .with_width(1.5),
+            );
+        } else {
+            // Resting state: subtle horizontal green line
+            let resting_line = Path::line(
+                Point::new(2.0, mid_y),
+                Point::new(bounds.width - 2.0, mid_y),
+            );
+            frame.stroke(
+                &resting_line,
+                Stroke::default()
+                    .with_color(Color::from_rgb8(0x2e, 0xcc, 0x71))
+                    .with_width(1.5),
+            );
+        }
+
+        vec![frame.into_geometry()]
+    }
+}
+
+pub fn compact_oscilloscope<'a, Theme: 'a>(
+    width: f32,
+    height: f32,
+    is_playing: bool,
+    playhead_tick: u64,
+    accent_color: Color,
+) -> Element<'a, crate::ui::message::UiMessage, Theme, iced::Renderer> {
+    Canvas::new(CompactOscilloscopeProgram {
+        is_playing,
+        playhead_tick,
+        accent_color,
+    })
+    .width(Length::Fixed(width))
+    .height(Length::Fixed(height))
+    .into()
+}
+
+/// Mini 3-Band Parametric EQ Curve Visualizer (FL Studio Parametric EQ 2 Style)
+pub struct ParametricEqVisualizerProgram {
+    pub low_gain_db: f32,
+    pub mid_gain_db: f32,
+    pub high_gain_db: f32,
+    pub accent_color: Color,
+}
+
+impl<Theme> canvas::Program<crate::ui::message::UiMessage, Theme>
+    for ParametricEqVisualizerProgram
+{
+    type State = ();
+
+    fn draw(
+        &self,
+        _state: &Self::State,
+        renderer: &iced::Renderer,
+        _theme: &Theme,
+        bounds: Rectangle,
+        _cursor: mouse::Cursor,
+    ) -> Vec<Geometry> {
+        let mut frame = Frame::new(renderer, bounds.size());
+
+        // 1. Dark Well Background (#101319)
+        frame.fill_rectangle(
+            Point::ORIGIN,
+            bounds.size(),
+            Color::from_rgb8(0x10, 0x13, 0x19),
+        );
+
+        // 2. Grid & Axis Lines
+        let mid_y = bounds.height * 0.5;
+
+        // Vertical Logarithmic Frequency Lines (100Hz at ~22%, 1kHz at ~52%, 10kHz at ~82%)
+        let freqs = [(0.22, "100"), (0.52, "1k"), (0.82, "10k")];
+        for (norm_x, label) in freqs {
+            let x = bounds.width * norm_x;
+            let f_line = Path::line(Point::new(x, 0.0), Point::new(x, bounds.height));
+            frame.stroke(
+                &f_line,
+                Stroke::default()
+                    .with_color(Color::from_rgba8(0xff, 0xff, 0xff, 0.07))
+                    .with_width(1.0),
+            );
+            frame.fill_text(canvas::Text {
+                content: label.to_string(),
+                position: Point::new(x + 2.0, bounds.height - 10.0),
+                color: Color::from_rgba8(0xff, 0xff, 0xff, 0.30),
+                size: 7.5.into(),
+                ..Default::default()
+            });
+        }
+
+        // Horizontal dB Guidelines (+6dB, 0dB, -6dB)
+        let db_scale_px = (bounds.height * 0.36) / 12.0; // 12dB span
+        let center_zero = Path::line(Point::new(0.0, mid_y), Point::new(bounds.width, mid_y));
+        frame.stroke(
+            &center_zero,
+            Stroke::default()
+                .with_color(Color::from_rgba8(0xff, 0xff, 0xff, 0.16))
+                .with_width(1.0),
+        );
+
+        let plus_6 = Path::line(
+            Point::new(0.0, mid_y - 6.0 * db_scale_px),
+            Point::new(bounds.width, mid_y - 6.0 * db_scale_px),
+        );
+        frame.stroke(
+            &plus_6,
+            Stroke::default()
+                .with_color(Color::from_rgba8(0xff, 0xff, 0xff, 0.05))
+                .with_width(1.0),
+        );
+
+        let minus_6 = Path::line(
+            Point::new(0.0, mid_y + 6.0 * db_scale_px),
+            Point::new(bounds.width, mid_y + 6.0 * db_scale_px),
+        );
+        frame.stroke(
+            &minus_6,
+            Stroke::default()
+                .with_color(Color::from_rgba8(0xff, 0xff, 0xff, 0.05))
+                .with_width(1.0),
+        );
+
+        // 3. Smooth Parametric EQ Response Curve
+        let steps = 50;
+        let step_w = bounds.width / steps as f32;
+
+        let curve_points: Vec<Point> = (0..=steps)
+            .map(|i| {
+                let x = i as f32 * step_w;
+                let norm_x = (x / bounds.width).clamp(0.0, 1.0);
+
+                // Gaussian bell distributions for Low (~0.20), Mid (~0.50), High (~0.80)
+                let d_low = (norm_x - 0.20) / 0.18;
+                let d_mid = (norm_x - 0.50) / 0.16;
+                let d_high = (norm_x - 0.80) / 0.18;
+
+                let low_gain = self.low_gain_db * (-d_low * d_low).exp();
+                let mid_gain = self.mid_gain_db * (-d_mid * d_mid).exp();
+                let high_gain = self.high_gain_db * (-d_high * d_high).exp();
+
+                let total_gain = low_gain + mid_gain + high_gain;
+                let y = (mid_y - total_gain * db_scale_px).clamp(2.0, bounds.height - 2.0);
+                Point::new(x, y)
+            })
+            .collect();
+
+        // 4. Fill Translucent Gradient Under Curve
+        let fill_path = Path::new(|builder| {
+            if let Some(first) = curve_points.first() {
+                builder.move_to(Point::new(0.0, mid_y));
+                builder.line_to(*first);
+                for pt in &curve_points[1..] {
+                    builder.line_to(*pt);
+                }
+                builder.line_to(Point::new(bounds.width, mid_y));
+                builder.close();
+            }
+        });
+        frame.fill(
+            &fill_path,
+            Color::from_rgba(
+                self.accent_color.r,
+                self.accent_color.g,
+                self.accent_color.b,
+                0.14,
+            ),
+        );
+
+        // 5. Stroke Outer Glow & Core Curve Line
+        let line_path = Path::new(|builder| {
+            if let Some(first) = curve_points.first() {
+                builder.move_to(*first);
+                for pt in &curve_points[1..] {
+                    builder.line_to(*pt);
+                }
+            }
+        });
+        frame.stroke(
+            &line_path,
+            Stroke::default()
+                .with_color(Color::from_rgba(
+                    self.accent_color.r,
+                    self.accent_color.g,
+                    self.accent_color.b,
+                    0.35,
+                ))
+                .with_width(3.0),
+        );
+        frame.stroke(
+            &line_path,
+            Stroke::default()
+                .with_color(self.accent_color)
+                .with_width(1.5),
+        );
+
+        // 6. Band Nodes (1: Red Low, 2: Green Mid, 3: Blue/Cyan High)
+        let nodes = [
+            (
+                0.20,
+                self.low_gain_db,
+                Color::from_rgb8(0xff, 0x47, 0x57),
+                "1",
+            ),
+            (
+                0.50,
+                self.mid_gain_db,
+                Color::from_rgb8(0x2e, 0xd5, 0x73),
+                "2",
+            ),
+            (
+                0.80,
+                self.high_gain_db,
+                Color::from_rgb8(0x1e, 0x90, 0xff),
+                "3",
+            ),
+        ];
+
+        for (norm_x, gain, color, label) in nodes {
+            let nx = bounds.width * norm_x;
+            let ny = (mid_y - gain * db_scale_px).clamp(6.0, bounds.height - 6.0);
+            let center = Point::new(nx, ny);
+
+            let circle = Path::circle(center, 4.5);
+            frame.fill(&circle, color);
+            frame.stroke(
+                &circle,
+                Stroke::default().with_color(Color::WHITE).with_width(1.0),
+            );
+            frame.fill_text(canvas::Text {
+                content: label.to_string(),
+                position: Point::new(nx - 2.5, ny - 4.5),
+                color: Color::WHITE,
+                size: 7.5.into(),
+                ..Default::default()
+            });
+        }
+
+        // 7. Header Title & Border
+        frame.fill_text(canvas::Text {
+            content: "PARAMETRIC EQ 2".into(),
+            position: Point::new(4.0, 3.0),
+            color: Color::from_rgba8(0xfa, 0x82, 0x31, 0.85),
+            size: 8.0.into(),
+            ..Default::default()
+        });
+
+        frame.fill_text(canvas::Text {
+            content: "HQ".into(),
+            position: Point::new(bounds.width - 16.0, 3.0),
+            color: Color::from_rgba8(0x2e, 0xcc, 0x71, 0.85),
+            size: 7.5.into(),
+            ..Default::default()
+        });
+
+        frame.stroke(
+            &Path::rectangle(Point::ORIGIN, bounds.size()),
+            Stroke::default()
+                .with_color(Color::from_rgb8(0x27, 0x2a, 0x36))
+                .with_width(1.0),
+        );
+
+        vec![frame.into_geometry()]
+    }
+}
+
+pub fn parametric_eq_visualizer<'a, Theme: 'a>(
+    width: f32,
+    height: f32,
+    low_gain_db: f32,
+    mid_gain_db: f32,
+    high_gain_db: f32,
+    accent_color: Color,
+) -> Element<'a, crate::ui::message::UiMessage, Theme, iced::Renderer> {
+    Canvas::new(ParametricEqVisualizerProgram {
+        low_gain_db,
+        mid_gain_db,
+        high_gain_db,
+        accent_color,
+    })
+    .width(Length::Fixed(width))
+    .height(Length::Fixed(height))
+    .into()
+}
+
+/// Compact Audio Waveform Preview Scrubber for Browser Player
+pub struct SamplePreviewWaveformProgram {
+    pub is_playing: bool,
+    pub progress: f32,
+    pub accent_color: Color,
+}
+
+impl<Theme> canvas::Program<crate::ui::message::UiMessage, Theme> for SamplePreviewWaveformProgram {
+    type State = ();
+
+    fn draw(
+        &self,
+        _state: &Self::State,
+        renderer: &iced::Renderer,
+        _theme: &Theme,
+        bounds: Rectangle,
+        _cursor: mouse::Cursor,
+    ) -> Vec<Geometry> {
+        let mut frame = Frame::new(renderer, bounds.size());
+
+        // Background
+        frame.fill_rectangle(
+            Point::ORIGIN,
+            bounds.size(),
+            Color::from_rgb8(0x13, 0x15, 0x1c),
+        );
+
+        let mid_y = bounds.height * 0.5;
+        let points_count = 48;
+        let step_x = bounds.width / points_count as f32;
+
+        // Synthesize dynamic peaks for sample preview
+        let mut bars = Vec::with_capacity(points_count);
+        for i in 0..points_count {
+            let norm_x = i as f32 / points_count as f32;
+            let decay = (-norm_x * 2.8).exp();
+            let wave = (norm_x * 35.0).sin().abs() * 0.6 + (norm_x * 80.0).cos().abs() * 0.4;
+            let amp = (decay * wave).clamp(0.05, 0.95);
+            bars.push(amp);
+        }
+
+        for (i, &amp) in bars.iter().enumerate() {
+            let x = i as f32 * step_x + 1.0;
+            let bar_h = amp * (mid_y - 2.0);
+            let color = if (x / bounds.width) <= self.progress {
+                Color::from_rgb8(0x2e, 0xcc, 0x71)
+            } else {
+                Color::from_rgb8(0x3d, 0x6e, 0x5a)
+            };
+
+            let bar_rect = Rectangle::new(
+                Point::new(x, mid_y - bar_h),
+                Size::new((step_x - 1.0).max(1.0), bar_h * 2.0),
+            );
+            frame.fill_rectangle(bar_rect.position(), bar_rect.size(), color);
+        }
+
+        // Center line
+        let center_line = Path::line(Point::new(0.0, mid_y), Point::new(bounds.width, mid_y));
+        frame.stroke(
+            &center_line,
+            Stroke::default()
+                .with_color(Color::from_rgba8(0xff, 0xff, 0xff, 0.12))
+                .with_width(1.0),
+        );
+
+        // Playhead Scrubber Line
+        if self.is_playing {
+            let scrub_x = bounds.width * self.progress.clamp(0.0, 1.0);
+            let scrub_line =
+                Path::line(Point::new(scrub_x, 0.0), Point::new(scrub_x, bounds.height));
+            frame.stroke(
+                &scrub_line,
+                Stroke::default().with_color(Color::WHITE).with_width(1.5),
+            );
+        }
+
+        // Border
+        frame.stroke(
+            &Path::rectangle(Point::ORIGIN, bounds.size()),
+            Stroke::default()
+                .with_color(Color::from_rgb8(0x24, 0x27, 0x32))
+                .with_width(1.0),
+        );
+
+        vec![frame.into_geometry()]
+    }
+}
+
+pub fn sample_preview_waveform<'a, Theme: 'a>(
+    width: f32,
+    height: f32,
+    is_playing: bool,
+    progress: f32,
+    accent_color: Color,
+) -> Element<'a, crate::ui::message::UiMessage, Theme, iced::Renderer> {
+    Canvas::new(SamplePreviewWaveformProgram {
+        is_playing,
+        progress,
+        accent_color,
+    })
+    .width(Length::Fixed(width))
+    .height(Length::Fixed(height))
+    .into()
 }

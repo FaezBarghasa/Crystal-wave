@@ -26,10 +26,10 @@ fn test_ui_theme_tokens_and_presets() {
         iced::Color::from_rgb8(0x10, 0x11, 0x14)
     );
     assert_eq!(fl_modern.surface, iced::Color::from_rgb8(0x18, 0x1a, 0x20));
-    assert_eq!(fl_modern.step_odd, iced::Color::from_rgb8(0x18, 0x1a, 0x20));
+    assert_eq!(fl_modern.step_odd, iced::Color::from_rgb8(0xb0, 0xb4, 0xbe));
     assert_eq!(
         fl_modern.step_even,
-        iced::Color::from_rgb8(0x25, 0x29, 0x32)
+        iced::Color::from_rgb8(0x7a, 0x56, 0x50)
     );
 
     // FL Orange accent verification

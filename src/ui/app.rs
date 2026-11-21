@@ -976,6 +976,16 @@ impl CrystalWaveApp {
                     self.dirty = true;
                 }
             },
+            UiMessage::ToggleMenuDropdown(menu) => {
+                if self.layout.active_dropdown == menu {
+                    self.layout.active_dropdown = None;
+                } else {
+                    self.layout.active_dropdown = menu;
+                }
+            }
+            UiMessage::CloseMenuDropdown => {
+                self.layout.active_dropdown = None;
+            }
 
             UiMessage::RemovePlugin(id) => {
                 self.plugin_registry.remove_plugin(id);
@@ -1069,6 +1079,7 @@ impl CrystalWaveApp {
                 }
             }
             UiMessage::SelectFlView(view) => {
+                self.layout.active_dropdown = None;
                 self.layout.active_view = view;
                 match view {
                     crate::ui::layout::FlActiveView::Playlist => {
@@ -1266,10 +1277,18 @@ impl CrystalWaveApp {
                 self.browser.active_tab = tab;
             }
             UiMessage::BrowserAuditionSample(id) => {
+                self.browser.selected_sample_id = Some(id);
                 self.browser.start_preview(id);
             }
             UiMessage::BrowserStopAudition => {
                 self.browser.stop_preview();
+            }
+            UiMessage::BrowserToggleFolder(folder) => {
+                self.browser.toggle_folder(&folder);
+            }
+            UiMessage::BrowserSelectSample(id) => {
+                self.browser.selected_sample_id = Some(id);
+                self.browser.start_preview(id);
             }
             UiMessage::BrowserDropSampleToPlaylist {
                 sample_id,

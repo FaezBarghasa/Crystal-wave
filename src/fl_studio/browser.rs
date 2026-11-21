@@ -64,10 +64,23 @@ pub struct FlBrowser {
     pub search_query: String,
     pub active_tab: BrowserTab,
     pub previewing_sample_id: Option<usize>,
+    pub selected_sample_id: Option<usize>,
+    pub expanded_folders: std::collections::HashSet<String>,
 }
 
 impl Default for FlBrowser {
     fn default() -> Self {
+        let mut expanded = std::collections::HashSet::new();
+        expanded.insert("Packs".to_string());
+        expanded.insert("Packs/Drums".to_string());
+        expanded.insert("Packs/Drums/808".to_string());
+        expanded.insert("Packs/Drums/Kicks".to_string());
+        expanded.insert("Packs/Drums/Snares".to_string());
+        expanded.insert("Packs/Drums/HiHats".to_string());
+        expanded.insert("Packs/Instruments".to_string());
+        expanded.insert("Packs/Vocals".to_string());
+        expanded.insert("Packs/FX".to_string());
+
         Self {
             samples: vec![
                 SampleEntry {
@@ -262,6 +275,8 @@ impl Default for FlBrowser {
             search_query: String::new(),
             active_tab: BrowserTab::All,
             previewing_sample_id: None,
+            selected_sample_id: Some(1),
+            expanded_folders: expanded,
         }
     }
 }
@@ -269,6 +284,18 @@ impl Default for FlBrowser {
 impl FlBrowser {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn toggle_folder(&mut self, folder: &str) {
+        if self.expanded_folders.contains(folder) {
+            self.expanded_folders.remove(folder);
+        } else {
+            self.expanded_folders.insert(folder.to_string());
+        }
+    }
+
+    pub fn is_folder_expanded(&self, folder: &str) -> bool {
+        self.expanded_folders.contains(folder)
     }
 
     pub fn start_preview(&mut self, sample_id: usize) {

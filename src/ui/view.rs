@@ -91,6 +91,11 @@ impl CrystalWaveApp {
         // Centered Floating Modal Overlays with Dimmed Backdrop (FL Studio / Modern 2026 UX)
         let mut root_stack = stack![base_content];
 
+        if let Some(dd) = self.layout.active_dropdown {
+            let menu_overlay = self.view_dropdown_menu_overlay(dd);
+            root_stack = root_stack.push(menu_overlay);
+        }
+
         if let Some(chan_id) = self.active_channel_settings {
             let settings_modal = self.view_channel_settings_modal(chan_id);
             let overlay = container(settings_modal)
@@ -149,190 +154,61 @@ impl CrystalWaveApp {
     }
 
     fn view_menu_bar(&self) -> Element<'_, UiMessage> {
-        let file_new =
-            button(text("New").size(11)).on_press(UiMessage::MenuAction(MenuCommand::NewProject));
-        let file_save =
-            button(text("Save").size(11)).on_press(UiMessage::MenuAction(MenuCommand::SaveSession));
-        let file_bounce = button(text("Export WAV").size(11))
-            .on_press(UiMessage::MenuAction(MenuCommand::BounceWav));
-        let file_aaf =
-            button(text("AAF").size(11)).on_press(UiMessage::MenuAction(MenuCommand::ExportAaf));
+        let (cpu_load, ram_mb) = (self.workspace.lcd_diagnostic.cpu_load_percent, 526);
+        let title_stats = text(format!("RAM: {}MB | CPU: {:.0}%", ram_mb, cpu_load))
+            .size(9)
+            .color(self.theme.text_muted);
 
-        let edit_split = button(text("Cut (B)").size(11))
-            .on_press(UiMessage::MenuAction(MenuCommand::SplitAtCursor));
-        let track_add_audio = button(text("+ Audio").size(11))
-            .on_press(UiMessage::MenuAction(MenuCommand::AddAudioTrack));
-        let track_add_midi = button(text("+ MIDI").size(11))
-            .on_press(UiMessage::MenuAction(MenuCommand::AddMidiTrack));
+        let title_controls = row![
+            button(text("─").size(9))
+                .padding([1, 4])
+                .style(self.theme.button_style(false)),
+            button(text("□").size(9))
+                .padding([1, 4])
+                .style(self.theme.button_style(false)),
+            button(text("×").size(10))
+                .padding([1, 4])
+                .style(self.theme.button_style(false)),
+        ]
+        .spacing(2)
+        .align_y(iced::Alignment::Center);
 
-        // FL Studio Multi-Window Toolbars (F5, F6, F7, F8, F9, F10) with LED jewel indicators
-        let is_pl = self.layout.active_view == crate::ui::layout::FlActiveView::Playlist;
-        let is_cr = self.layout.active_view == crate::ui::layout::FlActiveView::ChannelRack;
-        let is_pr = self.layout.active_view == crate::ui::layout::FlActiveView::PianoRoll;
-        let is_mx = self.layout.active_view == crate::ui::layout::FlActiveView::Mixer;
-        let is_ed = self.layout.active_view == crate::ui::layout::FlActiveView::Edison;
-        let is_fpc = self.layout.active_view == crate::ui::layout::FlActiveView::Fpc;
-        let is_sl = self.layout.active_view == crate::ui::layout::FlActiveView::Slicex;
-        let is_pat = self.layout.active_view == crate::ui::layout::FlActiveView::Patcher;
-
-        let win_playlist = button(
-            text(if is_pl {
-                "● Playlist [F5]"
-            } else {
-                "○ Playlist [F5]"
-            })
-            .size(11),
+        let brand_logo = container(
+            text("◆ CRYSTAL WAVE 24")
+                .size(11)
+                .color(Color::from_rgb8(0xff, 0x88, 0x00)),
         )
-        .style(self.theme.button_style(is_pl))
-        .on_press(UiMessage::SelectFlView(
-            crate::ui::layout::FlActiveView::Playlist,
-        ));
+        .padding([1, 3]);
 
-        let win_channel_rack = button(
-            text(if is_cr {
-                "● Rack [F6]"
-            } else {
-                "○ Rack [F6]"
-            })
-            .size(11),
-        )
-        .style(self.theme.button_style(is_cr))
-        .on_press(UiMessage::SelectFlView(
-            crate::ui::layout::FlActiveView::ChannelRack,
-        ));
+        let title_project = text("Crystal-wave — Untitled.flp")
+            .size(10)
+            .color(self.theme.text_secondary);
 
-        let win_piano_roll = button(
-            text(if is_pr {
-                "● Piano Roll [F7]"
-            } else {
-                "○ Piano Roll [F7]"
-            })
-            .size(11),
-        )
-        .style(self.theme.button_style(is_pr))
-        .on_press(UiMessage::SelectFlView(
-            crate::ui::layout::FlActiveView::PianoRoll,
-        ));
+        let make_menu_btn =
+            |label: &'static str, menu_type: crate::ui::layout::ActiveMenuDropdown| {
+                let is_open = self.layout.active_dropdown == Some(menu_type);
+                button(text(label).size(10))
+                    .padding([2, 5])
+                    .style(self.theme.button_style(is_open))
+                    .on_press(UiMessage::ToggleMenuDropdown(Some(menu_type)))
+            };
 
-        let win_browser = button(
-            text(if self.fl_windows.browser_visible {
-                "● Browser [F8]"
-            } else {
-                "○ Browser [F8]"
-            })
-            .size(11),
-        )
-        .style(self.theme.button_style(self.fl_windows.browser_visible))
-        .on_press(UiMessage::ToggleFlBrowser);
+        let menu_items = row![
+            make_menu_btn("FILE", crate::ui::layout::ActiveMenuDropdown::File),
+            make_menu_btn("EDIT", crate::ui::layout::ActiveMenuDropdown::Edit),
+            make_menu_btn("ADD", crate::ui::layout::ActiveMenuDropdown::Add),
+            make_menu_btn("PATTERNS", crate::ui::layout::ActiveMenuDropdown::Patterns),
+            make_menu_btn("VIEW", crate::ui::layout::ActiveMenuDropdown::View),
+            make_menu_btn("OPTIONS", crate::ui::layout::ActiveMenuDropdown::Options),
+            make_menu_btn("TOOLS", crate::ui::layout::ActiveMenuDropdown::Tools),
+            make_menu_btn("?", crate::ui::layout::ActiveMenuDropdown::Help),
+        ]
+        .spacing(1)
+        .align_y(iced::Alignment::Center);
 
-        let win_mixer = button(
-            text(if is_mx {
-                "● Mixer [F9]"
-            } else {
-                "○ Mixer [F9]"
-            })
-            .size(11),
-        )
-        .style(self.theme.button_style(is_mx))
-        .on_press(UiMessage::SelectFlView(
-            crate::ui::layout::FlActiveView::Mixer,
-        ));
-
-        let win_audio = button(
-            text(if self.audio_settings_open {
-                "● Audio [F10]"
-            } else {
-                "○ Audio [F10]"
-            })
-            .size(11),
-        )
-        .style(self.theme.button_style(self.audio_settings_open))
-        .on_press(UiMessage::ToggleAudioSettings);
-
-        let win_edison = button(text(if is_ed { "● Edison" } else { "○ Edison" }).size(11))
-            .style(self.theme.button_style(is_ed))
-            .on_press(UiMessage::SelectFlView(
-                crate::ui::layout::FlActiveView::Edison,
-            ));
-
-        let win_fpc = button(text(if is_fpc { "● FPC" } else { "○ FPC" }).size(11))
-            .style(self.theme.button_style(is_fpc))
-            .on_press(UiMessage::SelectFlView(
-                crate::ui::layout::FlActiveView::Fpc,
-            ));
-
-        let win_slicex = button(text(if is_sl { "● Slicex" } else { "○ Slicex" }).size(11))
-            .style(self.theme.button_style(is_sl))
-            .on_press(UiMessage::SelectFlView(
-                crate::ui::layout::FlActiveView::Slicex,
-            ));
-
-        let win_patcher = button(text(if is_pat { "● Patcher" } else { "○ Patcher" }).size(11))
-            .style(self.theme.button_style(is_pat))
-            .on_press(UiMessage::SelectFlView(
-                crate::ui::layout::FlActiveView::Patcher,
-            ));
-
-        let win_inspector = button(
-            text(if self.workspace.inspector_open {
-                "● Inspect [I]"
-            } else {
-                "○ Inspect [I]"
-            })
-            .size(11),
-        )
-        .style(self.theme.button_style(self.workspace.inspector_open))
-        .on_press(UiMessage::ToggleInspector);
-
-        let win_plugins = button(
-            text(if self.fl_windows.plugin_picker_visible {
-                "● Plugins"
-            } else {
-                "○ Plugins"
-            })
-            .size(11),
-        )
-        .style(
-            self.theme
-                .button_style(self.fl_windows.plugin_picker_visible),
-        )
-        .on_press(UiMessage::ToggleFlPluginPicker);
-
-        let win_dual = {
-            let is_dual = self.layout.secondary_view.is_some();
-            button(
-                text(if is_dual {
-                    "◫ Dual [Split]"
-                } else {
-                    "❐ Single [Full]"
-                })
-                .size(11),
-            )
-            .style(self.theme.button_style(is_dual))
-            .on_press(UiMessage::ToggleDualWorkspace(None))
-        };
-
-        // Theme Switcher & Snap Toggle
-        let theme_btn = button(
-            text(match self.theme.preset {
-                crate::ui::theme::ThemePreset::Graphite => "Theme: Logic Graphite",
-                crate::ui::theme::ThemePreset::FlDarkOrange => "Theme: FL Dark Orange",
-                crate::ui::theme::ThemePreset::FlStudioModern => "Theme: FL 2026 Modern",
-            })
-            .size(11),
-        )
-        .on_press(UiMessage::SetThemePreset(match self.theme.preset {
-            crate::ui::theme::ThemePreset::Graphite => crate::ui::theme::ThemePreset::FlDarkOrange,
-            crate::ui::theme::ThemePreset::FlDarkOrange => {
-                crate::ui::theme::ThemePreset::FlStudioModern
-            }
-            crate::ui::theme::ThemePreset::FlStudioModern => {
-                crate::ui::theme::ThemePreset::Graphite
-            }
-        }));
-
-        let snap_btn = button(text(format!("⊞ {}", self.snap_grid.label())).size(11)).on_press(
-            UiMessage::SetSnapGrid(match self.snap_grid {
+        let snap_btn = button(text(format!("⊞ {}", self.snap_grid.label())).size(10))
+            .padding([2, 4])
+            .on_press(UiMessage::SetSnapGrid(match self.snap_grid {
                 crate::ui::canvas_timeline::SnapGrid::Sixteenth => {
                     crate::ui::canvas_timeline::SnapGrid::Eighth
                 }
@@ -349,114 +225,65 @@ impl CrystalWaveApp {
                     crate::ui::canvas_timeline::SnapGrid::Off
                 }
                 _ => crate::ui::canvas_timeline::SnapGrid::Sixteenth,
-            }),
-        );
+            }));
 
-        let cmd_palette_btn =
-            button(text("⌘K / Ctrl+K").size(11)).on_press(UiMessage::ToggleCommandPalette);
-
-        // Modular machined floating capsules
-        let brand_logo = container(
-            text("◆ CRYSTAL WAVE 24")
-                .size(12)
-                .color(Color::from_rgb8(0xff, 0x88, 0x00)),
+        let theme_btn = button(
+            text(match self.theme.preset {
+                crate::ui::theme::ThemePreset::Graphite => "Theme: Graphite",
+                crate::ui::theme::ThemePreset::FlDarkOrange => "Theme: FL Dark",
+                crate::ui::theme::ThemePreset::FlStudioModern => "Theme: FL 2026",
+            })
+            .size(10),
         )
-        .padding(4);
+        .padding([2, 4])
+        .on_press(UiMessage::SetThemePreset(match self.theme.preset {
+            crate::ui::theme::ThemePreset::Graphite => crate::ui::theme::ThemePreset::FlDarkOrange,
+            crate::ui::theme::ThemePreset::FlDarkOrange => {
+                crate::ui::theme::ThemePreset::FlStudioModern
+            }
+            crate::ui::theme::ThemePreset::FlStudioModern => {
+                crate::ui::theme::ThemePreset::Graphite
+            }
+        }));
 
-        let capsule_file = container(
-            row![brand_logo, file_new, file_save, file_bounce, file_aaf,]
-                .spacing(4)
-                .align_y(iced::Alignment::Center),
-        )
-        .style(|_t| self.theme.machined_capsule_style())
-        .padding(3);
+        let cmd_palette_btn = button(text("⌘K").size(10))
+            .padding([2, 4])
+            .on_press(UiMessage::ToggleCommandPalette);
 
-        let capsule_tools =
-            container(row![edit_split, track_add_audio, track_add_midi, snap_btn,].spacing(4))
-                .style(|_t| self.theme.machined_capsule_style())
-                .padding(3);
-
-        let capsule_windows = container(
-            row![
-                win_playlist,
-                win_channel_rack,
-                win_piano_roll,
-                win_browser,
-                win_mixer,
-                win_audio,
-                win_edison,
-                win_fpc,
-                win_slicex,
-                win_patcher,
-                win_inspector,
-                win_plugins,
-                win_dual,
-            ]
-            .spacing(4)
-            .align_y(iced::Alignment::Center),
-        )
-        .style(|_t| self.theme.machined_capsule_style())
-        .padding(3);
-
-        let capsule_system = container(row![theme_btn, cmd_palette_btn,].spacing(4))
-            .style(|_t| self.theme.machined_capsule_style())
-            .padding(3);
-
-        // Row 1: Top Titlebar Row (22px) with system and project telemetry
-        let title_controls = row![
-            button(text("─").size(9))
-                .padding([1, 4])
-                .style(self.theme.button_style(false)),
-            button(text("□").size(9))
-                .padding([1, 4])
-                .style(self.theme.button_style(false)),
-            button(text("×").size(10))
-                .padding([1, 4])
-                .style(self.theme.button_style(false)),
-        ]
-        .spacing(2)
-        .align_y(iced::Alignment::Center);
-
-        let title_project = text("Crystal-wave — Untitled.flp")
-            .size(10)
-            .color(self.theme.text_secondary);
-
-        let (cpu_load, ram_mb) = (self.workspace.lcd_diagnostic.cpu_load_percent, 526);
-        let title_stats = text(format!("RAM: {}MB | CPU: {:.0}%", ram_mb, cpu_load))
-            .size(9)
-            .color(self.theme.text_muted);
-
+        // Row 1: Top Titlebar Row (24px)
         let row_titlebar = container(
             row![
                 title_controls,
-                Space::new().width(Length::Fixed(8.0)),
+                Space::new().width(Length::Fixed(4.0)),
+                brand_logo,
+                Space::new().width(Length::Fixed(6.0)),
                 title_project,
+                Space::new().width(Length::Fixed(8.0)),
+                menu_items,
                 Space::new().width(Length::Fill),
+                snap_btn,
+                theme_btn,
+                cmd_palette_btn,
+                Space::new().width(Length::Fixed(8.0)),
                 title_stats,
             ]
             .align_y(iced::Alignment::Center)
             .spacing(4),
         )
-        .height(Length::Fixed(22.0))
-        .padding([2, 6])
+        .height(Length::Fixed(24.0))
+        .padding([1, 6])
         .style(|_t| container::Style {
-            background: Some(iced::Background::Color(Color::from_rgb8(0x0f, 0x0f, 0x12))),
-            text_color: Some(Color::from_rgb8(0x88, 0x8c, 0x99)),
+            background: Some(iced::Background::Color(Color::from_rgb8(0x18, 0x1a, 0x21))),
+            text_color: Some(Color::from_rgb8(0x9a, 0xa0, 0xb0)),
             border: iced::Border {
-                color: Color::from_rgb8(0x20, 0x22, 0x28),
+                color: Color::from_rgb8(0x28, 0x2b, 0x34),
                 width: 0.5,
                 ..Default::default()
             },
             ..Default::default()
         });
 
-        // Row 2: Standard FL Studio Menu Ribbon + Window Capsules
-        let row_menubar = row![capsule_file, capsule_tools, capsule_windows, capsule_system,]
-            .spacing(6)
-            .padding(2)
-            .align_y(iced::Alignment::Center);
-
-        // Row 3: Hint Bar (18px, FL Studio LCD Telemetry readout)
+        // Row 2: Live Hint Bar (18px, FL Studio LCD Telemetry readout)
         let hint_text = self.active_hover_hint.as_deref().unwrap_or(
             "Hint: Click to select, drag to adjust, double-click or right-click to reset",
         );
@@ -477,29 +304,265 @@ impl CrystalWaveApp {
         )
         .height(Length::Fixed(18.0))
         .style(|_t| container::Style {
-            background: Some(iced::Background::Color(Color::from_rgb8(0x18, 0x1a, 0x20))),
+            background: Some(iced::Background::Color(Color::from_rgb8(0x13, 0x15, 0x1a))),
             border: iced::Border {
-                color: Color::from_rgb8(0x28, 0x2a, 0x32),
+                color: Color::from_rgb8(0x20, 0x22, 0x2a),
                 width: 0.5,
                 ..Default::default()
             },
             ..Default::default()
         });
 
-        column![row_titlebar, row_menubar, row_hintbar]
-            .spacing(1)
+        column![row_titlebar, row_hintbar].spacing(1).into()
+    }
+
+    /// Dropdown Menu Popup Overlay
+    #[allow(clippy::type_complexity)]
+    fn view_dropdown_menu_overlay(
+        &self,
+        dd: crate::ui::layout::ActiveMenuDropdown,
+    ) -> Element<'_, UiMessage> {
+        let (x_offset, items): (f32, Vec<(&'static str, Option<&'static str>, UiMessage)>) =
+            match dd {
+                crate::ui::layout::ActiveMenuDropdown::File => (
+                    70.0,
+                    vec![
+                        (
+                            "New Project",
+                            Some("Ctrl+N"),
+                            UiMessage::MenuAction(crate::ui::message::MenuCommand::NewProject),
+                        ),
+                        (
+                            "Open Session...",
+                            Some("Ctrl+O"),
+                            UiMessage::MenuAction(crate::ui::message::MenuCommand::OpenSession),
+                        ),
+                        (
+                            "Save Session",
+                            Some("Ctrl+S"),
+                            UiMessage::MenuAction(crate::ui::message::MenuCommand::SaveSession),
+                        ),
+                        (
+                            "Save Session As...",
+                            Some("Ctrl+Shift+S"),
+                            UiMessage::MenuAction(crate::ui::message::MenuCommand::SaveSessionAs),
+                        ),
+                        (
+                            "Export WAV...",
+                            Some("Ctrl+R"),
+                            UiMessage::MenuAction(crate::ui::message::MenuCommand::BounceWav),
+                        ),
+                        (
+                            "Export AAF...",
+                            None,
+                            UiMessage::MenuAction(crate::ui::message::MenuCommand::ExportAaf),
+                        ),
+                    ],
+                ),
+                crate::ui::layout::ActiveMenuDropdown::Edit => (
+                    115.0,
+                    vec![
+                        (
+                            "Cut at Playhead",
+                            Some("B"),
+                            UiMessage::MenuAction(crate::ui::message::MenuCommand::SplitAtCursor),
+                        ),
+                        (
+                            "Quantize Notes",
+                            Some("Ctrl+Q"),
+                            UiMessage::MenuAction(crate::ui::message::MenuCommand::Quantize),
+                        ),
+                        (
+                            "Toggle Loop",
+                            Some("Ctrl+L"),
+                            UiMessage::TransportToggleLoop,
+                        ),
+                    ],
+                ),
+                crate::ui::layout::ActiveMenuDropdown::Add => (
+                    155.0,
+                    vec![
+                        (
+                            "+ Audio Track",
+                            None,
+                            UiMessage::MenuAction(crate::ui::message::MenuCommand::AddAudioTrack),
+                        ),
+                        (
+                            "+ Instrument / MIDI Track",
+                            None,
+                            UiMessage::MenuAction(crate::ui::message::MenuCommand::AddMidiTrack),
+                        ),
+                        (
+                            "+ Duplicate Track",
+                            None,
+                            UiMessage::MenuAction(crate::ui::message::MenuCommand::DuplicateTrack),
+                        ),
+                    ],
+                ),
+                crate::ui::layout::ActiveMenuDropdown::Patterns => (
+                    195.0,
+                    vec![
+                        (
+                            "Next Pattern",
+                            Some("F4"),
+                            UiMessage::SelectPattern(self.current_pattern_index + 1),
+                        ),
+                        (
+                            "Previous Pattern",
+                            Some("Shift+F4"),
+                            UiMessage::SelectPattern(self.current_pattern_index.saturating_sub(1)),
+                        ),
+                    ],
+                ),
+                crate::ui::layout::ActiveMenuDropdown::View => (
+                    260.0,
+                    vec![
+                        (
+                            "Playlist",
+                            Some("F5"),
+                            UiMessage::SelectFlView(crate::ui::layout::FlActiveView::Playlist),
+                        ),
+                        (
+                            "Channel Rack",
+                            Some("F6"),
+                            UiMessage::SelectFlView(crate::ui::layout::FlActiveView::ChannelRack),
+                        ),
+                        (
+                            "Piano Roll",
+                            Some("F7"),
+                            UiMessage::SelectFlView(crate::ui::layout::FlActiveView::PianoRoll),
+                        ),
+                        (
+                            "Mixer Console",
+                            Some("F9"),
+                            UiMessage::SelectFlView(crate::ui::layout::FlActiveView::Mixer),
+                        ),
+                        ("Browser / Library", Some("F8"), UiMessage::ToggleFlBrowser),
+                        (
+                            "Audio Settings",
+                            Some("F10"),
+                            UiMessage::ToggleAudioSettings,
+                        ),
+                        (
+                            "Dual Split Mode",
+                            None,
+                            UiMessage::ToggleDualWorkspace(None),
+                        ),
+                    ],
+                ),
+                crate::ui::layout::ActiveMenuDropdown::Options => (
+                    305.0,
+                    vec![
+                        (
+                            "Audio Hardware Settings",
+                            Some("F10"),
+                            UiMessage::ToggleAudioSettings,
+                        ),
+                        ("Inspector Panel", Some("I"), UiMessage::ToggleInspector),
+                        ("Plugin Picker", None, UiMessage::ToggleFlPluginPicker),
+                    ],
+                ),
+                crate::ui::layout::ActiveMenuDropdown::Tools => (
+                    365.0,
+                    vec![
+                        (
+                            "Edison Waveform Editor",
+                            None,
+                            UiMessage::SelectFlView(crate::ui::layout::FlActiveView::Edison),
+                        ),
+                        (
+                            "FPC Drum Sampler",
+                            None,
+                            UiMessage::SelectFlView(crate::ui::layout::FlActiveView::Fpc),
+                        ),
+                        (
+                            "Slicex Transient Slicer",
+                            None,
+                            UiMessage::SelectFlView(crate::ui::layout::FlActiveView::Slicex),
+                        ),
+                        (
+                            "Command Palette",
+                            Some("Ctrl+K"),
+                            UiMessage::ToggleCommandPalette,
+                        ),
+                    ],
+                ),
+                crate::ui::layout::ActiveMenuDropdown::Help => (
+                    415.0,
+                    vec![
+                        (
+                            "CrystalWave Studio v24.1",
+                            None,
+                            UiMessage::CloseMenuDropdown,
+                        ),
+                        (
+                            "FL Studio 2026 Clean-Room Architecture",
+                            None,
+                            UiMessage::CloseMenuDropdown,
+                        ),
+                    ],
+                ),
+            };
+
+        let mut menu_col = column![].spacing(2).padding(3);
+        for (item_label, shortcut, action) in items {
+            let label_txt = text(item_label)
+                .size(11)
+                .color(Color::from_rgb8(0xee, 0xf0, 0xf5));
+            let shortcut_txt = text(shortcut.unwrap_or(""))
+                .size(10)
+                .color(Color::from_rgb8(0x7c, 0x82, 0x94));
+            let row_content = row![label_txt, Space::new().width(Length::Fill), shortcut_txt]
+                .align_y(iced::Alignment::Center);
+
+            let btn = button(row_content)
+                .padding([4, 10])
+                .style(self.theme.button_style(false))
+                .on_press(action)
+                .width(Length::Fixed(200.0));
+            menu_col = menu_col.push(btn);
+        }
+
+        let menu_box = container(menu_col).style(|_t| container::Style {
+            background: Some(iced::Background::Color(Color::from_rgb8(0x1a, 0x1d, 0x24))),
+            border: iced::Border {
+                color: Color::from_rgb8(0x38, 0x3d, 0x4a),
+                width: 1.0,
+                radius: 4.0.into(),
+            },
+            shadow: iced::Shadow {
+                color: Color::from_rgba(0.0, 0.0, 0.0, 0.55),
+                offset: iced::Vector::new(0.0, 4.0),
+                blur_radius: 8.0,
+            },
+            ..Default::default()
+        });
+
+        let dismiss_backdrop = button(Space::new().width(Length::Fill).height(Length::Fill))
+            .style(|_t, _s| button::Style {
+                background: None,
+                ..Default::default()
+            })
+            .on_press(UiMessage::CloseMenuDropdown);
+
+        let menu_positioned = row![
+            Space::new().width(Length::Fixed(x_offset)),
+            column![Space::new().height(Length::Fixed(24.0)), menu_box,]
+        ];
+
+        stack![dismiss_backdrop, menu_positioned]
+            .width(Length::Fill)
+            .height(Length::Fill)
             .into()
     }
 
     fn view_control_bar(&self) -> Element<'_, UiMessage> {
-        // Module 1: Transport Pill (PAT / SONG mode toggle, Play/Pause, Stop, Rec, Loop)
         let pill_accent = if self.is_song_mode {
             Color::from_rgb8(0x2e, 0xcc, 0x71)
         } else {
             Color::from_rgb8(0xff, 0x88, 0x00)
         };
 
-        // Module 1: Circular Transport Controls (Loop, Play/Pause, Stop, Rec)
         let pat_song_pill = button(
             row![
                 container(text("PAT").size(9).color(if !self.is_song_mode {
@@ -523,9 +586,9 @@ impl CrystalWaveApp {
         .on_press(UiMessage::TogglePatternSongMode);
 
         let cycle_btn = button(
-            container(text("↺").size(12))
-                .width(Length::Fixed(24.0))
-                .height(Length::Fixed(24.0))
+            container(text("↺").size(11))
+                .width(Length::Fixed(20.0))
+                .height(Length::Fixed(20.0))
                 .center(Length::Fill),
         )
         .padding(1)
@@ -536,9 +599,9 @@ impl CrystalWaveApp {
         .on_press(UiMessage::TransportToggleLoop);
 
         let play_btn = button(
-            container(text(if self.is_playing { "⏸" } else { "▶" }).size(12))
-                .width(Length::Fixed(26.0))
-                .height(Length::Fixed(26.0))
+            container(text(if self.is_playing { "⏸" } else { "▶" }).size(11))
+                .width(Length::Fixed(22.0))
+                .height(Length::Fixed(22.0))
                 .center(Length::Fill),
         )
         .padding(1)
@@ -557,9 +620,9 @@ impl CrystalWaveApp {
         });
 
         let stop_btn = button(
-            container(text("■").size(11))
-                .width(Length::Fixed(24.0))
-                .height(Length::Fixed(24.0))
+            container(text("■").size(10))
+                .width(Length::Fixed(20.0))
+                .height(Length::Fixed(20.0))
                 .center(Length::Fill),
         )
         .padding(1)
@@ -570,9 +633,9 @@ impl CrystalWaveApp {
         .on_press(UiMessage::TransportStop);
 
         let record_btn = button(
-            container(text("●").size(12))
-                .width(Length::Fixed(24.0))
-                .height(Length::Fixed(24.0))
+            container(text("●").size(11))
+                .width(Length::Fixed(20.0))
+                .height(Length::Fixed(20.0))
                 .center(Length::Fill),
         )
         .padding(1)
@@ -582,7 +645,7 @@ impl CrystalWaveApp {
         )
         .on_press(UiMessage::TransportRecord);
 
-        // Module 2: Time Display Panel (Bar:Beat:Tick & SMPTE Timecode in VFD amber/cyan)
+        // Bar:Beat:Tick & SMPTE Timecode
         let bar = (self.playhead_tick / 3840) + 1;
         let beat = ((self.playhead_tick % 3840) / 960) + 1;
         let tick = self.playhead_tick % 960;
@@ -593,7 +656,7 @@ impl CrystalWaveApp {
 
         let time_lcd = container(
             column![
-                text(format!("{:03} : {:02} : {:03}", bar, beat, tick)).size(12),
+                text(format!("{:03} : {:02} : {:03}", bar, beat, tick)).size(10),
                 text(format!(
                     "SMPTE {:02}:{:02}:{:02}.{:03}",
                     mins / 60,
@@ -601,16 +664,16 @@ impl CrystalWaveApp {
                     secs,
                     millis
                 ))
-                .size(9),
+                .size(8),
             ]
             .spacing(1),
         )
         .style(|_t| self.theme.vfd_amber_display_style())
-        .padding(4);
+        .padding(2);
 
-        // Module 3: Master Volume & Pitch Rotary Dials (FL Studio 2026 compact dials)
+        // Master Volume & Pitch Rotary Dials
         let master_vol_knob = crate::ui::canvas_knob::rotary_knob(
-            22.0,
+            18.0,
             0.0,
             1.25,
             self.master_volume,
@@ -618,10 +681,10 @@ impl CrystalWaveApp {
             Color::from_rgb8(0x2e, 0xcc, 0x71),
             UiMessage::SetMasterVolume,
         );
-        let master_vol_txt = text(format!("{:.0}%", self.master_volume * 100.0)).size(8);
+        let master_vol_txt = text(format!("{:.0}%", self.master_volume * 100.0)).size(7);
 
         let master_pitch_knob = crate::ui::canvas_knob::rotary_knob(
-            22.0,
+            18.0,
             -1200.0,
             1200.0,
             self.master_pitch_cents as f32,
@@ -634,32 +697,32 @@ impl CrystalWaveApp {
         } else {
             format!("{:+} ct", self.master_pitch_cents)
         })
-        .size(8);
+        .size(7);
 
         let master_knobs_capsule = container(
             row![
                 column![
-                    text("VOL").size(7).color(self.theme.text_muted),
+                    text("VOL").size(6).color(self.theme.text_muted),
                     master_vol_knob,
                     master_vol_txt
                 ]
                 .align_x(iced::Alignment::Center)
                 .spacing(1),
                 column![
-                    text("PITCH").size(7).color(self.theme.text_muted),
+                    text("PITCH").size(6).color(self.theme.text_muted),
                     master_pitch_knob,
                     master_pitch_txt
                 ]
                 .align_x(iced::Alignment::Center)
                 .spacing(1),
             ]
-            .spacing(6)
+            .spacing(4)
             .align_y(iced::Alignment::Center),
         )
         .style(|_t| self.theme.knob_well_style())
-        .padding(3);
+        .padding(2);
 
-        // Module 4: Tempo & Signature Hub + Performance LEDs (MET, 3.2.1, KEY, BLEND)
+        // Tempo & Signature Hub + Performance LEDs
         let tempo_lcd = container(
             column![
                 text(format!(
@@ -668,30 +731,30 @@ impl CrystalWaveApp {
                     self.workspace.lcd_diagnostic.time_signature.0,
                     self.workspace.lcd_diagnostic.time_signature.1
                 ))
-                .size(11),
+                .size(10),
                 text(format!(
                     "KEY: C min | A4: {:.1} Hz",
                     self.workspace.lcd_diagnostic.master_tuning_hz
                 ))
-                .size(9),
+                .size(8),
             ]
             .spacing(1),
         )
         .style(|_t| self.theme.vfd_cyan_display_style())
-        .padding(4);
+        .padding(2);
 
-        let btn_tap = button(text("TAP").size(9))
-            .padding(3)
+        let btn_tap = button(text("TAP").size(8))
+            .padding(2)
             .style(self.theme.button_style(false))
             .on_press(UiMessage::TapTempo);
 
-        let btn_tempo_minus = button(text("▼").size(8))
-            .padding(2)
+        let btn_tempo_minus = button(text("▼").size(7))
+            .padding(1)
             .style(self.theme.button_style(false))
             .on_press(UiMessage::NudgeTempo(-1.0));
 
-        let btn_tempo_plus = button(text("▲").size(8))
-            .padding(2)
+        let btn_tempo_plus = button(text("▲").size(7))
+            .padding(1)
             .style(self.theme.button_style(false))
             .on_press(UiMessage::NudgeTempo(1.0));
 
@@ -702,7 +765,7 @@ impl CrystalWaveApp {
                 } else {
                     "○ MET"
                 })
-                .size(9),
+                .size(8),
             )
             .padding(2)
             .style(self.theme.toggle_accent_button_style(
@@ -718,7 +781,7 @@ impl CrystalWaveApp {
                 } else {
                     "○ 3.2.1"
                 })
-                .size(9),
+                .size(8),
             )
             .padding(2)
             .style(self.theme.toggle_accent_button_style(
@@ -733,7 +796,7 @@ impl CrystalWaveApp {
             } else {
                 "○ KEY"
             })
-            .size(9),
+            .size(8),
         )
         .padding(2)
         .style(self.theme.toggle_accent_button_style(
@@ -748,7 +811,7 @@ impl CrystalWaveApp {
             } else {
                 "○ BLEND"
             })
-            .size(9),
+            .size(8),
         )
         .padding(2)
         .style(self.theme.toggle_accent_button_style(
@@ -757,38 +820,129 @@ impl CrystalWaveApp {
         ))
         .on_press(UiMessage::ToggleBlendRecording);
 
-        let leds_row = row![met_btn, precount_btn, typing_btn, blend_btn].spacing(3);
+        let leds_row = row![met_btn, precount_btn, typing_btn, blend_btn].spacing(2);
 
-        // Module 5: Audio Engine DSP & System Telemetry
-        let dsp_lcd = container(
-            column![
-                text(format!(
-                    "DSP: {:.1}% | 2.6ms",
-                    self.workspace.lcd_diagnostic.cpu_load_percent
-                ))
-                .size(11),
-                text("48.0 kHz | 128 spl | 32v").size(9),
-            ]
-            .spacing(1),
+        // Compact Oscilloscope Widget
+        let scope_widget = crate::ui::canvas_knob::compact_oscilloscope(
+            130.0,
+            28.0,
+            self.is_playing,
+            self.playhead_tick,
+            self.theme.accent,
+        );
+
+        // Window Toggles Dock (FL Studio style icons & shortcuts)
+        let is_pl = self.layout.active_view == crate::ui::layout::FlActiveView::Playlist;
+        let is_cr = self.layout.active_view == crate::ui::layout::FlActiveView::ChannelRack;
+        let is_pr = self.layout.active_view == crate::ui::layout::FlActiveView::PianoRoll;
+        let is_mx = self.layout.active_view == crate::ui::layout::FlActiveView::Mixer;
+        let is_ed = self.layout.active_view == crate::ui::layout::FlActiveView::Edison;
+        let is_fpc = self.layout.active_view == crate::ui::layout::FlActiveView::Fpc;
+        let is_sl = self.layout.active_view == crate::ui::layout::FlActiveView::Slicex;
+
+        let win_playlist = button(
+            text(if is_pl {
+                "● Playlist [F5]"
+            } else {
+                "○ Playlist [F5]"
+            })
+            .size(10),
         )
-        .style(|_t| self.theme.vfd_cyan_display_style())
-        .padding(4);
+        .style(self.theme.button_style(is_pl))
+        .on_press(UiMessage::SelectFlView(
+            crate::ui::layout::FlActiveView::Playlist,
+        ));
+
+        let win_channel_rack = button(
+            text(if is_cr {
+                "● Rack [F6]"
+            } else {
+                "○ Rack [F6]"
+            })
+            .size(10),
+        )
+        .style(self.theme.button_style(is_cr))
+        .on_press(UiMessage::SelectFlView(
+            crate::ui::layout::FlActiveView::ChannelRack,
+        ));
+
+        let win_piano_roll = button(
+            text(if is_pr {
+                "● Piano Roll [F7]"
+            } else {
+                "○ Piano Roll [F7]"
+            })
+            .size(10),
+        )
+        .style(self.theme.button_style(is_pr))
+        .on_press(UiMessage::SelectFlView(
+            crate::ui::layout::FlActiveView::PianoRoll,
+        ));
+
+        let win_browser = button(
+            text(if self.fl_windows.browser_visible {
+                "● Browser [F8]"
+            } else {
+                "○ Browser [F8]"
+            })
+            .size(10),
+        )
+        .style(self.theme.button_style(self.fl_windows.browser_visible))
+        .on_press(UiMessage::ToggleFlBrowser);
+
+        let win_mixer = button(
+            text(if is_mx {
+                "● Mixer [F9]"
+            } else {
+                "○ Mixer [F9]"
+            })
+            .size(10),
+        )
+        .style(self.theme.button_style(is_mx))
+        .on_press(UiMessage::SelectFlView(
+            crate::ui::layout::FlActiveView::Mixer,
+        ));
+
+        let win_edison = button(text(if is_ed { "● Edison" } else { "○ Edison" }).size(10))
+            .style(self.theme.button_style(is_ed))
+            .on_press(UiMessage::SelectFlView(
+                crate::ui::layout::FlActiveView::Edison,
+            ));
+
+        let win_fpc = button(text(if is_fpc { "● FPC" } else { "○ FPC" }).size(10))
+            .style(self.theme.button_style(is_fpc))
+            .on_press(UiMessage::SelectFlView(
+                crate::ui::layout::FlActiveView::Fpc,
+            ));
+
+        let win_slicex = button(text(if is_sl { "● Slicex" } else { "○ Slicex" }).size(10))
+            .style(self.theme.button_style(is_sl))
+            .on_press(UiMessage::SelectFlView(
+                crate::ui::layout::FlActiveView::Slicex,
+            ));
+
+        let win_dual = {
+            let is_dual = self.layout.secondary_view.is_some();
+            button(text(if is_dual { "◫ Dual" } else { "❐ Single" }).size(10))
+                .style(self.theme.button_style(is_dual))
+                .on_press(UiMessage::ToggleDualWorkspace(None))
+        };
 
         let capsule_transport = container(
             row![pat_song_pill, cycle_btn, play_btn, stop_btn, record_btn,]
-                .spacing(4)
+                .spacing(3)
                 .align_y(iced::Alignment::Center),
         )
         .style(|_t| self.theme.machined_capsule_style())
-        .padding(3);
+        .padding(2);
 
         let capsule_time = container(time_lcd)
             .style(|_t| self.theme.machined_capsule_style())
-            .padding(3);
+            .padding(2);
 
         let capsule_master = container(master_knobs_capsule)
             .style(|_t| self.theme.machined_capsule_style())
-            .padding(3);
+            .padding(2);
 
         let capsule_tempo = container(
             row![
@@ -797,30 +951,73 @@ impl CrystalWaveApp {
                 btn_tap,
                 leds_row,
             ]
-            .spacing(3)
+            .spacing(2)
             .align_y(iced::Alignment::Center),
         )
         .style(|_t| self.theme.machined_capsule_style())
-        .padding(3);
+        .padding(2);
+
+        let capsule_scope = container(scope_widget)
+            .style(|_t| self.theme.machined_capsule_style())
+            .padding(2);
+
+        let capsule_windows = container(
+            row![
+                win_playlist,
+                win_channel_rack,
+                win_piano_roll,
+                win_browser,
+                win_mixer,
+                win_edison,
+                win_fpc,
+                win_slicex,
+                win_dual,
+            ]
+            .spacing(2)
+            .align_y(iced::Alignment::Center),
+        )
+        .style(|_t| self.theme.machined_capsule_style())
+        .padding(2);
+
+        let dsp_lcd = container(
+            column![
+                text(format!(
+                    "DSP: {:.1}%",
+                    self.workspace.lcd_diagnostic.cpu_load_percent
+                ))
+                .size(10),
+                text("48.0k | 128spl").size(8),
+            ]
+            .spacing(1),
+        )
+        .style(|_t| self.theme.vfd_cyan_display_style())
+        .padding(2);
 
         let capsule_dsp = container(dsp_lcd)
             .style(|_t| self.theme.machined_capsule_style())
-            .padding(3);
+            .padding(2);
 
-        row![
-            capsule_transport,
-            capsule_time,
-            capsule_master,
-            capsule_tempo,
-            capsule_dsp,
-        ]
-        .spacing(6)
-        .padding(4)
-        .align_y(iced::Alignment::Center)
+        container(
+            row![
+                capsule_transport,
+                capsule_time,
+                capsule_master,
+                capsule_tempo,
+                capsule_scope,
+                capsule_windows,
+                Space::new().width(Length::Fill),
+                capsule_dsp,
+            ]
+            .spacing(4)
+            .padding([1, 4])
+            .align_y(iced::Alignment::Center),
+        )
+        .height(Length::Fixed(40.0))
+        .width(Length::Fill)
         .into()
     }
 
-    /// FL Studio Browser / Sample Library Panel (Left docked 260px)
+    /// FL Studio Browser / Sample Library Panel (Hierarchical Tree + Inline Preview Player)
     pub fn view_browser_panel(&self) -> Element<'_, UiMessage> {
         let tabs = [
             (crate::fl_studio::browser::BrowserTab::All, "All"),
@@ -844,131 +1041,273 @@ impl CrystalWaveApp {
 
         let search_input = text_input("⌕ Search library & tags...", &self.browser.search_query)
             .on_input(UiMessage::BrowserSetSearchQuery)
-            .padding(4)
-            .size(10);
+            .padding(3)
+            .size(9);
 
-        let mut items_col = column![].spacing(3).width(Length::Fill);
+        let mut tree_col = column![].spacing(2).width(Length::Fill);
 
-        match self.browser.active_tab {
-            crate::fl_studio::browser::BrowserTab::Presets => {
-                for preset in self.browser.filtered_presets() {
-                    let card = container(
-                        row![
-                            text("◈").size(10).color(self.theme.accent),
-                            column![
-                                text(&preset.name).size(10),
-                                text(format!("{} • {}", preset.category, preset.plugin_name))
-                                    .size(8)
-                                    .color(Color::from_rgb8(0x8a, 0x90, 0x9a)),
-                            ]
-                            .spacing(1)
-                            .width(Length::Fill),
-                        ]
-                        .spacing(4)
-                        .align_y(iced::Alignment::Center),
-                    )
-                    .padding(4)
-                    .style(|_t| self.theme.inner_well_style());
-                    items_col = items_col.push(card);
-                }
+        // Hierarchical Tree Categories (1:1 FL Studio 2026 Ground Truth)
+        let is_searching = !self.browser.search_query.trim().is_empty();
+
+        if is_searching {
+            // Search Results Mode
+            for sample in self.browser.filtered_samples() {
+                let s_id = sample.id;
+                let is_sel = self.browser.selected_sample_id == Some(s_id);
+                let is_prev = self.browser.previewing_sample_id == Some(s_id);
+
+                let item_btn = button(
+                    row![
+                        text(if is_prev { "■" } else { "▶" })
+                            .size(8)
+                            .color(if is_prev {
+                                self.theme.record
+                            } else {
+                                Color::from_rgb8(0x2e, 0xcc, 0x71)
+                            }),
+                        text(&sample.name).size(9),
+                        Space::new().width(Length::Fill),
+                        text(format!("{:.1}s", sample.duration_seconds))
+                            .size(8)
+                            .color(Color::from_rgb8(0x7a, 0x80, 0x8c)),
+                    ]
+                    .spacing(4)
+                    .align_y(iced::Alignment::Center),
+                )
+                .width(Length::Fill)
+                .padding(2)
+                .style(self.theme.button_style(is_sel))
+                .on_press(UiMessage::BrowserSelectSample(s_id));
+
+                tree_col = tree_col.push(item_btn);
             }
-            crate::fl_studio::browser::BrowserTab::Plugins => {
-                for plugin in self
-                    .browser
-                    .filtered_plugins(&self.browser.search_query, None)
-                {
-                    let pid = plugin.id;
-                    let is_gen = plugin.is_generator;
-                    let icon_glyph = if is_gen { "⬡" } else { "FX" };
-                    let card = container(
-                        row![
-                            text(icon_glyph)
-                                .size(10)
-                                .color(Color::from_rgb8(0x00, 0xf2, 0xfe)),
-                            column![
-                                text(&plugin.name).size(10),
-                                text(format!("{:?} • {}", plugin.category, plugin.vendor))
-                                    .size(8)
-                                    .color(Color::from_rgb8(0x8a, 0x90, 0x9a)),
-                            ]
-                            .spacing(1)
-                            .width(Length::Fill),
-                            button(text("+ Load").size(9))
-                                .padding(3)
-                                .style(self.theme.accent_button_style(self.theme.accent))
-                                .on_press(UiMessage::PluginPickerLoadPlugin {
-                                    plugin_id: pid,
-                                    is_generator: is_gen,
-                                }),
-                        ]
-                        .spacing(4)
-                        .align_y(iced::Alignment::Center),
-                    )
-                    .padding(4)
-                    .style(|_t| self.theme.inner_well_style());
-                    items_col = items_col.push(card);
-                }
+        } else {
+            // Full Collapsible Directory Tree
+            let root_folders = [
+                ("Current project", "📁", false),
+                ("Recent files", "📁", false),
+                ("Plugin database", "🔌", false),
+                ("Channel presets", "🎛", false),
+                ("Mixer presets", "🎚", false),
+                ("Scores", "🎼", false),
+            ];
+
+            for (f_name, f_icon, _) in root_folders {
+                let is_exp = self.browser.is_folder_expanded(f_name);
+                let caret = if is_exp { "▾" } else { "▸" };
+                let row_btn = button(
+                    row![
+                        text(caret)
+                            .size(9)
+                            .color(Color::from_rgb8(0xfa, 0x82, 0x31)),
+                        text(f_icon).size(9),
+                        text(f_name).size(9),
+                    ]
+                    .spacing(4)
+                    .align_y(iced::Alignment::Center),
+                )
+                .width(Length::Fill)
+                .padding(2)
+                .style(|_t, _s| button::Style {
+                    background: None,
+                    text_color: Color::from_rgb8(0xd0, 0xd4, 0xdc),
+                    ..button::Style::default()
+                })
+                .on_press(UiMessage::BrowserToggleFolder(f_name.to_string()));
+
+                tree_col = tree_col.push(row_btn);
             }
-            _ => {
-                for sample in self.browser.filtered_samples() {
-                    let sample_id = sample.id;
-                    let is_previewing = self.browser.previewing_sample_id == Some(sample_id);
 
-                    let audition_btn = button(text(if is_previewing { "■" } else { "▶" }).size(9))
-                        .padding(3)
-                        .style(
-                            self.theme
-                                .toggle_accent_button_style(is_previewing, self.theme.record),
-                        )
-                        .on_press(if is_previewing {
-                            UiMessage::BrowserStopAudition
-                        } else {
-                            UiMessage::BrowserAuditionSample(sample_id)
-                        });
+            // Packs Folder (Master Sample Library)
+            let packs_exp = self.browser.is_folder_expanded("Packs");
+            let packs_caret = if packs_exp { "▾" } else { "▸" };
+            let packs_btn = button(
+                row![
+                    text(packs_caret)
+                        .size(9)
+                        .color(Color::from_rgb8(0xfa, 0x82, 0x31)),
+                    text("📦").size(9),
+                    text("Packs")
+                        .size(9)
+                        .color(Color::from_rgb8(0xfa, 0x82, 0x31)),
+                ]
+                .spacing(4)
+                .align_y(iced::Alignment::Center),
+            )
+            .width(Length::Fill)
+            .padding(2)
+            .style(|_t, _s| button::Style {
+                background: None,
+                text_color: Color::WHITE,
+                ..button::Style::default()
+            })
+            .on_press(UiMessage::BrowserToggleFolder("Packs".to_string()));
 
-                    let rack_btn = button(text("+Rack").size(8))
-                        .padding(2)
-                        .on_press(UiMessage::ChannelRackDropSample { sample_id });
+            tree_col = tree_col.push(packs_btn);
 
-                    let lane_btn = button(text("+Lane").size(8)).padding(2).on_press(
-                        UiMessage::BrowserDropSampleToPlaylist {
-                            sample_id,
-                            track_id: self.workspace.selected_track_id,
-                            start_tick: self.playhead_tick,
-                        },
-                    );
+            if packs_exp {
+                // Sub-categories: Drums, Instruments, Vocals, FX
+                let subcats = [
+                    ("Packs/Drums", "Drums", "🥁"),
+                    ("Packs/Instruments", "Instruments", "🎹"),
+                    ("Packs/Vocals", "Vocals", "🎤"),
+                    ("Packs/FX", "FX", "✨"),
+                ];
 
-                    let card = container(
+                for (cat_path, cat_title, cat_icon) in subcats {
+                    let cat_exp = self.browser.is_folder_expanded(cat_path);
+                    let cat_caret = if cat_exp { "▾" } else { "▸" };
+
+                    let sub_btn = button(
                         row![
-                            text("⬟").size(9).color(Color::from_rgb8(0x2e, 0xcc, 0x71)),
-                            audition_btn,
-                            column![
-                                text(&sample.name).size(10),
-                                text(format!(
-                                    "{} | {:.1}s",
-                                    sample.category, sample.duration_seconds
-                                ))
+                            Space::new().width(Length::Fixed(8.0)),
+                            text(cat_caret)
                                 .size(8)
-                                .color(Color::from_rgb8(0x8a, 0x90, 0x9a)),
-                            ]
-                            .spacing(1)
-                            .width(Length::Fill),
-                            rack_btn,
-                            lane_btn,
+                                .color(Color::from_rgb8(0xfa, 0x82, 0x31)),
+                            text(cat_icon).size(8),
+                            text(cat_title).size(9),
                         ]
                         .spacing(3)
                         .align_y(iced::Alignment::Center),
                     )
-                    .padding(3)
-                    .style(|_t| self.theme.inner_well_style());
+                    .width(Length::Fill)
+                    .padding(2)
+                    .style(|_t, _s| button::Style {
+                        background: None,
+                        text_color: Color::from_rgb8(0xb0, 0xb6, 0xc4),
+                        ..button::Style::default()
+                    })
+                    .on_press(UiMessage::BrowserToggleFolder(cat_path.to_string()));
 
-                    items_col = items_col.push(card);
+                    tree_col = tree_col.push(sub_btn);
+
+                    if cat_exp {
+                        // Render Samples in this subcategory
+                        let cat_filter = match cat_title {
+                            "Drums" => vec!["808", "Kicks", "Snares", "HiHats"],
+                            "Instruments" => vec!["Instruments"],
+                            "Vocals" => vec!["Vocals"],
+                            "FX" => vec!["FX"],
+                            _ => vec![],
+                        };
+
+                        for sample in &self.browser.samples {
+                            if cat_filter.contains(&sample.category.as_str()) {
+                                let s_id = sample.id;
+                                let is_sel = self.browser.selected_sample_id == Some(s_id);
+                                let is_prev = self.browser.previewing_sample_id == Some(s_id);
+
+                                let sample_card = button(
+                                    row![
+                                        Space::new().width(Length::Fixed(18.0)),
+                                        text(if is_prev { "■" } else { "♫" }).size(8).color(
+                                            if is_prev {
+                                                self.theme.record
+                                            } else {
+                                                Color::from_rgb8(0x2e, 0xcc, 0x71)
+                                            }
+                                        ),
+                                        text(&sample.name).size(8),
+                                        Space::new().width(Length::Fill),
+                                        text(format!("{:.1}s", sample.duration_seconds))
+                                            .size(7)
+                                            .color(Color::from_rgb8(0x7a, 0x80, 0x8c)),
+                                    ]
+                                    .spacing(3)
+                                    .align_y(iced::Alignment::Center),
+                                )
+                                .width(Length::Fill)
+                                .padding(1)
+                                .style(self.theme.button_style(is_sel))
+                                .on_press(UiMessage::BrowserSelectSample(s_id));
+
+                                tree_col = tree_col.push(sample_card);
+                            }
+                        }
+                    }
                 }
             }
         }
 
+        // Selected Sample for Inline Previewer
+        let active_sample = self
+            .browser
+            .selected_sample_id
+            .and_then(|id| self.browser.samples.iter().find(|s| s.id == id))
+            .or_else(|| self.browser.samples.first());
+
+        let preview_dock = if let Some(s) = active_sample {
+            let s_id = s.id;
+            let is_prev = self.browser.previewing_sample_id == Some(s_id);
+
+            let audition_btn = button(text(if is_prev { "■ STOP" } else { "▶ PLAY" }).size(8))
+                .padding([2, 5])
+                .style(
+                    self.theme
+                        .toggle_accent_button_style(is_prev, self.theme.record),
+                )
+                .on_press(if is_prev {
+                    UiMessage::BrowserStopAudition
+                } else {
+                    UiMessage::BrowserAuditionSample(s_id)
+                });
+
+            let rack_btn = button(text("+Rack").size(8))
+                .padding([2, 4])
+                .style(self.theme.accent_button_style(self.theme.accent))
+                .on_press(UiMessage::ChannelRackDropSample { sample_id: s_id });
+
+            let lane_btn = button(text("+Lane").size(8))
+                .padding([2, 4])
+                .style(self.theme.button_style(false))
+                .on_press(UiMessage::BrowserDropSampleToPlaylist {
+                    sample_id: s_id,
+                    track_id: self.workspace.selected_track_id,
+                    start_tick: self.playhead_tick,
+                });
+
+            let waveform = crate::ui::canvas_knob::sample_preview_waveform(
+                238.0,
+                30.0,
+                is_prev,
+                0.35,
+                self.theme.accent,
+            );
+
+            container(
+                column![
+                    row![
+                        text(&s.name)
+                            .size(9)
+                            .color(Color::from_rgb8(0x00, 0xf2, 0xfe)),
+                        Space::new().width(Length::Fill),
+                        text(format!("{:.1}s | 44.1k", s.duration_seconds))
+                            .size(7)
+                            .color(Color::from_rgb8(0x8a, 0x90, 0x9a)),
+                    ]
+                    .align_y(iced::Alignment::Center),
+                    waveform,
+                    row![
+                        audition_btn,
+                        Space::new().width(Length::Fill),
+                        rack_btn,
+                        lane_btn
+                    ]
+                    .spacing(3)
+                    .align_y(iced::Alignment::Center),
+                ]
+                .spacing(3),
+            )
+            .padding(4)
+            .style(|_t| self.theme.inner_well_style())
+        } else {
+            container(column![])
+        };
+
         let browser_header = row![
-            text("BROWSER / LIBRARY").size(11),
+            text("BROWSER / LIBRARY")
+                .size(10)
+                .color(Color::from_rgb8(0xfa, 0x82, 0x31)),
             Space::new().width(Length::Fill),
             button(text("✕").size(9))
                 .padding(2)
@@ -980,13 +1319,14 @@ impl CrystalWaveApp {
             column![
                 browser_header,
                 tab_row,
-                scrollable(items_col).height(Length::Fill),
                 search_input,
+                scrollable(tree_col).height(Length::Fill),
+                preview_dock,
             ]
             .spacing(4),
         )
-        .width(Length::Fixed(260.0))
-        .padding(6)
+        .width(Length::Fixed(254.0))
+        .padding(5)
         .style(|_t| self.theme.sunken_container_style())
         .into()
     }
@@ -1763,13 +2103,46 @@ impl CrystalWaveApp {
                         .align_y(iced::Alignment::Center),
                     text(format!("{:.1} dB", vol_db)).size(9),
                     row![mute_btn, solo_btn, send_btn].spacing(2),
-                    text(if is_sending_master {
-                        "→ Master"
+                    container(if is_selected {
+                        row![
+                            text("⚡").size(9).color(Color::from_rgb8(0x2e, 0xcc, 0x71)),
+                            text("➔ Master")
+                                .size(8)
+                                .color(Color::from_rgb8(0x2e, 0xcc, 0x71)),
+                        ]
+                        .spacing(2)
+                        .align_y(iced::Alignment::Center)
                     } else {
-                        "→ Unrouted"
+                        row![
+                            text(if is_sending_master {
+                                "→ Master"
+                            } else {
+                                "→ Unrouted"
+                            })
+                            .size(8)
+                            .color(Color::from_rgb8(0x7a, 0x80, 0x8c))
+                        ]
                     })
-                    .size(8)
-                    .color(Color::from_rgb8(0x7a, 0x80, 0x8c)),
+                    .padding([1, 3])
+                    .style(move |_t| container::Style {
+                        background: if is_selected {
+                            Some(iced::Background::Color(Color::from_rgba8(
+                                0x2e, 0xcc, 0x71, 0.18,
+                            )))
+                        } else {
+                            None
+                        },
+                        border: iced::Border {
+                            color: if is_selected {
+                                Color::from_rgb8(0x2e, 0xcc, 0x71)
+                            } else {
+                                Color::TRANSPARENT
+                            },
+                            width: 1.0,
+                            radius: 2.0.into(),
+                        },
+                        ..container::Style::default()
+                    }),
                 ]
                 .spacing(2)
                 .align_x(iced::Alignment::Center),
@@ -1929,6 +2302,29 @@ impl CrystalWaveApp {
             inspector_footer = inspector_footer.push(clipper_btn);
         }
 
+        let eq_canvas = crate::ui::canvas_knob::parametric_eq_visualizer(
+            228.0,
+            68.0,
+            0.0,
+            0.0,
+            0.0,
+            self.theme.accent,
+        );
+        let eq_controls = row![
+            text("LOW: 0dB")
+                .size(7)
+                .color(Color::from_rgb8(0xff, 0x47, 0x57)),
+            Space::new().width(Length::Fill),
+            text("MID: 0dB")
+                .size(7)
+                .color(Color::from_rgb8(0x2e, 0xd5, 0x73)),
+            Space::new().width(Length::Fill),
+            text("HIGH: 0dB")
+                .size(7)
+                .color(Color::from_rgb8(0x1e, 0x90, 0xff)),
+        ]
+        .padding([1, 4]);
+
         let fx_inspector = container(
             column![
                 container(
@@ -1941,6 +2337,9 @@ impl CrystalWaveApp {
                 )
                 .padding(3)
                 .style(|_t| self.theme.machined_capsule_style()),
+                container(column![eq_canvas, eq_controls].spacing(1))
+                    .padding(2)
+                    .style(|_t| self.theme.inner_well_style()),
                 slots_col,
                 inspector_footer,
             ]
@@ -2951,10 +3350,121 @@ impl CrystalWaveApp {
             .padding(6)
             .style(|_t| self.theme.inner_well_style());
 
+            let layers_visualizer = container(
+                column![
+                    row![
+                        text("VELOCITY SPLIT LAYERS (1-4)")
+                            .size(8)
+                            .color(Color::from_rgb8(0xfa, 0x82, 0x31)),
+                        Space::new().width(Length::Fill),
+                        text("0 - 127")
+                            .size(8)
+                            .color(Color::from_rgb8(0x8a, 0x90, 0x9a)),
+                    ]
+                    .align_y(iced::Alignment::Center),
+                    row![
+                        text("L1").size(8).color(Color::from_rgb8(0x70, 0x75, 0x80)),
+                        container(text("0..31 Soft").size(7).color(Color::WHITE))
+                            .width(Length::Fixed(60.0))
+                            .padding([1, 4])
+                            .style(|_t| container::Style {
+                                background: Some(iced::Background::Color(Color::from_rgb8(
+                                    0x27, 0xae, 0x60
+                                ))),
+                                border: iced::Border {
+                                    radius: 2.0.into(),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }),
+                    ]
+                    .spacing(4)
+                    .align_y(iced::Alignment::Center),
+                    row![
+                        text("L2").size(8).color(Color::from_rgb8(0x70, 0x75, 0x80)),
+                        container(text("32..63 Med-Low").size(7).color(Color::WHITE))
+                            .width(Length::Fixed(110.0))
+                            .padding([1, 4])
+                            .style(|_t| container::Style {
+                                background: Some(iced::Background::Color(Color::from_rgb8(
+                                    0x29, 0x80, 0xb9
+                                ))),
+                                border: iced::Border {
+                                    radius: 2.0.into(),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }),
+                    ]
+                    .spacing(4)
+                    .align_y(iced::Alignment::Center),
+                    row![
+                        text("L3").size(8).color(Color::from_rgb8(0x70, 0x75, 0x80)),
+                        container(text("64..95 Med-Hard").size(7).color(Color::WHITE))
+                            .width(Length::Fixed(160.0))
+                            .padding([1, 4])
+                            .style(|_t| container::Style {
+                                background: Some(iced::Background::Color(Color::from_rgb8(
+                                    0xf3, 0x9c, 0x12
+                                ))),
+                                border: iced::Border {
+                                    radius: 2.0.into(),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }),
+                    ]
+                    .spacing(4)
+                    .align_y(iced::Alignment::Center),
+                    row![
+                        text("L4").size(8).color(Color::from_rgb8(0x70, 0x75, 0x80)),
+                        container(text("96..127 Hard (Max)").size(7).color(Color::WHITE))
+                            .width(Length::Fill)
+                            .padding([1, 4])
+                            .style(|_t| container::Style {
+                                background: Some(iced::Background::Color(Color::from_rgb8(
+                                    0xe7, 0x4c, 0x3c
+                                ))),
+                                border: iced::Border {
+                                    radius: 2.0.into(),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }),
+                    ]
+                    .spacing(4)
+                    .align_y(iced::Alignment::Center),
+                ]
+                .spacing(3),
+            )
+            .padding(5)
+            .style(|_t| self.theme.inner_well_style());
+
+            let adsr_bar = row![
+                text("ATT: 0ms")
+                    .size(8)
+                    .color(Color::from_rgb8(0x00, 0xf2, 0xfe)),
+                Space::new().width(Length::Fill),
+                text("DEC: 120ms")
+                    .size(8)
+                    .color(Color::from_rgb8(0x00, 0xf2, 0xfe)),
+                Space::new().width(Length::Fill),
+                text("SUS: 100%")
+                    .size(8)
+                    .color(Color::from_rgb8(0x00, 0xf2, 0xfe)),
+                Space::new().width(Length::Fill),
+                text("REL: 250ms")
+                    .size(8)
+                    .color(Color::from_rgb8(0x00, 0xf2, 0xfe)),
+            ]
+            .padding([2, 6]);
+
             container(
                 column![
                     pad_header,
                     sample_info,
+                    layers_visualizer,
+                    adsr_bar,
                     row![
                         text("Pad Level:").size(10),
                         vol_slider,
@@ -2967,7 +3477,7 @@ impl CrystalWaveApp {
                         .align_y(iced::Alignment::Center),
                     row![mute_btn, solo_btn].spacing(6),
                 ]
-                .spacing(6),
+                .spacing(5),
             )
             .width(Length::Fill)
             .padding(6)
@@ -3357,10 +3867,42 @@ impl CrystalWaveApp {
                     let s_idx = b_idx * 4 + step_in_beat;
                     let is_active = chan.steps.get(s_idx).map(|s| s.active).unwrap_or(false);
                     let is_even_beat = b_idx % 2 != 0;
-                    let step_lbl = if is_active { "●" } else { "•" };
-                    let step_btn = button(text(step_lbl).size(10))
+                    let pad_inner = if is_active {
+                        container(column![
+                            container(column![])
+                                .width(Length::Fill)
+                                .height(Length::Fixed(2.5))
+                                .style(|_t| container::Style {
+                                    background: Some(iced::Background::Color(Color::from_rgba8(
+                                        255, 255, 255, 0.85,
+                                    ))),
+                                    ..Default::default()
+                                }),
+                            Space::new().height(Length::Fill),
+                        ])
+                        .width(Length::Fixed(18.0))
+                        .height(Length::Fixed(24.0))
+                    } else {
+                        container(column![
+                            container(column![])
+                                .width(Length::Fill)
+                                .height(Length::Fixed(1.5))
+                                .style(|_t| container::Style {
+                                    background: Some(iced::Background::Color(Color::from_rgba8(
+                                        255, 255, 255, 0.20,
+                                    ))),
+                                    ..Default::default()
+                                }),
+                            Space::new().height(Length::Fill),
+                        ])
+                        .width(Length::Fixed(18.0))
+                        .height(Length::Fixed(24.0))
+                    };
+                    let step_btn = button(pad_inner)
                         .style(self.theme.step_pad_style(is_active, is_even_beat))
-                        .padding([2, 5])
+                        .padding(0)
+                        .width(Length::Fixed(20.0))
+                        .height(Length::Fixed(26.0))
                         .on_press(UiMessage::ChannelRackToggleStep {
                             channel_id: chan_id,
                             step_index: s_idx,
@@ -3573,92 +4115,176 @@ impl CrystalWaveApp {
 
         let tabs_bar = row![tab_smp, tab_env, tab_misc].spacing(4);
 
-        let env = &self.wrapper_state.volume_env;
-        let att = env.attack_ms;
-        let dec = env.decay_ms;
-        let sus = env.sustain_level;
-        let rel = env.release_ms;
+        let tab_content = match self.wrapper_state.active_tab {
+            crate::fl_studio::wrapper::WrapperTab::Sampler => {
+                let wave_preview = crate::ui::canvas_knob::sample_preview_waveform(
+                    280.0,
+                    46.0,
+                    false,
+                    0.0,
+                    Color::from_rgb8(0x00, 0xf2, 0xfe),
+                );
+                let precalc_fx = row![
+                    button(text("NORM").size(8))
+                        .padding([2, 5])
+                        .style(self.theme.button_style(false)),
+                    button(text("REV").size(8))
+                        .padding([2, 5])
+                        .style(self.theme.button_style(false)),
+                    button(text("CLIP").size(8))
+                        .padding([2, 5])
+                        .style(self.theme.button_style(false)),
+                    button(text("BOOST").size(8))
+                        .padding([2, 5])
+                        .style(self.theme.button_style(false)),
+                ]
+                .spacing(4);
 
-        let att_slider = slider(0.0..=1000.0, att, move |v| UiMessage::WrapperSetAdsr {
-            channel_id: chan_id,
-            attack: v,
-            decay: dec,
-            sustain: sus,
-            release: rel,
-        })
-        .step(1.0_f32)
-        .width(Length::Fixed(70.0));
+                let stretch_row = row![
+                    text("TIME STRETCH:")
+                        .size(9)
+                        .color(Color::from_rgb8(0xfa, 0x82, 0x31)),
+                    text("Mode: e3 Generic").size(9),
+                    Space::new().width(Length::Fill),
+                    text("Mul: 100%").size(9),
+                ]
+                .align_y(iced::Alignment::Center);
 
-        let dec_slider = slider(0.0..=2000.0, dec, move |v| UiMessage::WrapperSetAdsr {
-            channel_id: chan_id,
-            attack: att,
-            decay: v,
-            sustain: sus,
-            release: rel,
-        })
-        .step(5.0_f32)
-        .width(Length::Fixed(70.0));
+                column![
+                    container(wave_preview)
+                        .padding(2)
+                        .style(|_t| self.theme.inner_well_style()),
+                    row![
+                        text("PRECOMPUTED FX:")
+                            .size(8)
+                            .color(Color::from_rgb8(0x8a, 0x90, 0x9a)),
+                        precalc_fx
+                    ]
+                    .spacing(4)
+                    .align_y(iced::Alignment::Center),
+                    stretch_row,
+                ]
+                .spacing(6)
+            }
+            crate::fl_studio::wrapper::WrapperTab::Envelope => {
+                let env = &self.wrapper_state.volume_env;
+                let att = env.attack_ms;
+                let dec = env.decay_ms;
+                let sus = env.sustain_level;
+                let rel = env.release_ms;
 
-        let sus_slider = slider(0.0..=1.0, sus, move |v| UiMessage::WrapperSetAdsr {
-            channel_id: chan_id,
-            attack: att,
-            decay: dec,
-            sustain: v,
-            release: rel,
-        })
-        .step(0.02_f32)
-        .width(Length::Fixed(70.0));
+                let att_slider = slider(0.0..=1000.0, att, move |v| UiMessage::WrapperSetAdsr {
+                    channel_id: chan_id,
+                    attack: v,
+                    decay: dec,
+                    sustain: sus,
+                    release: rel,
+                })
+                .step(1.0_f32)
+                .width(Length::Fixed(65.0));
 
-        let rel_slider = slider(0.0..=3000.0, rel, move |v| UiMessage::WrapperSetAdsr {
-            channel_id: chan_id,
-            attack: att,
-            decay: dec,
-            sustain: sus,
-            release: v,
-        })
-        .step(10.0_f32)
-        .width(Length::Fixed(70.0));
+                let dec_slider = slider(0.0..=2000.0, dec, move |v| UiMessage::WrapperSetAdsr {
+                    channel_id: chan_id,
+                    attack: att,
+                    decay: v,
+                    sustain: sus,
+                    release: rel,
+                })
+                .step(5.0_f32)
+                .width(Length::Fixed(65.0));
 
-        let adsr_controls = row![
-            column![
-                text("ATT").size(8),
-                att_slider,
-                text(format!("{:.0}ms", att)).size(8)
+                let sus_slider = slider(0.0..=1.0, sus, move |v| UiMessage::WrapperSetAdsr {
+                    channel_id: chan_id,
+                    attack: att,
+                    decay: dec,
+                    sustain: v,
+                    release: rel,
+                })
+                .step(0.02_f32)
+                .width(Length::Fixed(65.0));
+
+                let rel_slider = slider(0.0..=3000.0, rel, move |v| UiMessage::WrapperSetAdsr {
+                    channel_id: chan_id,
+                    attack: att,
+                    decay: dec,
+                    sustain: sus,
+                    release: v,
+                })
+                .step(10.0_f32)
+                .width(Length::Fixed(65.0));
+
+                let adsr_controls = row![
+                    column![
+                        text("ATT").size(8),
+                        att_slider,
+                        text(format!("{:.0}ms", att)).size(8)
+                    ]
+                    .spacing(2),
+                    column![
+                        text("DEC").size(8),
+                        dec_slider,
+                        text(format!("{:.0}ms", dec)).size(8)
+                    ]
+                    .spacing(2),
+                    column![
+                        text("SUS").size(8),
+                        sus_slider,
+                        text(format!("{:.0}%", sus * 100.0)).size(8)
+                    ]
+                    .spacing(2),
+                    column![
+                        text("REL").size(8),
+                        rel_slider,
+                        text(format!("{:.0}ms", rel)).size(8)
+                    ]
+                    .spacing(2),
+                ]
+                .spacing(4);
+
+                column![
+                    adsr_controls,
+                    row![
+                        text("Hold: 0ms")
+                            .size(8)
+                            .color(Color::from_rgb8(0x8a, 0x90, 0x9a)),
+                        Space::new().width(Length::Fill),
+                        text("Del: 0ms")
+                            .size(8)
+                            .color(Color::from_rgb8(0x8a, 0x90, 0x9a)),
+                    ],
+                ]
+                .spacing(6)
+            }
+            crate::fl_studio::wrapper::WrapperTab::Misc
+            | crate::fl_studio::wrapper::WrapperTab::Fx => column![
+                row![
+                    text("Polyphony Max:").size(9),
+                    text("32 Voices")
+                        .size(9)
+                        .color(Color::from_rgb8(0x00, 0xf2, 0xfe))
+                ]
+                .spacing(4),
+                row![
+                    text("Cut / Cut By:").size(9),
+                    text("Group 1 / 1")
+                        .size(9)
+                        .color(Color::from_rgb8(0xfa, 0x82, 0x31))
+                ]
+                .spacing(4),
+                row![
+                    text("Portamento Mono:").size(9),
+                    text("Off")
+                        .size(9)
+                        .color(Color::from_rgb8(0x7a, 0x80, 0x8c))
+                ]
+                .spacing(4),
             ]
-            .spacing(2),
-            column![
-                text("DEC").size(8),
-                dec_slider,
-                text(format!("{:.0}ms", dec)).size(8)
-            ]
-            .spacing(2),
-            column![
-                text("SUS").size(8),
-                sus_slider,
-                text(format!("{:.0}%", sus * 100.0)).size(8)
-            ]
-            .spacing(2),
-            column![
-                text("REL").size(8),
-                rel_slider,
-                text(format!("{:.0}ms", rel)).size(8)
-            ]
-            .spacing(2),
-        ]
-        .spacing(6);
-
-        let stretch_info = row![
-            text("Mode: Auto Stretch").size(9),
-            text("|").size(9),
-            text("Polyphony: 32v").size(9),
-            text("|").size(9),
-            text("Porta: Off").size(9),
-        ]
-        .spacing(4);
+            .spacing(6),
+        };
 
         let right_col = column![
             row![
-                text("VOLUME ADSR ENVELOPE")
+                text("WRAPPER PROCESSING")
                     .size(10)
                     .color(Color::from_rgb8(0x5a, 0xe0, 0xff)),
                 Space::new().width(Length::Fill),
@@ -3666,8 +4292,7 @@ impl CrystalWaveApp {
             ]
             .spacing(4)
             .align_y(iced::Alignment::Center),
-            adsr_controls,
-            stretch_info,
+            tab_content,
         ]
         .spacing(6);
 

@@ -155,10 +155,10 @@ impl UiTheme {
             mute: Color::from_rgb8(200, 52, 16),      // Mute: -15715128 (#c83410)
             solo: Color::from_rgb8(0xf3, 0x9c, 0x12),
             record: Color::from_rgb8(0xd6, 0x30, 0x31),
-            step_even: Color::from_rgb8(237, 126, 81), // StepEven: -11436307 (#ed7e51)
-            step_odd: Color::from_rgb8(198, 85, 17),   // StepOdd: -15641146 (#c65511)
-            step_active: Color::from_rgb8(0xd4, 0x69, 0x7b), // FL StepActive (Rose/Pink)
-            step_active_dim: Color::from_rgb8(0x8c, 0x3f, 0x4a), // FL StepActive on dark beats
+            step_even: Color::from_rgb8(0x7a, 0x56, 0x50), // Copper/Brown rubber pad (Beats 2 & 4)
+            step_odd: Color::from_rgb8(0xb0, 0xb4, 0xbe),  // Silver/Grey rubber pad (Beats 1 & 3)
+            step_active: Color::from_rgb8(0xff, 0x6b, 0x81), // FL StepActive Rose Pink
+            step_active_dim: Color::from_rgb8(0xd6, 0x55, 0x68),
             channel_name_bg: Color::from_rgb8(0x35, 0x38, 0x40), // FL Channel Name Pill
             channel_name_sel: Color::from_rgb8(0x41, 0x44, 0x50), // FL Selected Channel
             window_titlebar: Color::from_rgb8(0x20, 0x22, 0x28), // Sub-window header
@@ -214,10 +214,10 @@ impl UiTheme {
             mute: Color::from_rgb8(0x3d, 0x2e, 0x22),
             solo: Color::from_rgb8(0xf5, 0xa6, 0x23),
             record: Color::from_rgb8(0xe7, 0x4c, 0x3c),
-            step_even: Color::from_rgb8(0x25, 0x29, 0x32), // Beats 2 & 4 (Graphite)
-            step_odd: Color::from_rgb8(0x18, 0x1a, 0x20),  // Beats 1 & 3 (Obsidian)
-            step_active: Color::from_rgb8(0xd4, 0x69, 0x7b), // FL StepActive (Rose/Pink)
-            step_active_dim: Color::from_rgb8(0x8c, 0x3f, 0x4a),
+            step_even: Color::from_rgb8(0x7a, 0x56, 0x50), // Copper/Brown rubber pad (Beats 2 & 4)
+            step_odd: Color::from_rgb8(0xb0, 0xb4, 0xbe),  // Silver/Grey rubber pad (Beats 1 & 3)
+            step_active: Color::from_rgb8(0xff, 0x6b, 0x81), // FL StepActive Rose Pink
+            step_active_dim: Color::from_rgb8(0xd6, 0x55, 0x68),
             channel_name_bg: Color::from_rgb8(0x28, 0x2c, 0x34),
             channel_name_sel: Color::from_rgb8(0x38, 0x3c, 0x46),
             window_titlebar: Color::from_rgb8(0x19, 0x1b, 0x22),
