@@ -72,6 +72,8 @@ pub struct CrystalWaveApp {
     pub mixer_sends: Vec<Vec<f32>>,
     pub audio_snapshot: crate::audio::AudioSnapshotHandle,
     pub active_hover_hint: Option<String>,
+    pub channel_rack_filter: crate::ui::layout::ChannelRackFilter,
+    pub browser_width: f32,
 }
 
 impl Default for CrystalWaveApp {
@@ -239,6 +241,8 @@ impl CrystalWaveApp {
             },
             audio_snapshot,
             active_hover_hint: None,
+            channel_rack_filter: crate::ui::layout::ChannelRackFilter::All,
+            browser_width: 254.0,
         };
 
         app.sync_audio_snapshot();
@@ -999,25 +1003,31 @@ impl CrystalWaveApp {
             }
 
             UiMessage::ToggleFlChannelRack => {
-                if self.layout.active_view != crate::ui::layout::FlActiveView::ChannelRack {
-                    self.fl_windows.channel_rack_visible = true;
-                    self.layout.active_view = crate::ui::layout::FlActiveView::ChannelRack;
-                    self.layout
-                        .set_drawer_tab(crate::ui::layout::DrawerTab::StepSequencer);
-                } else {
+                if self.fl_windows.channel_rack_visible
+                    && self.layout.active_view == crate::ui::layout::FlActiveView::ChannelRack
+                {
                     self.fl_windows.channel_rack_visible = false;
                     self.layout.active_view = crate::ui::layout::FlActiveView::Playlist;
+                } else {
+                    self.fl_windows.channel_rack_visible = true;
+                    self.layout
+                        .sub_windows
+                        .focus(crate::ui::layout::FlActiveView::ChannelRack);
+                    self.layout.active_view = crate::ui::layout::FlActiveView::ChannelRack;
                 }
             }
             UiMessage::ToggleFlPianoRoll => {
-                if self.layout.active_view != crate::ui::layout::FlActiveView::PianoRoll {
-                    self.fl_windows.piano_roll_visible = true;
-                    self.layout.active_view = crate::ui::layout::FlActiveView::PianoRoll;
-                    self.layout
-                        .set_drawer_tab(crate::ui::layout::DrawerTab::PianoRoll);
-                } else {
+                if self.fl_windows.piano_roll_visible
+                    && self.layout.active_view == crate::ui::layout::FlActiveView::PianoRoll
+                {
                     self.fl_windows.piano_roll_visible = false;
                     self.layout.active_view = crate::ui::layout::FlActiveView::Playlist;
+                } else {
+                    self.fl_windows.piano_roll_visible = true;
+                    self.layout
+                        .sub_windows
+                        .focus(crate::ui::layout::FlActiveView::PianoRoll);
+                    self.layout.active_view = crate::ui::layout::FlActiveView::PianoRoll;
                 }
             }
             UiMessage::ToggleFlPlaylist => {
@@ -1025,14 +1035,17 @@ impl CrystalWaveApp {
                 self.layout.active_view = crate::ui::layout::FlActiveView::Playlist;
             }
             UiMessage::ToggleFlMixer => {
-                if self.layout.active_view != crate::ui::layout::FlActiveView::Mixer {
-                    self.fl_windows.mixer_visible = true;
-                    self.layout.active_view = crate::ui::layout::FlActiveView::Mixer;
-                    self.layout
-                        .set_drawer_tab(crate::ui::layout::DrawerTab::Mixer);
-                } else {
+                if self.fl_windows.mixer_visible
+                    && self.layout.active_view == crate::ui::layout::FlActiveView::Mixer
+                {
                     self.fl_windows.mixer_visible = false;
                     self.layout.active_view = crate::ui::layout::FlActiveView::Playlist;
+                } else {
+                    self.fl_windows.mixer_visible = true;
+                    self.layout
+                        .sub_windows
+                        .focus(crate::ui::layout::FlActiveView::Mixer);
+                    self.layout.active_view = crate::ui::layout::FlActiveView::Mixer;
                 }
             }
             UiMessage::ToggleFlBrowser => {
@@ -1040,47 +1053,68 @@ impl CrystalWaveApp {
                 self.layout.browser.visible = self.fl_windows.browser_visible;
             }
             UiMessage::ToggleFlPatcher => {
-                if self.layout.active_view != crate::ui::layout::FlActiveView::Patcher {
-                    self.fl_windows.patcher_visible = true;
-                    self.layout.active_view = crate::ui::layout::FlActiveView::Patcher;
-                } else {
+                if self.fl_windows.patcher_visible
+                    && self.layout.active_view == crate::ui::layout::FlActiveView::Patcher
+                {
                     self.fl_windows.patcher_visible = false;
                     self.layout.active_view = crate::ui::layout::FlActiveView::Playlist;
+                } else {
+                    self.fl_windows.patcher_visible = true;
+                    self.layout
+                        .sub_windows
+                        .focus(crate::ui::layout::FlActiveView::Patcher);
+                    self.layout.active_view = crate::ui::layout::FlActiveView::Patcher;
                 }
             }
             UiMessage::ToggleFlPluginPicker => {
                 self.fl_windows.toggle_plugin_picker();
             }
             UiMessage::ToggleFlEdison => {
-                if self.layout.active_view != crate::ui::layout::FlActiveView::Edison {
-                    self.fl_windows.edison_visible = true;
-                    self.layout.active_view = crate::ui::layout::FlActiveView::Edison;
-                } else {
+                if self.fl_windows.edison_visible
+                    && self.layout.active_view == crate::ui::layout::FlActiveView::Edison
+                {
                     self.fl_windows.edison_visible = false;
                     self.layout.active_view = crate::ui::layout::FlActiveView::Playlist;
+                } else {
+                    self.fl_windows.edison_visible = true;
+                    self.layout
+                        .sub_windows
+                        .focus(crate::ui::layout::FlActiveView::Edison);
+                    self.layout.active_view = crate::ui::layout::FlActiveView::Edison;
                 }
             }
             UiMessage::ToggleFlFpc => {
-                if self.layout.active_view != crate::ui::layout::FlActiveView::Fpc {
-                    self.fl_windows.fpc_visible = true;
-                    self.layout.active_view = crate::ui::layout::FlActiveView::Fpc;
-                } else {
+                if self.fl_windows.fpc_visible
+                    && self.layout.active_view == crate::ui::layout::FlActiveView::Fpc
+                {
                     self.fl_windows.fpc_visible = false;
                     self.layout.active_view = crate::ui::layout::FlActiveView::Playlist;
+                } else {
+                    self.fl_windows.fpc_visible = true;
+                    self.layout
+                        .sub_windows
+                        .focus(crate::ui::layout::FlActiveView::Fpc);
+                    self.layout.active_view = crate::ui::layout::FlActiveView::Fpc;
                 }
             }
             UiMessage::ToggleFlSlicex => {
-                if self.layout.active_view != crate::ui::layout::FlActiveView::Slicex {
-                    self.fl_windows.slicex_visible = true;
-                    self.layout.active_view = crate::ui::layout::FlActiveView::Slicex;
-                } else {
+                if self.fl_windows.slicex_visible
+                    && self.layout.active_view == crate::ui::layout::FlActiveView::Slicex
+                {
                     self.fl_windows.slicex_visible = false;
                     self.layout.active_view = crate::ui::layout::FlActiveView::Playlist;
+                } else {
+                    self.fl_windows.slicex_visible = true;
+                    self.layout
+                        .sub_windows
+                        .focus(crate::ui::layout::FlActiveView::Slicex);
+                    self.layout.active_view = crate::ui::layout::FlActiveView::Slicex;
                 }
             }
             UiMessage::SelectFlView(view) => {
                 self.layout.active_dropdown = None;
                 self.layout.active_view = view;
+                self.layout.sub_windows.focus(view);
                 match view {
                     crate::ui::layout::FlActiveView::Playlist => {
                         self.fl_windows.playlist_visible = true
@@ -1106,6 +1140,71 @@ impl CrystalWaveApp {
                         self.fl_windows.patcher_visible = true
                     }
                 }
+            }
+            UiMessage::MoveSubWindow { view, dx, dy } => {
+                self.layout.sub_windows.move_window(view, dx, dy);
+            }
+            UiMessage::ResizeSubWindow { view, dw, dh } => {
+                self.layout.sub_windows.resize_window(view, dw, dh);
+            }
+            UiMessage::ToggleSubWindowMaximize(view) => {
+                self.layout.sub_windows.toggle_maximize(view);
+            }
+            UiMessage::ToggleSubWindowFloating(view) => {
+                self.layout.sub_windows.toggle_floating(view);
+            }
+            UiMessage::FocusSubWindow(view) => {
+                self.layout.sub_windows.focus(view);
+            }
+            UiMessage::CloseSubWindow(view) => {
+                match view {
+                    crate::ui::layout::FlActiveView::ChannelRack => {
+                        self.fl_windows.channel_rack_visible = false
+                    }
+                    crate::ui::layout::FlActiveView::PianoRoll => {
+                        self.fl_windows.piano_roll_visible = false
+                    }
+                    crate::ui::layout::FlActiveView::Mixer => {
+                        self.fl_windows.mixer_visible = false
+                    }
+                    crate::ui::layout::FlActiveView::Edison => {
+                        self.fl_windows.edison_visible = false
+                    }
+                    crate::ui::layout::FlActiveView::Fpc => self.fl_windows.fpc_visible = false,
+                    crate::ui::layout::FlActiveView::Slicex => {
+                        self.fl_windows.slicex_visible = false
+                    }
+                    crate::ui::layout::FlActiveView::Patcher => {
+                        self.fl_windows.patcher_visible = false
+                    }
+                    _ => {}
+                }
+            }
+            UiMessage::SetSubWindowPresetSize {
+                view,
+                width,
+                height,
+            } => {
+                if let Some(w) = self.layout.sub_windows.get_window_mut(view) {
+                    w.width = width;
+                    w.height = height;
+                }
+                self.layout.sub_windows.focus(view);
+            }
+            UiMessage::TileSubWindowsHorizontal => {
+                self.layout.sub_windows.tile_horizontal();
+            }
+            UiMessage::CascadeSubWindows => {
+                self.layout.sub_windows.cascade();
+            }
+            UiMessage::ResetSubWindows => {
+                self.layout.sub_windows.reset();
+            }
+            UiMessage::SetChannelRackFilter(filter) => {
+                self.channel_rack_filter = filter;
+            }
+            UiMessage::ResizeBrowser(delta) => {
+                self.browser_width = (self.browser_width + delta).clamp(180.0, 520.0);
             }
             UiMessage::ToggleDualWorkspace(target) => {
                 if let Some(v) = target {

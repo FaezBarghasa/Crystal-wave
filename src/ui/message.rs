@@ -122,6 +122,32 @@ pub enum UiMessage {
     ToggleDualWorkspace(Option<crate::ui::layout::FlActiveView>),
     CloseDualWorkspace,
 
+    // FL Studio Floating & Resizable Sub-Window Actions
+    MoveSubWindow {
+        view: crate::ui::layout::FlActiveView,
+        dx: f32,
+        dy: f32,
+    },
+    ResizeSubWindow {
+        view: crate::ui::layout::FlActiveView,
+        dw: f32,
+        dh: f32,
+    },
+    ToggleSubWindowMaximize(crate::ui::layout::FlActiveView),
+    ToggleSubWindowFloating(crate::ui::layout::FlActiveView),
+    FocusSubWindow(crate::ui::layout::FlActiveView),
+    CloseSubWindow(crate::ui::layout::FlActiveView),
+    SetSubWindowPresetSize {
+        view: crate::ui::layout::FlActiveView,
+        width: f32,
+        height: f32,
+    },
+    TileSubWindowsHorizontal,
+    CascadeSubWindows,
+    ResetSubWindows,
+    SetChannelRackFilter(crate::ui::layout::ChannelRackFilter),
+    ResizeBrowser(f32),
+
     // Edison Operations
     EdisonNormalize,
     EdisonReverse,

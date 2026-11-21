@@ -876,6 +876,30 @@ impl UiTheme {
         }
     }
 
+    /// FL Studio 2026 MDI Floating Window Frame with 3D drop shadow
+    pub fn floating_window_style(&self, is_focused: bool) -> container::Style {
+        let border_col = if is_focused {
+            self.accent
+        } else {
+            self.border
+        };
+        container::Style {
+            background: Some(Background::Color(self.surface)),
+            text_color: Some(self.text_primary),
+            border: Border {
+                color: border_col,
+                width: if is_focused { 1.5 } else { 1.0 },
+                radius: Radius::from(4.0),
+            },
+            shadow: iced::Shadow {
+                color: Color::from_rgba(0.0, 0.0, 0.0, 0.65),
+                offset: iced::Vector::new(0.0, 6.0),
+                blur_radius: 16.0,
+            },
+            ..container::Style::default()
+        }
+    }
+
     /// Channel name pill button style
     pub fn channel_pill_style<'a>(
         &'a self,
