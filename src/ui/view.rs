@@ -1441,12 +1441,12 @@ impl CrystalWaveApp {
         } else {
             // Full Collapsible Directory Tree
             let root_folders = [
-                ("Current project", "📁", false),
-                ("Recent files", "📁", false),
-                ("Plugin database", "🔌", false),
-                ("Channel presets", "🎛", false),
-                ("Mixer presets", "🎚", false),
-                ("Scores", "🎼", false),
+                ("Current project", "▫", false),
+                ("Recent files", "◷", false),
+                ("Plugin database", "☵", false),
+                ("Channel presets", "◧", false),
+                ("Mixer presets", "☲", false),
+                ("Scores", "♫", false),
             ];
 
             for (f_name, f_icon, _) in root_folders {
@@ -1483,7 +1483,7 @@ impl CrystalWaveApp {
                     text(packs_caret)
                         .size(9)
                         .color(Color::from_rgb8(0xfa, 0x82, 0x31)),
-                    text("📦").size(9),
+                    text("▦").size(9),
                     text("Packs")
                         .size(9)
                         .color(Color::from_rgb8(0xfa, 0x82, 0x31)),
@@ -1505,10 +1505,10 @@ impl CrystalWaveApp {
             if packs_exp {
                 // Sub-categories: Drums, Instruments, Vocals, FX
                 let subcats = [
-                    ("Packs/Drums", "Drums", "🥁"),
-                    ("Packs/Instruments", "Instruments", "🎹"),
-                    ("Packs/Vocals", "Vocals", "🎤"),
-                    ("Packs/FX", "FX", "✨"),
+                    ("Packs/Drums", "Drums", "◎"),
+                    ("Packs/Instruments", "Instruments", "⌨"),
+                    ("Packs/Vocals", "Vocals", "☊"),
+                    ("Packs/FX", "FX", "⚡"),
                 ];
 
                 for (cat_path, cat_title, cat_icon) in subcats {
@@ -1715,8 +1715,8 @@ impl CrystalWaveApp {
         let mut tool_row = row![].spacing(2);
         for t in tools {
             let is_sel = self.active_playlist_tool == t;
-            let btn = button(text(t.label()).size(9))
-                .padding(2)
+            let btn = button(text(format!("{} {}", t.icon(), t.label())).size(9))
+                .padding([2, 5])
                 .style(self.theme.button_style(is_sel))
                 .on_press(UiMessage::SetPlaylistTool(t));
             tool_row = tool_row.push(btn);
@@ -2136,12 +2136,38 @@ impl CrystalWaveApp {
         let mut tool_row = row![].spacing(2);
         for t in tools {
             let is_sel = self.active_pianoroll_tool == t;
-            let btn = button(text(t.label()).size(9))
-                .padding(2)
+            let btn = button(text(format!("{} {}", t.icon(), t.label())).size(9))
+                .padding([2, 5])
                 .style(self.theme.button_style(is_sel))
                 .on_press(UiMessage::SetPianoRollTool(t));
             tool_row = tool_row.push(btn);
         }
+
+        let note_color_capsule = container(
+            row![
+                container(text("COLOR").size(8).color(Color::from_rgb8(0x10, 0x20, 0x15)))
+                    .padding([2, 5])
+                    .style(|_t| container::Style {
+                        background: Some(iced::Background::Color(Color::from_rgb8(
+                            0x59, 0xd0, 0x8a,
+                        ))),
+                        border: iced::Border {
+                            radius: 3.0.into(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }),
+                button(text("◿ Slide").size(8))
+                    .padding([1, 4])
+                    .style(self.theme.button_style(false)),
+                button(text("⟋ Porta").size(8))
+                    .padding([1, 4])
+                    .style(self.theme.button_style(false)),
+            ]
+            .spacing(2)
+            .align_y(iced::Alignment::Center),
+        )
+        .padding(1);
 
         let btn_strum = button(text("Strum").size(9)).on_press(UiMessage::PianoRollQuickStrum);
         let btn_flip_h =
@@ -2214,7 +2240,7 @@ impl CrystalWaveApp {
             ));
 
         let roll_header = row![
-            text("FL Studio Piano Roll").size(11),
+            note_color_capsule,
             tool_row,
             btn_strum,
             btn_flip_h,
@@ -4259,23 +4285,23 @@ impl CrystalWaveApp {
             let chan_id = chan.id;
             let is_sel = self.active_channel_settings == Some(chan_id);
 
-            // Mute / Solo LED dot
+            // Mute / Solo LED dot (10px circular green LED)
             let mute_btn = button(
                 container(column![])
-                    .width(Length::Fixed(8.0))
-                    .height(Length::Fixed(8.0))
+                    .width(Length::Fixed(10.0))
+                    .height(Length::Fixed(10.0))
                     .style(move |_t| container::Style {
                         background: Some(iced::Background::Color(Color::from_rgb8(
                             0x2e, 0xcc, 0x71,
                         ))),
                         border: iced::Border {
-                            radius: 4.0.into(),
+                            radius: 5.0.into(),
                             ..Default::default()
                         },
                         ..Default::default()
                     }),
             )
-            .padding(2)
+            .padding(1)
             .style(self.theme.button_style(false))
             .on_press(UiMessage::ToggleTrackMute(
                 chan.target_mixer_track.saturating_sub(1),

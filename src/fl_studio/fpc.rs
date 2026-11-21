@@ -37,22 +37,26 @@ impl Default for FpcEngine {
 impl FpcEngine {
     pub fn new() -> Self {
         let default_names = [
-            ("Kick 1", 36, [0xf8, 0x8a, 0x36]),        // C2
-            ("Snare 1", 38, [0x2e, 0xcc, 0x71]),       // D2
-            ("Hi-Hat Closed", 42, [0x00, 0xf2, 0xfe]), // F#2
-            ("Hi-Hat Open", 46, [0x34, 0x98, 0xdb]),   // A#2
-            ("Clap", 39, [0xe7, 0x4c, 0x3c]),          // D#2
-            ("Crash Cymbal", 49, [0xf1, 0xc4, 0x0f]),  // C#3
-            ("Ride Cymbal", 51, [0xe6, 0x7e, 0x22]),   // D#3
-            ("Tom Low", 41, [0x9b, 0x59, 0xb6]),       // F2
-            ("Tom Mid", 45, [0x8e, 0x44, 0xad]),       // A2
-            ("Tom High", 48, [0x1a, 0xbc, 0x9c]),      // C3
-            ("Rimshot", 37, [0x16, 0xa0, 0x85]),       // C#2
-            ("Shaker", 70, [0x29, 0x80, 0xb9]),        // A#4
-            ("808 Sub", 35, [0xff, 0x5e, 0x3a]),       // B1
-            ("Perc Hit", 54, [0x54, 0xa0, 0xff]),      // F#3
-            ("Cowbell", 56, [0x5f, 0x27, 0xcd]),       // G#3
-            ("FX Sweep", 60, [0x00, 0xd2, 0xd3]),      // C4
+            // Row 0 (bottom row, pads 0..3): SideStick, Kick Drum, Closed Hat, Tambourine
+            ("SideStick", 37, [0x3e, 0x8f, 0x9f]), // Cyan / Teal
+            ("Kick Drum", 36, [0xbd, 0x51, 0x51]), // Coral / Warm Red
+            ("Closed Hat", 42, [0x59, 0xa5, 0x5a]), // Warm Green
+            ("Tambourine", 54, [0xb8, 0x8a, 0x42]), // Gold / Brown
+            // Row 1 (pads 4..7): Snare 1, Snare 2, Open HiHat, Pedal Hi Hat
+            ("Snare 1", 38, [0x46, 0x9b, 0xaa]), // Teal / Cyan
+            ("Snare 2", 40, [0x46, 0x9b, 0xaa]), // Teal / Cyan
+            ("Open HiHat", 46, [0x59, 0xa5, 0x5a]), // Warm Green
+            ("Pedal Hi Hat", 44, [0x59, 0xa5, 0x5a]), // Warm Green
+            // Row 2 (pads 8..11): Hi Tom, Mid Tom, Lo Tom, Floor Tom
+            ("Hi Tom", 50, [0xb8, 0x8a, 0x42]), // Gold / Ochre
+            ("Mid Tom", 47, [0xb8, 0x8a, 0x42]), // Gold / Ochre
+            ("Lo Tom", 45, [0xb8, 0x8a, 0x42]), // Gold / Ochre
+            ("Floor Tom", 41, [0xb8, 0x8a, 0x42]), // Gold / Ochre
+            // Row 3 (top row, pads 12..15): Crash, Lite Crash, Lite Ride, Ride Bell
+            ("Crash", 49, [0x68, 0xb0, 0x4d]), // Fresh Green
+            ("Lite Crash", 57, [0x68, 0xb0, 0x4d]), // Fresh Green
+            ("Lite Ride", 51, [0x48, 0xb8, 0xa5]), // Turquoise / Sea Green
+            ("Ride Bell", 53, [0x48, 0xb8, 0xa5]), // Turquoise / Sea Green
         ];
 
         let mut pads = Vec::with_capacity(16);

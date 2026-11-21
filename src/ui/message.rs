@@ -432,6 +432,19 @@ impl PlaylistTool {
             Self::Zoom => "Zoom (Z)",
         }
     }
+
+    pub fn icon(&self) -> &'static str {
+        match self {
+            Self::Draw => "✎",
+            Self::Paint => "🖌",
+            Self::Delete => "🗑",
+            Self::Mute => "🔇",
+            Self::Slip => "⇄",
+            Self::Slice => "✂",
+            Self::Select => "⬚",
+            Self::Zoom => "🔍",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -456,6 +469,18 @@ impl PianoRollTool {
             Self::Slice => "Slice (C)",
             Self::Select => "Select (E)",
             Self::Zoom => "Zoom (Z)",
+        }
+    }
+
+    pub fn icon(&self) -> &'static str {
+        match self {
+            Self::Draw => "✎",
+            Self::Paint => "🖌",
+            Self::Delete => "🗑",
+            Self::Mute => "🔇",
+            Self::Slice => "✂",
+            Self::Select => "⬚",
+            Self::Zoom => "🔍",
         }
     }
 }
