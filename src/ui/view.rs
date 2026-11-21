@@ -580,36 +580,53 @@ impl CrystalWaveApp {
         .style(|_t| self.theme.vfd_amber_display_style())
         .padding(4);
 
-        // Module 3: Master Volume & Pitch sliders
-        let master_vol_slider = slider(0.0..=1.25, self.master_volume, UiMessage::SetMasterVolume)
-            .step(0.01_f32)
-            .width(Length::Fixed(60.0));
-        let master_vol_txt = text(format!("VOL: {:.0}%", self.master_volume * 100.0)).size(8);
+        // Module 3: Master Volume & Pitch Rotary Dials (FL Studio 2026 compact dials)
+        let master_vol_knob = crate::ui::canvas_knob::rotary_knob(
+            22.0,
+            0.0,
+            1.25,
+            self.master_volume,
+            false,
+            Color::from_rgb8(0x2e, 0xcc, 0x71),
+            UiMessage::SetMasterVolume,
+        );
+        let master_vol_txt = text(format!("{:.0}%", self.master_volume * 100.0)).size(8);
 
-        let master_pitch_slider = slider(
-            -1200..=1200,
-            self.master_pitch_cents,
-            UiMessage::SetMasterPitchCents,
-        )
-        .step(10)
-        .width(Length::Fixed(60.0));
+        let master_pitch_knob = crate::ui::canvas_knob::rotary_knob(
+            22.0,
+            -1200.0,
+            1200.0,
+            self.master_pitch_cents as f32,
+            true,
+            self.theme.accent,
+            |c| UiMessage::SetMasterPitchCents(c.round() as i32),
+        );
         let master_pitch_txt = text(if self.master_pitch_cents == 0 {
-            "PITCH: 0 ct".to_string()
+            "0 ct".to_string()
         } else {
-            format!("PITCH: {:+} ct", self.master_pitch_cents)
+            format!("{:+} ct", self.master_pitch_cents)
         })
         .size(8);
 
         let master_knobs_capsule = container(
-            column![
-                row![master_vol_slider, master_vol_txt]
-                    .spacing(3)
-                    .align_y(iced::Alignment::Center),
-                row![master_pitch_slider, master_pitch_txt]
-                    .spacing(3)
-                    .align_y(iced::Alignment::Center),
+            row![
+                column![
+                    text("VOL").size(7).color(self.theme.text_muted),
+                    master_vol_knob,
+                    master_vol_txt
+                ]
+                .align_x(iced::Alignment::Center)
+                .spacing(1),
+                column![
+                    text("PITCH").size(7).color(self.theme.text_muted),
+                    master_pitch_knob,
+                    master_pitch_txt
+                ]
+                .align_x(iced::Alignment::Center)
+                .spacing(1),
             ]
-            .spacing(2),
+            .spacing(6)
+            .align_y(iced::Alignment::Center),
         )
         .style(|_t| self.theme.knob_well_style())
         .padding(3);

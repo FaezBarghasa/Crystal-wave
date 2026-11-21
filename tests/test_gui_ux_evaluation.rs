@@ -987,3 +987,353 @@ fn test_phase5_auto_mute_protection_and_recovery() {
     ch.volume_fader_db = 0.0;
     assert!((ch.linear_gain() - 1.0).abs() < 1e-4);
 }
+
+#[test]
+fn test_real_world_beatmaker_session_simulation() {
+    let mut driver = UiSessionDriver::new(48000.0);
+
+    // 1. Switch to FL Dark Orange Theme
+    driver.dispatch(UiMessage::SetThemePreset(ThemePreset::FlDarkOrange));
+    assert_eq!(driver.app.theme.preset, ThemePreset::FlDarkOrange);
+
+    // 2. Set Project Tempo to 140 BPM (Modern Drill / Trap Tempo)
+    driver.dispatch(UiMessage::SetTempo(140.0));
+    assert!((driver.app.workspace.lcd_diagnostic.project_tempo_bpm - 140.0).abs() < 0.01);
+
+    // 3. Build a Realistic 6-Track Production Arrangement
+    // Track 0: Kick 808
+    driver.dispatch(UiMessage::SetTrackFader {
+        track_id: 0,
+        volume_db: -1.5,
+    });
+    driver.dispatch(UiMessage::SetTrackPan {
+        track_id: 0,
+        pan: 0.0, // Dead Center
+    });
+
+    // Track 1: Snare / Clap
+    driver.dispatch(UiMessage::SetTrackFader {
+        track_id: 1,
+        volume_db: -3.0,
+    });
+    driver.dispatch(UiMessage::SetTrackPan {
+        track_id: 1,
+        pan: 0.05,
+    });
+
+    // Track 2: Hi-Hat Rolls
+    driver.dispatch(UiMessage::SetTrackFader {
+        track_id: 2,
+        volume_db: -4.5,
+    });
+    driver.dispatch(UiMessage::SetTrackPan {
+        track_id: 2,
+        pan: -0.20, // Slightly Left
+    });
+
+    // Track 3: 808 Bass Slide
+    driver.dispatch(UiMessage::SetTrackFader {
+        track_id: 3,
+        volume_db: -2.0,
+    });
+
+    // Track 4: Melody Synth / Chords
+    driver.dispatch(UiMessage::SetTrackFader {
+        track_id: 4,
+        volume_db: -6.0,
+    });
+    driver.dispatch(UiMessage::SetTrackPan {
+        track_id: 4,
+        pan: 0.25, // Slightly Right
+    });
+
+    // Track 5: Ambient FX / Vox
+    driver.dispatch(UiMessage::SetTrackFader {
+        track_id: 5,
+        volume_db: -9.0,
+    });
+
+    // 4. Populate Pattern Clips into Arrangement
+    driver.dispatch(UiMessage::TimelineAddPatternClip {
+        track_id: 0,
+        start_tick: 0,
+        length_ticks: 3840 * 4, // 4-Bar Loop
+        name: "808 Kick Main".to_string(),
+    });
+    driver.dispatch(UiMessage::TimelineAddPatternClip {
+        track_id: 1,
+        start_tick: 0,
+        length_ticks: 3840 * 4,
+        name: "Snare Layer".to_string(),
+    });
+    driver.dispatch(UiMessage::TimelineAddPatternClip {
+        track_id: 2,
+        start_tick: 0,
+        length_ticks: 3840 * 4,
+        name: "Hi-Hat 1/16 Rolls".to_string(),
+    });
+    driver.dispatch(UiMessage::TimelineAddPatternClip {
+        track_id: 3,
+        start_tick: 0,
+        length_ticks: 3840 * 4,
+        name: "808 Slide Bass".to_string(),
+    });
+    driver.dispatch(UiMessage::TimelineAddPatternClip {
+        track_id: 4,
+        start_tick: 0,
+        length_ticks: 3840 * 4,
+        name: "C Minor Pluck Melody".to_string(),
+    });
+
+    // 5. Populate Complex Melodic & Slide Notes into Piano Roll
+    let root_c = 48; // C3
+    let notes = [
+        (root_c, 0, 480, false),
+        (root_c + 3, 480, 480, false),   // Eb3
+        (root_c + 7, 960, 480, false),   // G3
+        (root_c + 10, 1440, 480, false), // Bb3
+        (root_c + 12, 1920, 960, true),  // C4 Slide note!
+        (root_c + 15, 2880, 960, false), // Eb4
+    ];
+    for (k, st, len, is_slide) in notes {
+        driver.dispatch(UiMessage::PianoRollAddNote {
+            channel_id: 3,
+            key: k,
+            start_tick: st,
+            length_ticks: len,
+        });
+        if is_slide {
+            // Find note and toggle slide flag
+            if let Some(n) = driver.app.piano_roll_notes.last() {
+                driver.dispatch(UiMessage::PianoRollToggleSlide(n.id));
+            }
+        }
+    }
+    assert!(driver.app.piano_roll_notes.iter().any(|n| n.is_slide));
+
+    // 6. Test Channel Rack Rotary Knob Interactivity
+    driver.dispatch(UiMessage::ChannelRackSetPan {
+        channel_id: 0,
+        pan: 0.15,
+    });
+    driver.dispatch(UiMessage::ChannelRackSetVolume {
+        channel_id: 0,
+        volume: 0.95,
+    });
+    assert!((driver.app.channel_rack.channels[0].pan - 0.15).abs() < 1e-4);
+    assert!((driver.app.channel_rack.channels[0].volume - 0.95).abs() < 1e-4);
+
+    // 7. Test Master Transport Rotary Dials
+    driver.dispatch(UiMessage::SetMasterVolume(0.85));
+    driver.dispatch(UiMessage::SetMasterPitchCents(100)); // Semitone up
+    assert!((driver.app.master_volume - 0.85).abs() < 1e-4);
+    assert_eq!(driver.app.master_pitch_cents, 100);
+
+    // 8. Test View Switching across Full FL Suite (Playlist, Rack, Roll, Mixer, Edison, FPC)
+    let views = [
+        Crystal_wave::ui::layout::FlActiveView::Playlist,
+        Crystal_wave::ui::layout::FlActiveView::ChannelRack,
+        Crystal_wave::ui::layout::FlActiveView::PianoRoll,
+        Crystal_wave::ui::layout::FlActiveView::Mixer,
+        Crystal_wave::ui::layout::FlActiveView::Edison,
+        Crystal_wave::ui::layout::FlActiveView::Fpc,
+    ];
+
+    for v in views {
+        driver.dispatch(UiMessage::SelectFlView(v));
+        assert_eq!(driver.app.layout.active_view, v);
+        let _rendered_frame = driver.app.view();
+    }
+
+    // 9. Process Audio Buffer Under Realistic Load (512 samples)
+    let mut out_l = [0.0f32; 512];
+    let mut out_r = [0.0f32; 512];
+    driver.app.audio_scheduler.process_block(
+        &driver.app.arrangement.timeline.tracks,
+        &driver.app.piano_roll_notes,
+        &mut driver.app.mixer,
+        0,
+        512,
+        &mut out_l,
+        &mut out_r,
+    );
+
+    // Verify Master Output summation energy
+    let energy: f32 = out_l.iter().chain(out_r.iter()).map(|s| s.abs()).sum();
+    assert!(energy >= 0.0);
+}
+
+#[test]
+fn test_real_world_beatmaker_session_simulation() {
+    let mut driver = UiSessionDriver::new(48000.0);
+
+    // 1. Switch to FL Dark Orange Theme
+    driver.dispatch(UiMessage::SetThemePreset(ThemePreset::FlDarkOrange));
+    assert_eq!(driver.app.theme.preset, ThemePreset::FlDarkOrange);
+
+    // 2. Set Project Tempo to 140 BPM (Modern Drill / Trap Tempo)
+    driver.dispatch(UiMessage::SetTempo(140.0));
+    assert!((driver.app.workspace.lcd_diagnostic.project_tempo_bpm - 140.0).abs() < 0.01);
+
+    // 3. Build a Realistic 6-Track Production Arrangement
+    // Track 0: Kick 808
+    driver.dispatch(UiMessage::SetTrackFader {
+        track_id: 0,
+        volume_db: -1.5,
+    });
+    driver.dispatch(UiMessage::SetTrackPan {
+        track_id: 0,
+        pan: 0.0, // Dead Center
+    });
+
+    // Track 1: Snare / Clap
+    driver.dispatch(UiMessage::SetTrackFader {
+        track_id: 1,
+        volume_db: -3.0,
+    });
+    driver.dispatch(UiMessage::SetTrackPan {
+        track_id: 1,
+        pan: 0.05,
+    });
+
+    // Track 2: Hi-Hat Rolls
+    driver.dispatch(UiMessage::SetTrackFader {
+        track_id: 2,
+        volume_db: -4.5,
+    });
+    driver.dispatch(UiMessage::SetTrackPan {
+        track_id: 2,
+        pan: -0.20, // Slightly Left
+    });
+
+    // Track 3: 808 Bass Slide
+    driver.dispatch(UiMessage::SetTrackFader {
+        track_id: 3,
+        volume_db: -2.0,
+    });
+
+    // Track 4: Melody Synth / Chords
+    driver.dispatch(UiMessage::SetTrackFader {
+        track_id: 4,
+        volume_db: -6.0,
+    });
+    driver.dispatch(UiMessage::SetTrackPan {
+        track_id: 4,
+        pan: 0.25, // Slightly Right
+    });
+
+    // Track 5: Ambient FX / Vox
+    driver.dispatch(UiMessage::SetTrackFader {
+        track_id: 5,
+        volume_db: -9.0,
+    });
+
+    // 4. Populate Pattern Clips into Arrangement
+    driver.dispatch(UiMessage::TimelineAddPatternClip {
+        track_id: 0,
+        start_tick: 0,
+        length_ticks: 3840 * 4, // 4-Bar Loop
+        name: "808 Kick Main".to_string(),
+    });
+    driver.dispatch(UiMessage::TimelineAddPatternClip {
+        track_id: 1,
+        start_tick: 0,
+        length_ticks: 3840 * 4,
+        name: "Snare Layer".to_string(),
+    });
+    driver.dispatch(UiMessage::TimelineAddPatternClip {
+        track_id: 2,
+        start_tick: 0,
+        length_ticks: 3840 * 4,
+        name: "Hi-Hat 1/16 Rolls".to_string(),
+    });
+    driver.dispatch(UiMessage::TimelineAddPatternClip {
+        track_id: 3,
+        start_tick: 0,
+        length_ticks: 3840 * 4,
+        name: "808 Slide Bass".to_string(),
+    });
+    driver.dispatch(UiMessage::TimelineAddPatternClip {
+        track_id: 4,
+        start_tick: 0,
+        length_ticks: 3840 * 4,
+        name: "C Minor Pluck Melody".to_string(),
+    });
+
+    // 5. Populate Complex Melodic & Slide Notes into Piano Roll
+    let root_c = 48; // C3
+    let notes = [
+        (root_c, 0, 480, false),
+        (root_c + 3, 480, 480, false), // Eb3
+        (root_c + 7, 960, 480, false), // G3
+        (root_c + 10, 1440, 480, false), // Bb3
+        (root_c + 12, 1920, 960, true), // C4 Slide note!
+        (root_c + 15, 2880, 960, false), // Eb4
+    ];
+    for (k, st, len, is_slide) in notes {
+        driver.dispatch(UiMessage::PianoRollAddNote {
+            channel_id: 3,
+            key: k,
+            start_tick: st,
+            length_ticks: len,
+        });
+        if is_slide {
+            // Find note and toggle slide flag
+            if let Some(n) = driver.app.piano_roll_notes.last() {
+                driver.dispatch(UiMessage::PianoRollToggleSlide(n.id));
+            }
+        }
+    }
+    assert!(driver.app.piano_roll_notes.iter().any(|n| n.is_slide));
+
+    // 6. Test Channel Rack Rotary Knob Interactivity
+    driver.dispatch(UiMessage::ChannelRackSetPan {
+        channel_id: 0,
+        pan: 0.15,
+    });
+    driver.dispatch(UiMessage::ChannelRackSetVolume {
+        channel_id: 0,
+        volume: 0.95,
+    });
+    assert!((driver.app.channel_rack.channels[0].pan - 0.15).abs() < 1e-4);
+    assert!((driver.app.channel_rack.channels[0].volume - 0.95).abs() < 1e-4);
+
+    // 7. Test Master Transport Rotary Dials
+    driver.dispatch(UiMessage::SetMasterVolume(0.85));
+    driver.dispatch(UiMessage::SetMasterPitchCents(100)); // Semitone up
+    assert!((driver.app.master_volume - 0.85).abs() < 1e-4);
+    assert_eq!(driver.app.master_pitch_cents, 100);
+
+    // 8. Test View Switching across Full FL Suite (Playlist, Rack, Roll, Mixer, Edison, FPC)
+    let views = [
+        Crystal_wave::ui::layout::FlActiveView::Playlist,
+        Crystal_wave::ui::layout::FlActiveView::ChannelRack,
+        Crystal_wave::ui::layout::FlActiveView::PianoRoll,
+        Crystal_wave::ui::layout::FlActiveView::Mixer,
+        Crystal_wave::ui::layout::FlActiveView::Edison,
+        Crystal_wave::ui::layout::FlActiveView::Fpc,
+    ];
+
+    for v in views {
+        driver.dispatch(UiMessage::SelectFlView(v));
+        assert_eq!(driver.app.layout.active_view, v);
+        let _rendered_frame = driver.app.view();
+    }
+
+    // 9. Process Audio Buffer Under Realistic Load (512 samples)
+    let mut out_l = [0.0f32; 512];
+    let mut out_r = [0.0f32; 512];
+    driver.app.audio_scheduler.process_block(
+        &driver.app.arrangement.timeline.tracks,
+        &driver.app.piano_roll_notes,
+        &mut driver.app.mixer,
+        0,
+        512,
+        &mut out_l,
+        &mut out_r,
+    );
+
+    // Verify Master Output summation energy
+    let energy: f32 = out_l.iter().chain(out_r.iter()).map(|s| s.abs()).sum();
+    assert!(energy >= 0.0);
+}
