@@ -35,15 +35,11 @@ impl CrystalWaveApp {
         }))
         .padding([0, 4]);
 
-        let title_w = button(
-            text(title)
-                .size(11)
-                .color(if is_focused {
-                    self.theme.text_primary
-                } else {
-                    self.theme.text_secondary
-                }),
-        )
+        let title_w = button(text(title).size(11).color(if is_focused {
+            self.theme.text_primary
+        } else {
+            self.theme.text_secondary
+        }))
         .padding(0)
         .style(|_t, _s| button::Style::default())
         .on_press(UiMessage::FocusSubWindow(view));
@@ -286,7 +282,9 @@ impl CrystalWaveApp {
             crate::ui::layout::FlActiveView::Playlist,
         ));
 
-        let mut tab_row = row![tab_playlist].spacing(2).align_y(iced::Alignment::Center);
+        let mut tab_row = row![tab_playlist]
+            .spacing(2)
+            .align_y(iced::Alignment::Center);
 
         let sub_wins = [
             (
@@ -383,7 +381,9 @@ impl CrystalWaveApp {
             row![
                 tab_row,
                 spacer,
-                text("Arrange:").size(9).color(Color::from_rgb8(0x80, 0x88, 0x98)),
+                text("Arrange:")
+                    .size(9)
+                    .color(Color::from_rgb8(0x80, 0x88, 0x98)),
                 btn_cascade,
                 btn_tile,
                 btn_reset,
@@ -2004,117 +2004,118 @@ impl CrystalWaveApp {
             }
         };
 
-        let workspace_area: Element<'_, UiMessage> = if let Some(sec_view) =
-            self.layout.secondary_view
-        {
-            // Dual Workspace Mode: Render primary and secondary view side-by-side or stacked
-            let primary = container(render_view(self.layout.active_view))
-                .width(Length::FillPortion(1))
-                .height(Length::Fill);
-            let secondary = container(render_view(sec_view))
-                .width(Length::FillPortion(1))
-                .height(Length::Fill);
+        let workspace_area: Element<'_, UiMessage> =
+            if let Some(sec_view) = self.layout.secondary_view {
+                // Dual Workspace Mode: Render primary and secondary view side-by-side or stacked
+                let primary = container(render_view(self.layout.active_view))
+                    .width(Length::FillPortion(1))
+                    .height(Length::Fill);
+                let secondary = container(render_view(sec_view))
+                    .width(Length::FillPortion(1))
+                    .height(Length::Fill);
 
-            row![primary, secondary]
-                .spacing(3)
-                .width(Length::Fill)
-                .height(Length::Fill)
-                .into()
-        } else {
-            // Check if ANY open sub-window is maximized
-            let sub_wins = [
-                (
-                    crate::ui::layout::FlActiveView::ChannelRack,
-                    self.fl_windows.channel_rack_visible,
-                    &self.layout.sub_windows.channel_rack,
-                ),
-                (
-                    crate::ui::layout::FlActiveView::PianoRoll,
-                    self.fl_windows.piano_roll_visible,
-                    &self.layout.sub_windows.piano_roll,
-                ),
-                (
-                    crate::ui::layout::FlActiveView::Mixer,
-                    self.fl_windows.mixer_visible,
-                    &self.layout.sub_windows.mixer,
-                ),
-                (
-                    crate::ui::layout::FlActiveView::Edison,
-                    self.fl_windows.edison_visible,
-                    &self.layout.sub_windows.edison,
-                ),
-                (
-                    crate::ui::layout::FlActiveView::Fpc,
-                    self.fl_windows.fpc_visible,
-                    &self.layout.sub_windows.fpc,
-                ),
-                (
-                    crate::ui::layout::FlActiveView::Slicex,
-                    self.fl_windows.slicex_visible,
-                    &self.layout.sub_windows.slicex,
-                ),
-                (
-                    crate::ui::layout::FlActiveView::Patcher,
-                    self.fl_windows.patcher_visible,
-                    &self.layout.sub_windows.patcher,
-                ),
-            ];
-
-            let maximized_window = sub_wins
-                .iter()
-                .find(|(_, vis, state)| *vis && state.is_maximized);
-
-            if let Some((max_v, _, _)) = maximized_window {
-                container(render_view(*max_v))
+                row![primary, secondary]
+                    .spacing(3)
                     .width(Length::Fill)
                     .height(Length::Fill)
                     .into()
             } else {
-                let base_playlist = self.view_playlist_window();
+                // Check if ANY open sub-window is maximized
+                let sub_wins = [
+                    (
+                        crate::ui::layout::FlActiveView::ChannelRack,
+                        self.fl_windows.channel_rack_visible,
+                        &self.layout.sub_windows.channel_rack,
+                    ),
+                    (
+                        crate::ui::layout::FlActiveView::PianoRoll,
+                        self.fl_windows.piano_roll_visible,
+                        &self.layout.sub_windows.piano_roll,
+                    ),
+                    (
+                        crate::ui::layout::FlActiveView::Mixer,
+                        self.fl_windows.mixer_visible,
+                        &self.layout.sub_windows.mixer,
+                    ),
+                    (
+                        crate::ui::layout::FlActiveView::Edison,
+                        self.fl_windows.edison_visible,
+                        &self.layout.sub_windows.edison,
+                    ),
+                    (
+                        crate::ui::layout::FlActiveView::Fpc,
+                        self.fl_windows.fpc_visible,
+                        &self.layout.sub_windows.fpc,
+                    ),
+                    (
+                        crate::ui::layout::FlActiveView::Slicex,
+                        self.fl_windows.slicex_visible,
+                        &self.layout.sub_windows.slicex,
+                    ),
+                    (
+                        crate::ui::layout::FlActiveView::Patcher,
+                        self.fl_windows.patcher_visible,
+                        &self.layout.sub_windows.patcher,
+                    ),
+                ];
 
-                let mut open_windows = Vec::new();
-                for (v, vis, state) in sub_wins {
-                    if vis {
-                        open_windows.push((v, state));
-                    }
-                }
+                let maximized_window = sub_wins
+                    .iter()
+                    .find(|(_, vis, state)| *vis && state.is_maximized);
 
-                if open_windows.is_empty() {
-                    container(base_playlist)
+                if let Some((max_v, _, _)) = maximized_window {
+                    container(render_view(*max_v))
                         .width(Length::Fill)
                         .height(Length::Fill)
                         .into()
                 } else {
-                    open_windows.sort_by_key(|(_, state)| state.z_index);
+                    let base_playlist = self.view_playlist_window();
 
-                    let mut mdi_stack = stack![container(base_playlist)
-                        .width(Length::Fill)
-                        .height(Length::Fill)];
-
-                    for (v, state) in open_windows {
-                        let win_view = render_view(v);
-                        let is_focused = self.layout.sub_windows.focused_window == Some(v);
-
-                        let styled_window = container(win_view)
-                            .width(Length::Fixed(state.width))
-                            .height(Length::Fixed(state.height))
-                            .style(move |_t| self.theme.floating_window_style(is_focused));
-
-                        let positioned = column![
-                            Space::new().height(Length::Fixed(state.y)),
-                            row![Space::new().width(Length::Fixed(state.x)), styled_window,]
-                        ];
-
-                        mdi_stack = mdi_stack.push(positioned);
+                    let mut open_windows = Vec::new();
+                    for (v, vis, state) in sub_wins {
+                        if vis {
+                            open_windows.push((v, state));
+                        }
                     }
 
-                    container(mdi_stack)
-                        .width(Length::Fill)
-                        .height(Length::Fill)
-                        .into()
+                    if open_windows.is_empty() {
+                        container(base_playlist)
+                            .width(Length::Fill)
+                            .height(Length::Fill)
+                            .into()
+                    } else {
+                        open_windows.sort_by_key(|(_, state)| state.z_index);
+
+                        let mut mdi_stack = stack![
+                            container(base_playlist)
+                                .width(Length::Fill)
+                                .height(Length::Fill)
+                        ];
+
+                        for (v, state) in open_windows {
+                            let win_view = render_view(v);
+                            let is_focused = self.layout.sub_windows.focused_window == Some(v);
+
+                            let styled_window = container(win_view)
+                                .width(Length::Fixed(state.width))
+                                .height(Length::Fixed(state.height))
+                                .style(move |_t| self.theme.floating_window_style(is_focused));
+
+                            let positioned = column![
+                                Space::new().height(Length::Fixed(state.y)),
+                                row![Space::new().width(Length::Fixed(state.x)), styled_window,]
+                            ];
+
+                            mdi_stack = mdi_stack.push(positioned);
+                        }
+
+                        container(mdi_stack)
+                            .width(Length::Fill)
+                            .height(Length::Fill)
+                            .into()
+                    }
                 }
-            }
-        };
+            };
 
         content = content.push(
             column![
@@ -2258,7 +2259,9 @@ impl CrystalWaveApp {
         );
         let footer = self.view_window_resize_footer(crate::ui::layout::FlActiveView::PianoRoll);
 
-        column![chrome, roll_header, roll_body, footer].spacing(2).into()
+        column![chrome, roll_header, roll_body, footer]
+            .spacing(2)
+            .into()
     }
 
     pub fn view_mixer_window(&self) -> Element<'_, UiMessage> {
@@ -4470,7 +4473,10 @@ impl CrystalWaveApp {
             (crate::ui::layout::ChannelRackFilter::All, "ALL"),
             (crate::ui::layout::ChannelRackFilter::Audio, "AUDIO"),
             (crate::ui::layout::ChannelRackFilter::Unsorted, "UNSORTED"),
-            (crate::ui::layout::ChannelRackFilter::Automation, "AUTOMATION"),
+            (
+                crate::ui::layout::ChannelRackFilter::Automation,
+                "AUTOMATION",
+            ),
         ];
 
         let mut filter_row = row![].spacing(3).align_y(iced::Alignment::Center);

@@ -878,11 +878,7 @@ impl UiTheme {
 
     /// FL Studio 2026 MDI Floating Window Frame with 3D drop shadow
     pub fn floating_window_style(&self, is_focused: bool) -> container::Style {
-        let border_col = if is_focused {
-            self.accent
-        } else {
-            self.border
-        };
+        let border_col = if is_focused { self.accent } else { self.border };
         container::Style {
             background: Some(Background::Color(self.surface)),
             text_color: Some(self.text_primary),

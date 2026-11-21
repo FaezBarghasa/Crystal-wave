@@ -52,11 +52,27 @@ fn main() -> iced::Result {
         args.contains(&"--audio-settings".to_string()) || args.contains(&"--f10".to_string());
     let open_wrapper = args.contains(&"--wrapper".to_string());
     let open_dual = args.contains(&"--dual".to_string()) || args.contains(&"--split".to_string());
+    let open_floating = args.contains(&"--floating-windows".to_string())
+        || args.contains(&"--mdi".to_string())
+        || args.contains(&"--multi".to_string());
 
     iced::application(
         move || {
             let mut app = CrystalWaveApp::new(44100.0);
-            if let Some(v) = initial_view {
+            if open_floating {
+                app.fl_windows.channel_rack_visible = true;
+                app.fl_windows.piano_roll_visible = true;
+                app.fl_windows.mixer_visible = true;
+                app.layout.sub_windows.channel_rack =
+                    Crystal_wave::ui::layout::SubWindowState::new(260.0, 30.0, 680.0, 380.0);
+                app.layout.sub_windows.piano_roll =
+                    Crystal_wave::ui::layout::SubWindowState::new(340.0, 160.0, 840.0, 440.0);
+                app.layout.sub_windows.mixer =
+                    Crystal_wave::ui::layout::SubWindowState::new(300.0, 340.0, 960.0, 420.0);
+                app.layout
+                    .sub_windows
+                    .focus(Crystal_wave::ui::layout::FlActiveView::PianoRoll);
+            } else if let Some(v) = initial_view {
                 app.layout.active_view = v;
                 match v {
                     Crystal_wave::ui::layout::FlActiveView::ChannelRack => {
