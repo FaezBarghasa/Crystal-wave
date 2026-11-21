@@ -130,6 +130,7 @@ impl Default for LayoutState {
     fn default() -> Self {
         Self {
             active_view: FlActiveView::Playlist,
+            secondary_view: None,
             browser: PanelState::new(PanelId::Browser, DockPosition::Left, 0.20, true),
             inspector: PanelState::new(PanelId::Inspector, DockPosition::Left, 0.18, false),
             bottom_drawer: PanelState::new(PanelId::EditorDrawer, DockPosition::Bottom, 0.35, true),

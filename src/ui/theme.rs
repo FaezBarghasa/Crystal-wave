@@ -557,6 +557,7 @@ impl UiTheme {
                         blur_radius: 1.0,
                     }
                 },
+                ..button::Style::default()
             }
         }
     }

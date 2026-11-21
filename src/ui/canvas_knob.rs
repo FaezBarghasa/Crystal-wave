@@ -17,6 +17,7 @@ use std::f32::consts::PI;
 #[derive(Debug, Clone, Copy, Default)]
 pub struct KnobState {
     pub is_dragging: bool,
+    pub is_hovered: bool,
     pub drag_start_y: f32,
     pub initial_value: f32,
     pub last_click_instant: Option<std::time::Instant>,
@@ -34,6 +35,7 @@ where
     pub default_value: f32,
     pub is_bipolar: bool,
     pub on_change: F,
+    pub label: Option<&'static str>,
     pub track_color: Color,
     pub arc_color: Color,
     pub needle_color: Color,
@@ -60,10 +62,35 @@ where
             default_value,
             is_bipolar,
             on_change,
+            label: None,
             track_color: Color::from_rgb8(0x18, 0x1b, 0x22),
             arc_color,
             needle_color: Color::from_rgb8(0xf0, 0xf3, 0xf8),
             body_color: Color::from_rgb8(0x23, 0x27, 0x30),
+        }
+    }
+
+    pub fn with_label(mut self, label: &'static str) -> Self {
+        self.label = Some(label);
+        self
+    }
+
+    fn format_hint(&self, val: f32) -> String {
+        let prefix = self.label.unwrap_or("Parameter");
+        if self.is_bipolar {
+            if val.abs() < 0.05 {
+                format!("{}: Center (0%)", prefix)
+            } else if val < 0.0 {
+                format!("{}: {:.0}% Left", prefix, -val * 100.0)
+            } else {
+                format!("{}: {:.0}% Right", prefix, val * 100.0)
+            }
+        } else if self.max > 100.0 {
+            // Pitch / cents
+            format!("{}: {:+.0} cents", prefix, val)
+        } else {
+            // Volume / percentage
+            format!("{}: {:.0}%", prefix, val * 100.0)
         }
     }
 }
@@ -115,6 +142,21 @@ where
                     let delta_val = (dy / 100.0) * range;
                     let new_val = (state.initial_value + delta_val).clamp(self.min, self.max);
                     Some(Action::publish((self.on_change)(new_val)))
+                } else if !state.is_hovered {
+                    state.is_hovered = true;
+                    Some(Action::publish(
+                        crate::ui::message::UiMessage::HoverParameter(self.format_hint(self.value)),
+                    ))
+                } else {
+                    None
+                }
+            }
+            canvas::Event::Mouse(mouse::Event::CursorLeft) => {
+                if state.is_hovered {
+                    state.is_hovered = false;
+                    Some(Action::publish(
+                        crate::ui::message::UiMessage::ClearHoverParameter,
+                    ))
                 } else {
                     None
                 }
@@ -273,6 +315,44 @@ where
     }
 }
 
+/// Configuration descriptor for rotary knob construction
+#[derive(Debug, Clone)]
+pub struct RotaryKnobConfig<'a> {
+    pub size: f32,
+    pub min: f32,
+    pub max: f32,
+    pub value: f32,
+    pub is_bipolar: bool,
+    pub arc_color: Color,
+    pub label: Option<&'a str>,
+}
+
+impl<'a> RotaryKnobConfig<'a> {
+    pub fn new(
+        size: f32,
+        min: f32,
+        max: f32,
+        value: f32,
+        is_bipolar: bool,
+        arc_color: Color,
+    ) -> Self {
+        Self {
+            size,
+            min,
+            max,
+            value,
+            is_bipolar,
+            arc_color,
+            label: None,
+        }
+    }
+
+    pub fn with_label(mut self, label: &'a str) -> Self {
+        self.label = Some(label);
+        self
+    }
+}
+
 /// Helper function to render a compact FL Studio rotary knob widget
 pub fn rotary_knob<'a, F, Theme: 'a>(
     size: f32,
@@ -292,4 +372,29 @@ where
     .width(Length::Fixed(size))
     .height(Length::Fixed(size))
     .into()
+}
+
+/// Helper function to render an FL Studio rotary knob configured via `RotaryKnobConfig`
+pub fn rotary_knob_with_config<'a, F, Theme: 'a>(
+    config: RotaryKnobConfig<'a>,
+    on_change: F,
+) -> Element<'a, crate::ui::message::UiMessage, Theme, iced::Renderer>
+where
+    F: Fn(f32) -> crate::ui::message::UiMessage + Clone + 'static,
+{
+    let mut prog = RotaryKnobProgram::new(
+        config.min,
+        config.max,
+        config.value,
+        config.is_bipolar,
+        config.arc_color,
+        on_change,
+    );
+    if let Some(lbl) = config.label {
+        prog = prog.with_label(Box::leak(lbl.to_string().into_boxed_str()));
+    }
+    Canvas::new(prog)
+        .width(Length::Fixed(config.size))
+        .height(Length::Fixed(config.size))
+        .into()
 }

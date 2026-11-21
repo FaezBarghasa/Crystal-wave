@@ -1255,24 +1255,44 @@ impl CrystalWaveApp {
             content = content.push(self.view_browser_panel());
         }
 
-        // 2. Active Center Workspace View
-        let center_view: Element<'_, UiMessage> = match self.layout.active_view {
-            crate::ui::layout::FlActiveView::Playlist => self.view_playlist_window(),
-            crate::ui::layout::FlActiveView::ChannelRack => self.view_channel_rack(false),
-            crate::ui::layout::FlActiveView::PianoRoll => self.view_piano_roll_window(),
-            crate::ui::layout::FlActiveView::Mixer => self.view_mixer_window(),
-            crate::ui::layout::FlActiveView::Edison => self.view_edison_window(),
-            crate::ui::layout::FlActiveView::Fpc => self.view_fpc_window(),
-            crate::ui::layout::FlActiveView::Slicex => self.view_slicex_window(),
-            crate::ui::layout::FlActiveView::Patcher => self.view_patcher_window(),
-            crate::ui::layout::FlActiveView::Browser => self.view_playlist_window(),
+        // 2. Active Center Workspace View with Dual MDI Compositor Support
+        let render_view = |v: crate::ui::layout::FlActiveView| -> Element<'_, UiMessage> {
+            match v {
+                crate::ui::layout::FlActiveView::Playlist => self.view_playlist_window(),
+                crate::ui::layout::FlActiveView::ChannelRack => self.view_channel_rack(false),
+                crate::ui::layout::FlActiveView::PianoRoll => self.view_piano_roll_window(),
+                crate::ui::layout::FlActiveView::Mixer => self.view_mixer_window(),
+                crate::ui::layout::FlActiveView::Edison => self.view_edison_window(),
+                crate::ui::layout::FlActiveView::Fpc => self.view_fpc_window(),
+                crate::ui::layout::FlActiveView::Slicex => self.view_slicex_window(),
+                crate::ui::layout::FlActiveView::Patcher => self.view_patcher_window(),
+                crate::ui::layout::FlActiveView::Browser => self.view_playlist_window(),
+            }
         };
 
-        content = content.push(
-            container(center_view)
-                .width(Length::Fill)
-                .height(Length::Fill),
-        );
+        if let Some(sec_view) = self.layout.secondary_view {
+            // Dual Workspace Mode: Render primary and secondary view side-by-side or stacked
+            let primary = container(render_view(self.layout.active_view))
+                .width(Length::FillPortion(1))
+                .height(Length::Fill);
+            let secondary = container(render_view(sec_view))
+                .width(Length::FillPortion(1))
+                .height(Length::Fill);
+
+            content = content.push(
+                row![primary, secondary]
+                    .spacing(3)
+                    .width(Length::Fill)
+                    .height(Length::Fill),
+            );
+        } else {
+            let center_view = render_view(self.layout.active_view);
+            content = content.push(
+                container(center_view)
+                    .width(Length::Fill)
+                    .height(Length::Fill),
+            );
+        }
         content.into()
     }
 
