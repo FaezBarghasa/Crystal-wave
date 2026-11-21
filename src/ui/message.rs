@@ -368,6 +368,10 @@ pub enum UiMessage {
     // FL Studio Tool Strips
     SetPlaylistTool(PlaylistTool),
     SetPianoRollTool(PianoRollTool),
+
+    // Live Hint Bar Parameter Telemetry
+    HoverParameter(String),
+    ClearHoverParameter,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

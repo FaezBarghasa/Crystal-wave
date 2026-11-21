@@ -498,7 +498,7 @@ impl UiTheme {
         }
     }
 
-    /// Tactile 16-step sequencer button style with illuminated LED core
+    /// Tactile 16-step sequencer button style with authentic FL Studio 3D convex rubber pad and LED core
     pub fn step_pad_style<'a>(
         &'a self,
         active: bool,
@@ -513,15 +513,15 @@ impl UiTheme {
             };
             let bg = match status {
                 button::Status::Hovered => Color {
-                    r: (base.r * 1.15).min(1.0),
-                    g: (base.g * 1.15).min(1.0),
-                    b: (base.b * 1.15).min(1.0),
+                    r: (base.r * 1.18).min(1.0),
+                    g: (base.g * 1.18).min(1.0),
+                    b: (base.b * 1.18).min(1.0),
                     a: base.a,
                 },
                 button::Status::Pressed => Color {
-                    r: base.r * 0.85,
-                    g: base.g * 0.85,
-                    b: base.b * 0.85,
+                    r: base.r * 0.80,
+                    g: base.g * 0.80,
+                    b: base.b * 0.80,
                     a: base.a,
                 },
                 _ => base,
@@ -529,21 +529,34 @@ impl UiTheme {
             button::Style {
                 background: Some(Background::Color(bg)),
                 text_color: if active {
-                    Color::WHITE
+                    Color::from_rgb8(0xff, 0xff, 0xff)
                 } else {
-                    self.text_muted
+                    Color::from_rgba8(255, 255, 255, 0.25)
                 },
                 border: Border {
                     color: if active {
-                        Color::from_rgba8(255, 255, 255, 0.4)
+                        Color::from_rgba8(255, 255, 255, 0.65) // Glowing core highlight
+                    } else if is_even_beat {
+                        Color::from_rgba8(255, 255, 255, 0.14) // Top bevel highlight
                     } else {
-                        self.border
+                        Color::from_rgba8(0, 0, 0, 0.45) // Sunken groove border
                     },
-                    width: 0.5,
-                    radius: Radius::from(2.0),
+                    width: if active { 1.0 } else { 0.75 },
+                    radius: Radius::from(3.0),
                 },
-                shadow: Shadow::default(),
-                ..button::Style::default()
+                shadow: if active {
+                    Shadow {
+                        color: Color::from_rgba8(212, 105, 123, 0.40), // Radiant rose LED glow
+                        offset: iced::Vector::new(0.0, 0.0),
+                        blur_radius: 4.0,
+                    }
+                } else {
+                    Shadow {
+                        color: Color::from_rgba8(0, 0, 0, 0.35),
+                        offset: iced::Vector::new(0.0, 1.0),
+                        blur_radius: 1.0,
+                    }
+                },
             }
         }
     }

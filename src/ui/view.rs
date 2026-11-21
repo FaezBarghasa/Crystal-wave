@@ -435,12 +435,19 @@ impl CrystalWaveApp {
             .padding(2)
             .align_y(iced::Alignment::Center);
 
-        // Row 3: Hint Bar (18px)
+        // Row 3: Hint Bar (18px, FL Studio LCD Telemetry readout)
+        let hint_text = self.active_hover_hint.as_deref().unwrap_or(
+            "Hint: Click to select, drag to adjust, double-click or right-click to reset",
+        );
+        let hint_color = if self.active_hover_hint.is_some() {
+            self.theme.accent
+        } else {
+            self.theme.text_muted
+        };
+
         let row_hintbar = container(
             row![
-                text("Hint: Click to select or right-click for context menu")
-                    .size(9)
-                    .color(self.theme.text_muted),
+                text(hint_text).size(9).color(hint_color),
                 Space::new().width(Length::Fill),
                 text("SYNC ✓").size(9).color(self.theme.accent),
             ]

@@ -71,6 +71,7 @@ pub struct CrystalWaveApp {
     pub tap_tempo_times: Vec<std::time::Instant>,
     pub mixer_sends: Vec<Vec<f32>>,
     pub audio_snapshot: crate::audio::AudioSnapshotHandle,
+    pub active_hover_hint: Option<String>,
 }
 
 impl Default for CrystalWaveApp {
@@ -237,6 +238,7 @@ impl CrystalWaveApp {
                 sends
             },
             audio_snapshot,
+            active_hover_hint: None,
         };
 
         app.sync_audio_snapshot();
@@ -1396,6 +1398,12 @@ impl CrystalWaveApp {
             UiMessage::SetPianoRollTool(tool) => {
                 self.active_pianoroll_tool = tool;
                 self.dirty = true;
+            }
+            UiMessage::HoverParameter(hint) => {
+                self.active_hover_hint = Some(hint);
+            }
+            UiMessage::ClearHoverParameter => {
+                self.active_hover_hint = None;
             }
 
             UiMessage::ChannelRackToggleStep {

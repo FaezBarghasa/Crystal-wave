@@ -115,6 +115,7 @@ impl PanelState {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LayoutState {
     pub active_view: FlActiveView,
+    pub secondary_view: Option<FlActiveView>,
     pub browser: PanelState,
     pub inspector: PanelState,
     pub bottom_drawer: PanelState,
