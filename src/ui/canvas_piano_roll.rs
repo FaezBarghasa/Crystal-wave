@@ -82,6 +82,10 @@ pub enum PianoRollDragMode {
     ResizeNote {
         orig_len: u64,
     },
+    EditEventLane {
+        closest_note_id: usize,
+        property: EventLaneTarget,
+    },
 }
 
 /// Live preview telemetry during drag or resize
@@ -264,6 +268,13 @@ impl<Theme> canvas::Program<UiMessage, Theme> for PianoRollCanvasProgram {
                                 (frac * 100.0).clamp(-100.0, 100.0)
                             }
                         };
+                        state.active_drag = Some((
+                            closest.id,
+                            PianoRollDragMode::EditEventLane {
+                                closest_note_id: closest.id,
+                                property: self.event_target,
+                            },
+                        ));
                         return Some(Action::publish(UiMessage::PianoRollSetNoteProperty {
                             note_id: closest.id,
                             property: self.event_target,
@@ -378,52 +389,91 @@ impl<Theme> canvas::Program<UiMessage, Theme> for PianoRollCanvasProgram {
                 None
             }
 
-            // Cursor Moved: Update live preview during drag or resize
+            // Cursor Moved: Update live preview during drag or resize, or stream event lane stalk updates
             canvas::Event::Mouse(mouse::Event::CursorMoved { .. }) => {
-                if let Some((note_id, mode)) = state.active_drag
-                    && let Some(note) = self.notes.iter().find(|n| n.id == note_id)
-                {
+                if let Some((note_id, mode)) = state.active_drag {
                     match mode {
+                        PianoRollDragMode::EditEventLane { property, .. } => {
+                            let lane_y = bounds.height - self.event_lane_height;
+                            let usable_h = (self.event_lane_height - 16.0).max(1.0);
+                            let val = match property {
+                                EventLaneTarget::Velocity => {
+                                    let frac = 1.0 - (cursor_pos.y - (lane_y + 4.0)) / usable_h;
+                                    frac.clamp(0.05, 1.0)
+                                }
+                                EventLaneTarget::Pan => {
+                                    let mid_y = lane_y + (self.event_lane_height * 0.5);
+                                    let frac = (mid_y - cursor_pos.y) / (usable_h * 0.5);
+                                    frac.clamp(-1.0, 1.0)
+                                }
+                                EventLaneTarget::Pitch => {
+                                    let mid_y = lane_y + (self.event_lane_height * 0.5);
+                                    let frac = (mid_y - cursor_pos.y) / (usable_h * 0.5);
+                                    (frac * 100.0).clamp(-100.0, 100.0)
+                                }
+                            };
+
+                            let target_note_id = self
+                                .notes
+                                .iter()
+                                .min_by_key(|n| {
+                                    let nx = self.tick_to_x(n.start_tick);
+                                    ((nx - cursor_pos.x).abs() * 100.0) as i64
+                                })
+                                .map(|n| n.id)
+                                .unwrap_or(note_id);
+
+                            return Some(Action::publish(UiMessage::PianoRollSetNoteProperty {
+                                note_id: target_note_id,
+                                property,
+                                value: val,
+                            }));
+                        }
                         PianoRollDragMode::MoveNote {
                             orig_key,
                             orig_start,
                             offset_ticks,
                         } => {
-                            let cand_key = self.y_to_key(cursor_pos.y);
-                            let cand_tick_raw = self.x_to_tick(cursor_pos.x);
-                            let cand_start_raw =
-                                (cand_tick_raw as i64 - offset_ticks as i64).max(0) as u64;
-                            let cand_start = self.snap.snap(cand_start_raw, self.horizontal_zoom);
-                            let delta_semitones = cand_key as i8 - orig_key as i8;
-                            let delta_ticks = cand_start as i64 - orig_start as i64;
+                            if let Some(note) = self.notes.iter().find(|n| n.id == note_id) {
+                                let cand_key = self.y_to_key(cursor_pos.y);
+                                let cand_tick_raw = self.x_to_tick(cursor_pos.x);
+                                let cand_start_raw =
+                                    (cand_tick_raw as i64 - offset_ticks as i64).max(0) as u64;
+                                let cand_start =
+                                    self.snap.snap(cand_start_raw, self.horizontal_zoom);
+                                let delta_semitones = cand_key as i8 - orig_key as i8;
+                                let delta_ticks = cand_start as i64 - orig_start as i64;
 
-                            state.live_preview = Some(PianoRollLiveDrag {
-                                note_id,
-                                mode,
-                                target_key: cand_key,
-                                target_start_tick: cand_start,
-                                target_length_ticks: note.length_ticks,
-                                delta_semitones,
-                                delta_ticks,
-                            });
-                            return Some(Action::request_redraw());
+                                state.live_preview = Some(PianoRollLiveDrag {
+                                    note_id,
+                                    mode,
+                                    target_key: cand_key,
+                                    target_start_tick: cand_start,
+                                    target_length_ticks: note.length_ticks,
+                                    delta_semitones,
+                                    delta_ticks,
+                                });
+                                return Some(Action::request_redraw());
+                            }
                         }
                         PianoRollDragMode::ResizeNote { orig_len } => {
-                            let cand_end_raw = self.x_to_tick(cursor_pos.x);
-                            let cand_end = self.snap.snap(cand_end_raw, self.horizontal_zoom);
-                            let cand_len = cand_end.saturating_sub(note.start_tick).max(60);
-                            let delta_ticks = cand_len as i64 - orig_len as i64;
+                            if let Some(note) = self.notes.iter().find(|n| n.id == note_id) {
+                                let cand_end_raw = self.x_to_tick(cursor_pos.x);
+                                let cand_end = self.snap.snap(cand_end_raw, self.horizontal_zoom);
+                                let cand_len = cand_end.saturating_sub(note.start_tick).max(60);
+                                let delta_ticks = cand_len as i64 - orig_len as i64;
 
-                            state.live_preview = Some(PianoRollLiveDrag {
-                                note_id,
-                                mode,
-                                target_key: note.key,
-                                target_start_tick: note.start_tick,
-                                target_length_ticks: cand_len,
-                                delta_semitones: 0,
-                                delta_ticks,
-                            });
-                            return Some(Action::request_redraw());
+                                state.live_preview = Some(PianoRollLiveDrag {
+                                    note_id,
+                                    mode,
+                                    target_key: note.key,
+                                    target_start_tick: note.start_tick,
+                                    target_length_ticks: cand_len,
+                                    delta_semitones: 0,
+                                    delta_ticks,
+                                });
+                                return Some(Action::request_redraw());
+                            }
                         }
                     }
                 }
@@ -432,6 +482,10 @@ impl<Theme> canvas::Program<UiMessage, Theme> for PianoRollCanvasProgram {
 
             // Left Mouse Button Released: Commit move or resize
             canvas::Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
+                if let Some((_, PianoRollDragMode::EditEventLane { .. })) = state.active_drag {
+                    state.active_drag = None;
+                    return Some(Action::request_redraw());
+                }
                 if let Some(preview) = state.live_preview.take() {
                     state.active_drag = None;
                     match preview.mode {
@@ -452,6 +506,7 @@ impl<Theme> canvas::Program<UiMessage, Theme> for PianoRollCanvasProgram {
                                 }));
                             }
                         }
+                        PianoRollDragMode::EditEventLane { .. } => {}
                     }
                     return Some(Action::request_redraw());
                 }

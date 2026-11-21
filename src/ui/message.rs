@@ -117,6 +117,8 @@ pub enum UiMessage {
     ToggleFlFpc,
     ToggleFlSlicex,
     SelectFlView(crate::ui::layout::FlActiveView),
+    ToggleDualWorkspace(Option<crate::ui::layout::FlActiveView>),
+    CloseDualWorkspace,
 
     // Edison Operations
     EdisonNormalize,

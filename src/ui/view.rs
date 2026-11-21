@@ -22,13 +22,19 @@ impl CrystalWaveApp {
             .padding([2, 5])
             .style(self.theme.button_style(false))
             .on_press(close_msg.clone());
-        let max_btn = button(text("□").size(9))
+        let is_dual = self.layout.secondary_view.is_some();
+        let max_btn = button(text(if is_dual { "❐" } else { "◫" }).size(9))
             .padding([2, 5])
-            .style(self.theme.button_style(false));
+            .style(self.theme.button_style(is_dual))
+            .on_press(UiMessage::ToggleDualWorkspace(None));
         let close_btn = button(text("×").size(11))
             .padding([2, 5])
             .style(self.theme.button_style(false))
-            .on_press(close_msg);
+            .on_press(if is_dual {
+                UiMessage::CloseDualWorkspace
+            } else {
+                close_msg
+            });
 
         container(
             row![icon_w, title_w, spacer, min_btn, max_btn, close_btn]
@@ -292,6 +298,20 @@ impl CrystalWaveApp {
         )
         .on_press(UiMessage::ToggleFlPluginPicker);
 
+        let win_dual = {
+            let is_dual = self.layout.secondary_view.is_some();
+            button(
+                text(if is_dual {
+                    "◫ Dual [Split]"
+                } else {
+                    "❐ Single [Full]"
+                })
+                .size(11),
+            )
+            .style(self.theme.button_style(is_dual))
+            .on_press(UiMessage::ToggleDualWorkspace(None))
+        };
+
         // Theme Switcher & Snap Toggle
         let theme_btn = button(
             text(match self.theme.preset {
@@ -370,6 +390,7 @@ impl CrystalWaveApp {
                 win_patcher,
                 win_inspector,
                 win_plugins,
+                win_dual,
             ]
             .spacing(4)
             .align_y(iced::Alignment::Center),
@@ -3336,7 +3357,7 @@ impl CrystalWaveApp {
                     let s_idx = b_idx * 4 + step_in_beat;
                     let is_active = chan.steps.get(s_idx).map(|s| s.active).unwrap_or(false);
                     let is_even_beat = b_idx % 2 != 0;
-                    let step_lbl = if is_active { "■" } else { "·" };
+                    let step_lbl = if is_active { "●" } else { "•" };
                     let step_btn = button(text(step_lbl).size(10))
                         .style(self.theme.step_pad_style(is_active, is_even_beat))
                         .padding([2, 5])

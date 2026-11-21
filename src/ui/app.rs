@@ -1096,6 +1096,38 @@ impl CrystalWaveApp {
                     }
                 }
             }
+            UiMessage::ToggleDualWorkspace(target) => {
+                if let Some(v) = target {
+                    if self.layout.secondary_view == Some(v) {
+                        self.layout.secondary_view = None;
+                    } else {
+                        self.layout.secondary_view = Some(v);
+                    }
+                } else if self.layout.secondary_view.is_some() {
+                    self.layout.secondary_view = None;
+                } else {
+                    // Pick a complementary secondary view for MDI dual workspace
+                    let sec = match self.layout.active_view {
+                        crate::ui::layout::FlActiveView::Playlist => {
+                            crate::ui::layout::FlActiveView::ChannelRack
+                        }
+                        crate::ui::layout::FlActiveView::ChannelRack => {
+                            crate::ui::layout::FlActiveView::PianoRoll
+                        }
+                        crate::ui::layout::FlActiveView::PianoRoll => {
+                            crate::ui::layout::FlActiveView::ChannelRack
+                        }
+                        crate::ui::layout::FlActiveView::Mixer => {
+                            crate::ui::layout::FlActiveView::Playlist
+                        }
+                        _ => crate::ui::layout::FlActiveView::ChannelRack,
+                    };
+                    self.layout.secondary_view = Some(sec);
+                }
+            }
+            UiMessage::CloseDualWorkspace => {
+                self.layout.secondary_view = None;
+            }
 
             // Edison Operations
             UiMessage::EdisonNormalize => self.edison.normalize(),
@@ -1664,17 +1696,30 @@ impl CrystalWaveApp {
                 value,
             } => {
                 if let Some(note) = self.piano_roll_notes.iter_mut().find(|n| n.id == note_id) {
-                    match property {
+                    let hint_str = match property {
                         crate::fl_studio::piano_roll::EventLaneTarget::Velocity => {
                             note.velocity = value.clamp(0.0, 1.0);
+                            format!("Note {}: Velocity {:.0}%", note.key, note.velocity * 100.0)
                         }
                         crate::fl_studio::piano_roll::EventLaneTarget::Pan => {
                             note.pan = value.clamp(-1.0, 1.0);
+                            if note.pan.abs() < 0.05 {
+                                format!("Note {}: Pan Center", note.key)
+                            } else if note.pan < 0.0 {
+                                format!("Note {}: Pan {:.0}% Left", note.key, -note.pan * 100.0)
+                            } else {
+                                format!("Note {}: Pan {:.0}% Right", note.key, note.pan * 100.0)
+                            }
                         }
                         crate::fl_studio::piano_roll::EventLaneTarget::Pitch => {
                             note.fine_pitch_cents = value.clamp(-100.0, 100.0);
+                            format!(
+                                "Note {}: Pitch {:+.0} cents",
+                                note.key, note.fine_pitch_cents
+                            )
                         }
-                    }
+                    };
+                    self.active_hover_hint = Some(hint_str);
                     self.dirty = true;
                 }
             }
