@@ -7,12 +7,12 @@ use iced::widget::{
 use iced::{Color, Element, Length};
 
 impl CrystalWaveApp {
-    /// Render standard FL Studio sub-window titlebar chrome (28px) with move nudge, preset sizes, minimize, maximize/tile, and close controls
+    /// Render standard FL Studio sub-window titlebar chrome (24px) with menu, title, nudge, and window controls
     pub fn view_window_chrome<'a>(
         &'a self,
         view: crate::ui::layout::FlActiveView,
         title: &'static str,
-        icon: &'static str,
+        _icon: &'static str,
     ) -> Element<'a, UiMessage> {
         let is_focused = self.layout.sub_windows.focused_window == Some(view);
         let is_floating = self
@@ -28,101 +28,111 @@ impl CrystalWaveApp {
             .map(|w| w.is_maximized)
             .unwrap_or(false);
 
-        let icon_w = container(text(icon).size(11).color(if is_focused {
+        // FL Studio Menu Arrow (▾) and Speaker icon (🔊)
+        let menu_arrow = button(text("▾").size(9).color(Color::from_rgb8(0x9a, 0xa0, 0xb0)))
+            .padding([1, 4])
+            .style(|_t, _s| button::Style::default())
+            .on_press(UiMessage::FocusSubWindow(view));
+
+        let icon_speaker = text("🔊").size(9).color(if is_focused {
             self.theme.accent
         } else {
-            Color::from_rgb8(0x88, 0x90, 0xa0)
-        }))
-        .padding([0, 4]);
+            Color::from_rgb8(0x80, 0x86, 0x96)
+        });
 
-        let title_w = button(text(title).size(11).color(if is_focused {
-            self.theme.text_primary
-        } else {
-            self.theme.text_secondary
-        }))
+        let title_btn = button(
+            row![
+                icon_speaker,
+                text(title).size(10).color(if is_focused {
+                    self.theme.text_primary
+                } else {
+                    self.theme.text_secondary
+                }),
+            ]
+            .spacing(4)
+            .align_y(iced::Alignment::Center),
+        )
         .padding(0)
         .style(|_t, _s| button::Style::default())
         .on_press(UiMessage::FocusSubWindow(view));
 
-        // Nudge / Drag Move buttons
-        let nudge_l = button(text("◀").size(8))
-            .padding([1, 3])
-            .style(self.theme.button_style(false))
-            .on_press(UiMessage::MoveSubWindow {
-                view,
-                dx: -40.0,
-                dy: 0.0,
-            });
-        let nudge_u = button(text("▲").size(8))
-            .padding([1, 3])
-            .style(self.theme.button_style(false))
-            .on_press(UiMessage::MoveSubWindow {
-                view,
-                dx: 0.0,
-                dy: -30.0,
-            });
-        let nudge_d = button(text("▼").size(8))
-            .padding([1, 3])
-            .style(self.theme.button_style(false))
-            .on_press(UiMessage::MoveSubWindow {
-                view,
-                dx: 0.0,
-                dy: 30.0,
-            });
-        let nudge_r = button(text("▶").size(8))
-            .padding([1, 3])
-            .style(self.theme.button_style(false))
-            .on_press(UiMessage::MoveSubWindow {
-                view,
-                dx: 40.0,
-                dy: 0.0,
-            });
+        // Subtle flush Nudge Move buttons [◀] [▲] [▼] [▶]
+        let nudge_btn = |lbl, dx, dy| {
+            button(text(lbl).size(7).color(Color::from_rgb8(0x88, 0x90, 0xa2)))
+                .padding([1, 3])
+                .style(self.theme.button_style(false))
+                .on_press(UiMessage::MoveSubWindow { view, dx, dy })
+        };
+        let nudge_l = nudge_btn("◀", -40.0, 0.0);
+        let nudge_u = nudge_btn("▲", 0.0, -30.0);
+        let nudge_d = nudge_btn("▼", 0.0, 30.0);
+        let nudge_r = nudge_btn("▶", 40.0, 0.0);
 
         // Quick Preset Sizes
-        let btn_compact = button(text("Compact").size(8))
-            .padding([1, 4])
-            .style(self.theme.button_style(false))
-            .on_press(UiMessage::SetSubWindowPresetSize {
-                view,
-                width: 620.0,
-                height: 380.0,
-            });
-        let btn_normal = button(text("Normal").size(8))
-            .padding([1, 4])
-            .style(self.theme.button_style(false))
-            .on_press(UiMessage::SetSubWindowPresetSize {
-                view,
-                width: 840.0,
-                height: 480.0,
-            });
-        let btn_wide = button(text("Wide").size(8))
-            .padding([1, 4])
-            .style(self.theme.button_style(false))
-            .on_press(UiMessage::SetSubWindowPresetSize {
-                view,
-                width: 1120.0,
-                height: 580.0,
-            });
+        let btn_compact = button(
+            text("600")
+                .size(7)
+                .color(Color::from_rgb8(0x88, 0x90, 0xa2)),
+        )
+        .padding([1, 3])
+        .style(self.theme.button_style(false))
+        .on_press(UiMessage::SetSubWindowPresetSize {
+            view,
+            width: 620.0,
+            height: 380.0,
+        });
+        let btn_normal = button(
+            text("840")
+                .size(7)
+                .color(Color::from_rgb8(0x88, 0x90, 0xa2)),
+        )
+        .padding([1, 3])
+        .style(self.theme.button_style(false))
+        .on_press(UiMessage::SetSubWindowPresetSize {
+            view,
+            width: 840.0,
+            height: 480.0,
+        });
+        let btn_wide = button(
+            text("1120")
+                .size(7)
+                .color(Color::from_rgb8(0x88, 0x90, 0xa2)),
+        )
+        .padding([1, 3])
+        .style(self.theme.button_style(false))
+        .on_press(UiMessage::SetSubWindowPresetSize {
+            view,
+            width: 1120.0,
+            height: 580.0,
+        });
 
         let spacer = Space::new().width(Length::Fill);
 
-        let float_btn = button(text(if is_floating { "◳" } else { "◫" }).size(9))
-            .padding([2, 5])
-            .style(self.theme.button_style(is_floating))
-            .on_press(UiMessage::ToggleSubWindowFloating(view));
+        let float_btn = button(
+            text(if is_floating { "◳" } else { "◫" })
+                .size(8)
+                .color(Color::from_rgb8(0x88, 0x90, 0xa0)),
+        )
+        .padding([1, 4])
+        .style(self.theme.button_style(is_floating))
+        .on_press(UiMessage::ToggleSubWindowFloating(view));
 
-        let min_btn = button(text("─").size(9))
-            .padding([2, 5])
+        let min_btn = button(text("─").size(8).color(Color::from_rgb8(0xaa, 0xb0, 0xbe)))
+            .padding([1, 4])
             .style(self.theme.button_style(false))
             .on_press(UiMessage::CloseSubWindow(view));
 
-        let max_btn = button(text(if is_maximized { "❐" } else { "□" }).size(9))
-            .padding([2, 5])
-            .style(self.theme.button_style(is_maximized))
-            .on_press(UiMessage::ToggleSubWindowMaximize(view));
+        let max_btn = button(
+            text(if is_maximized { "❐" } else { "□" })
+                .size(8)
+                .color(Color::from_rgb8(0xaa, 0xb0, 0xbe)),
+        )
+        .padding([1, 4])
+        .style(self.theme.button_style(is_maximized))
+        .on_press(UiMessage::ToggleSubWindowMaximize(view));
 
-        let close_btn = button(text("×").size(11))
-            .padding([2, 5])
+        let close_btn = button(text("×").size(10).color(Color::from_rgb8(0xdd, 0x60, 0x60)))
+            .padding([1, 4])
             .style(self.theme.button_style(false))
             .on_press(UiMessage::CloseSubWindow(view));
 
@@ -131,22 +141,22 @@ impl CrystalWaveApp {
         let row_content = if is_playlist {
             let is_dual = self.layout.secondary_view.is_some();
             let dual_btn = button(text(if is_dual { "❐" } else { "◫" }).size(9))
-                .padding([2, 5])
+                .padding([1, 5])
                 .style(self.theme.button_style(is_dual))
                 .on_press(UiMessage::ToggleDualWorkspace(None));
-            row![icon_w, title_w, spacer, dual_btn]
+            row![menu_arrow, title_btn, spacer, dual_btn]
                 .align_y(iced::Alignment::Center)
                 .spacing(3)
         } else {
             row![
-                icon_w,
-                title_w,
-                Space::new().width(Length::Fixed(6.0)),
+                menu_arrow,
+                title_btn,
+                Space::new().width(Length::Fixed(4.0)),
                 nudge_l,
                 nudge_u,
                 nudge_d,
                 nudge_r,
-                Space::new().width(Length::Fixed(6.0)),
+                Space::new().width(Length::Fixed(4.0)),
                 btn_compact,
                 btn_normal,
                 btn_wide,
@@ -161,9 +171,9 @@ impl CrystalWaveApp {
         };
 
         container(row_content)
-            .height(Length::Fixed(28.0))
+            .height(Length::Fixed(24.0))
             .width(Length::Fill)
-            .padding([2, 6])
+            .padding([1, 5])
             .style(|_t| self.theme.window_titlebar_style())
             .into()
     }
@@ -180,78 +190,55 @@ impl CrystalWaveApp {
             (0.0, 0.0, 800.0, 480.0)
         };
 
-        let coord_txt = text(format!("Pos: ({:.0}, {:.0})", x, y))
-            .size(9)
-            .color(Color::from_rgb8(0x88, 0x90, 0xa0));
-        let size_txt = text(format!("Size: {:.0}×{:.0}", w, h))
-            .size(9)
-            .color(Color::from_rgb8(0xfa, 0x82, 0x31));
+        let coord_txt = text(format!("({:.0}, {:.0})  {:.0}×{:.0}", x, y, w, h))
+            .size(8)
+            .color(Color::from_rgb8(0x60, 0x68, 0x78));
 
-        let btn_w_minus = button(text("W −50").size(8))
-            .padding([1, 4])
+        let btn_step_minus = button(text("−").size(7))
+            .padding([0, 3])
             .style(self.theme.button_style(false))
             .on_press(UiMessage::ResizeSubWindow {
                 view,
                 dw: -50.0,
-                dh: 0.0,
+                dh: -35.0,
             });
-        let btn_w_plus = button(text("W +50").size(8))
-            .padding([1, 4])
+        let btn_step_plus = button(text("+").size(7))
+            .padding([0, 3])
             .style(self.theme.button_style(false))
-            .on_press(UiMessage::ResizeSubWindow {
-                view,
-                dw: 50.0,
-                dh: 0.0,
-            });
-        let btn_h_minus = button(text("H −50").size(8))
-            .padding([1, 4])
-            .style(self.theme.button_style(false))
-            .on_press(UiMessage::ResizeSubWindow {
-                view,
-                dw: 0.0,
-                dh: -50.0,
-            });
-        let btn_h_plus = button(text("H +50").size(8))
-            .padding([1, 4])
-            .style(self.theme.button_style(false))
-            .on_press(UiMessage::ResizeSubWindow {
-                view,
-                dw: 0.0,
-                dh: 50.0,
-            });
-
-        let btn_grip = button(text("◢ RESIZE").size(9))
-            .padding([1, 6])
-            .style(self.theme.button_style(true))
             .on_press(UiMessage::ResizeSubWindow {
                 view,
                 dw: 50.0,
                 dh: 35.0,
             });
 
+        let btn_grip = button(text("◢").size(9).color(self.theme.accent))
+            .padding([0, 4])
+            .style(self.theme.button_style(false))
+            .on_press(UiMessage::ResizeSubWindow {
+                view,
+                dw: 40.0,
+                dh: 28.0,
+            });
+
         container(
             row![
                 coord_txt,
-                Space::new().width(Length::Fixed(8.0)),
-                size_txt,
                 Space::new().width(Length::Fill),
-                btn_w_minus,
-                btn_w_plus,
-                btn_h_minus,
-                btn_h_plus,
-                Space::new().width(Length::Fixed(4.0)),
+                btn_step_minus,
+                btn_step_plus,
+                Space::new().width(Length::Fixed(2.0)),
                 btn_grip,
             ]
             .spacing(2)
             .align_y(iced::Alignment::Center),
         )
-        .height(Length::Fixed(22.0))
+        .height(Length::Fixed(16.0))
         .width(Length::Fill)
-        .padding([2, 6])
+        .padding([1, 4])
         .style(|_t| container::Style {
-            background: Some(iced::Background::Color(Color::from_rgb8(0x18, 0x1a, 0x20))),
+            background: Some(iced::Background::Color(Color::from_rgb8(0x16, 0x18, 0x1e))),
             border: iced::Border {
-                color: Color::from_rgb8(0x2d, 0x30, 0x39),
+                color: Color::from_rgb8(0x28, 0x2b, 0x34),
                 width: 1.0,
                 radius: 0.0.into(),
             },
@@ -261,6 +248,7 @@ impl CrystalWaveApp {
     }
 
     /// MDI Sub-Window Tabs Bar (Floating tabs with cascade/tile controls)
+    #[allow(dead_code)]
     pub fn view_mdi_window_tabs_bar(&self) -> Element<'_, UiMessage> {
         let is_pl_focused = self.layout.sub_windows.focused_window
             == Some(crate::ui::layout::FlActiveView::Playlist);
@@ -806,6 +794,17 @@ impl CrystalWaveApp {
                             None,
                             UiMessage::ToggleDualWorkspace(None),
                         ),
+                        (
+                            "Arrange: Cascade Windows",
+                            None,
+                            UiMessage::CascadeSubWindows,
+                        ),
+                        (
+                            "Arrange: Tile Horizontally",
+                            None,
+                            UiMessage::TileSubWindowsHorizontal,
+                        ),
+                        ("Arrange: Reset Layout", None, UiMessage::ResetSubWindows),
                     ],
                 ),
                 crate::ui::layout::ActiveMenuDropdown::Options => (
@@ -1986,10 +1985,7 @@ impl CrystalWaveApp {
             content = content.push(self.view_browser_panel());
         }
 
-        // 2. MDI Sub-Window Tabs Bar
-        let tabs_bar = self.view_mdi_window_tabs_bar();
-
-        // 3. Active Center Workspace View with Floating & Resizable Windows Compositor
+        // 2. Active Center Workspace View with Floating & Resizable Windows Compositor
         let render_view = |v: crate::ui::layout::FlActiveView| -> Element<'_, UiMessage> {
             match v {
                 crate::ui::layout::FlActiveView::Playlist => self.view_playlist_window(),
@@ -2118,15 +2114,9 @@ impl CrystalWaveApp {
             };
 
         content = content.push(
-            column![
-                tabs_bar,
-                container(workspace_area)
-                    .width(Length::Fill)
-                    .height(Length::Fill)
-            ]
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .spacing(1),
+            container(workspace_area)
+                .width(Length::Fill)
+                .height(Length::Fill),
         );
 
         content.into()
@@ -4221,8 +4211,37 @@ impl CrystalWaveApp {
             .on_press(UiMessage::SetChannelRackStepCount(64));
         let steps_row = row![step16_btn, step32_btn, step64_btn].spacing(1);
 
-        let mut header_row = row![
-            text("CHANNEL RACK [F6]").size(11),
+        let filter_label = match self.channel_rack_filter {
+            crate::ui::layout::ChannelRackFilter::All => "All ▾",
+            crate::ui::layout::ChannelRackFilter::Audio => "Audio ▾",
+            crate::ui::layout::ChannelRackFilter::Unsorted => "Unsorted ▾",
+            crate::ui::layout::ChannelRackFilter::Automation => "Automation ▾",
+        };
+        let next_filter = match self.channel_rack_filter {
+            crate::ui::layout::ChannelRackFilter::All => {
+                crate::ui::layout::ChannelRackFilter::Audio
+            }
+            crate::ui::layout::ChannelRackFilter::Audio => {
+                crate::ui::layout::ChannelRackFilter::Unsorted
+            }
+            crate::ui::layout::ChannelRackFilter::Unsorted => {
+                crate::ui::layout::ChannelRackFilter::Automation
+            }
+            crate::ui::layout::ChannelRackFilter::Automation => {
+                crate::ui::layout::ChannelRackFilter::All
+            }
+        };
+        let filter_btn = button(
+            text(filter_label)
+                .size(9)
+                .color(Color::from_rgb8(0xd0, 0xd4, 0xe0)),
+        )
+        .padding([2, 5])
+        .style(self.theme.button_style(false))
+        .on_press(UiMessage::SetChannelRackFilter(next_filter));
+
+        let header_row = row![
+            filter_btn,
             pat_capsule,
             row![text("Swing:").size(9), swing_slider, swing_txt]
                 .spacing(2)
@@ -4232,15 +4251,6 @@ impl CrystalWaveApp {
         ]
         .spacing(6)
         .align_y(iced::Alignment::Center);
-
-        if is_window {
-            header_row = header_row.push(Space::new().width(Length::Fill));
-            header_row = header_row.push(
-                button(text("✕").size(9))
-                    .padding(2)
-                    .on_press(UiMessage::ToggleFlChannelRack),
-            );
-        }
 
         let num_beats = (self.channel_rack_step_count / 4).max(4);
         let mut rack_col = column![].spacing(3).padding(2);
@@ -4469,26 +4479,6 @@ impl CrystalWaveApp {
             main_rack = main_rack.push(graph_drawer);
         }
 
-        let filter_tabs = [
-            (crate::ui::layout::ChannelRackFilter::All, "ALL"),
-            (crate::ui::layout::ChannelRackFilter::Audio, "AUDIO"),
-            (crate::ui::layout::ChannelRackFilter::Unsorted, "UNSORTED"),
-            (
-                crate::ui::layout::ChannelRackFilter::Automation,
-                "AUTOMATION",
-            ),
-        ];
-
-        let mut filter_row = row![].spacing(3).align_y(iced::Alignment::Center);
-        for (f_variant, f_lbl) in filter_tabs {
-            let is_act = self.channel_rack_filter == f_variant;
-            let btn = button(text(f_lbl).size(9))
-                .padding([2, 6])
-                .style(self.theme.button_style(is_act))
-                .on_press(UiMessage::SetChannelRackFilter(f_variant));
-            filter_row = filter_row.push(btn);
-        }
-
         let chrome = self.view_window_chrome(
             crate::ui::layout::FlActiveView::ChannelRack,
             "Channel Rack",
@@ -4496,7 +4486,7 @@ impl CrystalWaveApp {
         );
         let footer = self.view_window_resize_footer(crate::ui::layout::FlActiveView::ChannelRack);
 
-        let rack_column = column![chrome, filter_row, main_rack, footer].spacing(4);
+        let rack_column = column![chrome, main_rack, footer].spacing(2);
 
         if is_window {
             container(rack_column)

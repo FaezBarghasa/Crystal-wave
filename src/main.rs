@@ -56,6 +56,9 @@ fn main() -> iced::Result {
         || args.contains(&"--mdi".to_string())
         || args.contains(&"--multi".to_string());
 
+    let is_fullscreen =
+        args.contains(&"--fullscreen".to_string()) || args.contains(&"-f".to_string());
+
     iced::application(
         move || {
             let mut app = CrystalWaveApp::new(44100.0);
@@ -122,5 +125,11 @@ fn main() -> iced::Result {
     )
     .subscription(CrystalWaveApp::subscription)
     .title("CrystalWave Studio - Professional Digital Audio Workstation")
+    .window(iced::window::Settings {
+        size: iced::Size::new(1920.0, 1080.0),
+        fullscreen: is_fullscreen,
+        maximized: is_fullscreen,
+        ..Default::default()
+    })
     .run()
 }
