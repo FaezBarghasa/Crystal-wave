@@ -63,7 +63,7 @@ pub struct UiTheme {
 
 impl Default for UiTheme {
     fn default() -> Self {
-        Self::from_preset(ThemePreset::Graphite)
+        Self::from_preset(ThemePreset::FlStudioModern)
     }
 }
 
@@ -1012,6 +1012,103 @@ impl UiTheme {
                     radius: Radius::from(3.0),
                 },
                 shadow: Shadow::default(),
+                ..button::Style::default()
+            }
+        }
+    }
+
+    /// FL Studio 1:1 Dark Graphite Context Menu container style (07, 21, 26, 49, 76)
+    pub fn fl_context_menu_container_style(&self) -> container::Style {
+        container::Style {
+            background: Some(Background::Color(Color::from_rgb8(0x1e, 0x21, 0x29))),
+            text_color: Some(self.text_primary),
+            border: Border {
+                color: Color::from_rgb8(0x38, 0x3d, 0x4a),
+                width: 1.0,
+                radius: Radius::from(4.0),
+            },
+            shadow: Shadow {
+                color: Color::from_rgba(0.0, 0.0, 0.0, 0.65),
+                offset: iced::Vector::new(0.0, 4.0),
+                blur_radius: 12.0,
+            },
+            ..container::Style::default()
+        }
+    }
+
+    /// FL Studio 1:1 Floating Modal Container (11, 12, 27, 62, 85)
+    pub fn fl_modal_container_style(&self) -> container::Style {
+        container::Style {
+            background: Some(Background::Color(Color::from_rgb8(0x23, 0x27, 0x32))),
+            text_color: Some(self.text_primary),
+            border: Border {
+                color: Color::from_rgb8(0x40, 0x46, 0x58),
+                width: 1.5,
+                radius: Radius::from(6.0),
+            },
+            shadow: Shadow {
+                color: Color::from_rgba(0.0, 0.0, 0.0, 0.75),
+                offset: iced::Vector::new(0.0, 8.0),
+                blur_radius: 24.0,
+            },
+            ..container::Style::default()
+        }
+    }
+
+    /// FL Studio 1:1 Rubber Step Pad Button style (40)
+    pub fn fl_step_pad_style<'a>(
+        &'a self,
+        is_even_beat: bool,
+        is_active: bool,
+    ) -> impl Fn(&iced::Theme, button::Status) -> button::Style + 'a {
+        move |_theme, status| {
+            let base_color = if is_active {
+                Color::from_rgb8(0xff, 0x6b, 0x81) // Illuminated Rose Pink / Orange
+            } else if is_even_beat {
+                Color::from_rgb8(0x6e, 0x4e, 0x48) // Copper / Brown rubber pad (Beats 2 & 4)
+            } else {
+                Color::from_rgb8(0x9a, 0x9e, 0xa8) // Silver / Grey rubber pad (Beats 1 & 3)
+            };
+
+            let bg = match status {
+                button::Status::Hovered => Color {
+                    r: (base_color.r * 1.2).min(1.0),
+                    g: (base_color.g * 1.2).min(1.0),
+                    b: (base_color.b * 1.2).min(1.0),
+                    a: 1.0,
+                },
+                button::Status::Pressed => Color {
+                    r: base_color.r * 0.8,
+                    g: base_color.g * 0.8,
+                    b: base_color.b * 0.8,
+                    a: 1.0,
+                },
+                _ => base_color,
+            };
+
+            let border_color = if is_active {
+                Color::from_rgb8(0xff, 0xa0, 0xb0)
+            } else {
+                Color::from_rgb8(0x28, 0x2b, 0x33)
+            };
+
+            button::Style {
+                background: Some(Background::Color(bg)),
+                text_color: Color::WHITE,
+                border: Border {
+                    color: border_color,
+                    width: 1.0,
+                    radius: Radius::from(3.0),
+                },
+                shadow: Shadow {
+                    color: if is_active {
+                        Color::from_rgba8(0xff, 0x6b, 0x81, 0.4)
+                    } else {
+                        Color::from_rgba(0.0, 0.0, 0.0, 0.25)
+                    },
+                    offset: iced::Vector::new(0.0, 1.0),
+                    blur_radius: if is_active { 4.0 } else { 1.0 },
+                },
                 ..button::Style::default()
             }
         }

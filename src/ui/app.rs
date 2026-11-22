@@ -74,6 +74,18 @@ pub struct CrystalWaveApp {
     pub active_hover_hint: Option<String>,
     pub channel_rack_filter: crate::ui::layout::ChannelRackFilter,
     pub browser_width: f32,
+    pub theme_settings_open: bool,
+    pub theme_hue: f32,
+    pub theme_sat: f32,
+    pub theme_bright: f32,
+    pub theme_contrast: f32,
+    pub color_picker_target: Option<crate::ui::message::ColorPickerTarget>,
+    pub color_picker_mode: crate::ui::message::ColorPickerMode,
+    pub project_picker_open: bool,
+    pub consolidate_modal_open: Option<usize>,
+    pub note_properties_modal: Option<usize>,
+    pub selected_midi_color: usize,
+    pub browser_tag_filter: Option<String>,
 }
 
 impl Default for CrystalWaveApp {
@@ -243,6 +255,18 @@ impl CrystalWaveApp {
             active_hover_hint: None,
             channel_rack_filter: crate::ui::layout::ChannelRackFilter::All,
             browser_width: 254.0,
+            theme_settings_open: false,
+            theme_hue: 0.0,
+            theme_sat: 1.0,
+            theme_bright: 1.0,
+            theme_contrast: 1.0,
+            color_picker_target: None,
+            color_picker_mode: crate::ui::message::ColorPickerMode::Circle,
+            project_picker_open: false,
+            consolidate_modal_open: None,
+            note_properties_modal: None,
+            selected_midi_color: 0,
+            browser_tag_filter: None,
         };
 
         app.sync_audio_snapshot();
@@ -2087,6 +2111,137 @@ impl CrystalWaveApp {
             } => {
                 self.channel_rack.toggle_step(channel_id, step_index);
                 self.dirty = true;
+            }
+            UiMessage::ToggleThemeSettingsModal => {
+                self.theme_settings_open = !self.theme_settings_open;
+            }
+            UiMessage::ThemeSettingsAdjustHue(h) => {
+                self.theme_hue = h;
+            }
+            UiMessage::ThemeSettingsAdjustSat(s) => {
+                self.theme_sat = s;
+            }
+            UiMessage::ThemeSettingsAdjustBright(b) => {
+                self.theme_bright = b;
+            }
+            UiMessage::ThemeSettingsAdjustContrast(c) => {
+                self.theme_contrast = c;
+            }
+            UiMessage::OpenColorPicker(target) => {
+                self.color_picker_target = Some(target);
+            }
+            UiMessage::CloseColorPicker => {
+                self.color_picker_target = None;
+            }
+            UiMessage::ColorPickerSelectMode(mode) => {
+                self.color_picker_mode = mode;
+            }
+            UiMessage::ColorPickerSelectRgb(rgb) => {
+                if let Some(target) = self.color_picker_target {
+                    match target {
+                        crate::ui::message::ColorPickerTarget::Track(_trk_id) => {}
+                        crate::ui::message::ColorPickerTarget::Channel(ch_id) => {
+                            if let Some(ch) = self.channel_rack.channels.get_mut(ch_id) {
+                                ch.color_rgb = rgb;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                self.dirty = true;
+            }
+            UiMessage::ToggleProjectPicker => {
+                self.project_picker_open = !self.project_picker_open;
+            }
+            UiMessage::ToggleConsolidateModal(opt) => {
+                self.consolidate_modal_open = opt;
+            }
+            UiMessage::ConsolidateTrack(_trk_id) => {
+                self.consolidate_modal_open = None;
+                self.dirty = true;
+            }
+            UiMessage::FillChannelSteps {
+                channel_id,
+                interval,
+            } => {
+                if let Some(ch) = self.channel_rack.channels.get_mut(channel_id) {
+                    for (i, step) in ch.steps.iter_mut().enumerate() {
+                        step.active = (i % interval) == 0;
+                    }
+                    self.dirty = true;
+                }
+            }
+            UiMessage::EuclideanFillChannel {
+                channel_id,
+                hits,
+                steps,
+            } => {
+                if let Some(ch) = self.channel_rack.channels.get_mut(channel_id) {
+                    let total = steps.min(ch.steps.len()).max(1);
+                    for (i, step) in ch.steps.iter_mut().take(total).enumerate() {
+                        step.active = ((i * hits) % total) < hits;
+                    }
+                    self.dirty = true;
+                }
+            }
+            UiMessage::PianoRollSelectMidiColor(c_idx) => {
+                self.selected_midi_color = c_idx % 16;
+            }
+            UiMessage::PianoRollTogglePortamento(_id) => {
+                self.dirty = true;
+            }
+            UiMessage::PianoRollOpenNoteProperties(id) => {
+                self.note_properties_modal = Some(id);
+            }
+            UiMessage::PianoRollSaveNoteProperties {
+                note_id,
+                start,
+                len,
+                key,
+                vel,
+                pan,
+                color_idx: _,
+            } => {
+                if let Some(note) = self.piano_roll_notes.iter_mut().find(|n| n.id == note_id) {
+                    note.start_tick = start;
+                    note.length_ticks = len;
+                    note.key = key;
+                    note.velocity = vel;
+                    note.pan = pan;
+                }
+                self.note_properties_modal = None;
+                self.dirty = true;
+            }
+            UiMessage::CloseNotePropertiesModal => {
+                self.note_properties_modal = None;
+            }
+            UiMessage::MixerRouteAction {
+                from_track,
+                to_track,
+                mode,
+            } => {
+                if from_track < self.mixer_sends.len()
+                    && to_track < self.mixer_sends[from_track].len()
+                {
+                    match mode {
+                        crate::ui::message::MixerRouteMode::RouteToThis => {
+                            self.mixer_sends[from_track][to_track] = 1.0;
+                        }
+                        crate::ui::message::MixerRouteMode::RouteToThisOnly => {
+                            for s in self.mixer_sends[from_track].iter_mut() {
+                                *s = 0.0;
+                            }
+                            self.mixer_sends[from_track][to_track] = 1.0;
+                        }
+                        crate::ui::message::MixerRouteMode::SidechainToThis => {
+                            self.mixer_sends[from_track][to_track] = 0.0001;
+                        }
+                    }
+                    self.dirty = true;
+                }
+            }
+            UiMessage::BrowserSetTagFilter(tag) => {
+                self.browser_tag_filter = tag;
             }
         }
 

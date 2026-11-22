@@ -39,6 +39,7 @@ pub struct GraphEditorState {
 pub struct RackChannel {
     pub id: usize,
     pub name: String,
+    pub color_rgb: [u8; 3],
     pub sample_path: Option<String>,
     pub volume: f32,         // 0.0 to 1.25 (0 to 125%)
     pub pan: f32,            // -1.0 to 1.0
@@ -49,9 +50,18 @@ pub struct RackChannel {
 
 impl RackChannel {
     pub fn new(id: usize, name: impl Into<String>, num_steps: usize) -> Self {
+        let default_colors = [
+            [0x36, 0x8a, 0xf8], // Lead Blue
+            [0x2e, 0xcc, 0x71], // Emerald
+            [0xf8, 0x8a, 0x36], // Citrus Orange
+            [0x9b, 0x59, 0xb6], // Purple
+            [0x00, 0xf2, 0xfe], // Electric Cyan
+            [0xe7, 0x4c, 0x3c], // Crimson
+        ];
         Self {
             id,
             name: name.into(),
+            color_rgb: default_colors[id % default_colors.len()],
             sample_path: None,
             volume: 0.8,
             pan: 0.0,

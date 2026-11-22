@@ -468,6 +468,71 @@ impl CrystalWaveApp {
                     ..Default::default()
                 });
             root_stack = root_stack.push(overlay);
+        } else if self.theme_settings_open {
+            let theme_modal = self.view_theme_settings_modal();
+            let overlay = container(theme_modal)
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .center(Length::Fill)
+                .style(|_t| container::Style {
+                    background: Some(iced::Background::Color(Color::from_rgba(
+                        0.0, 0.0, 0.0, 0.70,
+                    ))),
+                    ..Default::default()
+                });
+            root_stack = root_stack.push(overlay);
+        } else if let Some(target) = self.color_picker_target {
+            let color_modal = self.view_color_selector_modal(target);
+            let overlay = container(color_modal)
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .center(Length::Fill)
+                .style(|_t| container::Style {
+                    background: Some(iced::Background::Color(Color::from_rgba(
+                        0.0, 0.0, 0.0, 0.70,
+                    ))),
+                    ..Default::default()
+                });
+            root_stack = root_stack.push(overlay);
+        } else if self.project_picker_open {
+            let proj_picker = self.view_project_picker();
+            let overlay = container(proj_picker)
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .center(Length::Fill)
+                .style(|_t| container::Style {
+                    background: Some(iced::Background::Color(Color::from_rgba(
+                        0.0, 0.0, 0.0, 0.85,
+                    ))),
+                    ..Default::default()
+                });
+            root_stack = root_stack.push(overlay);
+        } else if let Some(trk_id) = self.consolidate_modal_open {
+            let cons_modal = self.view_consolidate_modal(trk_id);
+            let overlay = container(cons_modal)
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .center(Length::Fill)
+                .style(|_t| container::Style {
+                    background: Some(iced::Background::Color(Color::from_rgba(
+                        0.0, 0.0, 0.0, 0.70,
+                    ))),
+                    ..Default::default()
+                });
+            root_stack = root_stack.push(overlay);
+        } else if let Some(note_id) = self.note_properties_modal {
+            let note_modal = self.view_note_properties_modal(note_id);
+            let overlay = container(note_modal)
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .center(Length::Fill)
+                .style(|_t| container::Style {
+                    background: Some(iced::Background::Color(Color::from_rgba(
+                        0.0, 0.0, 0.0, 0.70,
+                    ))),
+                    ..Default::default()
+                });
+            root_stack = root_stack.push(overlay);
         } else if self.audio_settings_open {
             let audio_modal = self.view_audio_settings_modal();
             let overlay = container(audio_modal)
@@ -1351,20 +1416,20 @@ impl CrystalWaveApp {
     /// FL Studio Browser / Sample Library Panel (Hierarchical Tree + Inline Preview Player)
     pub fn view_browser_panel(&self) -> Element<'_, UiMessage> {
         let tabs = [
-            (crate::fl_studio::browser::BrowserTab::All, "All"),
-            (crate::fl_studio::browser::BrowserTab::Drums, "Drums"),
-            (crate::fl_studio::browser::BrowserTab::Bass, "808"),
-            (crate::fl_studio::browser::BrowserTab::Instruments, "Inst"),
-            (crate::fl_studio::browser::BrowserTab::Fx, "FX"),
-            (crate::fl_studio::browser::BrowserTab::Plugins, "Plugins"),
-            (crate::fl_studio::browser::BrowserTab::Presets, "Presets"),
+            (crate::fl_studio::browser::BrowserTab::All, "▦ All"),
+            (crate::fl_studio::browser::BrowserTab::Drums, "◎ Drums"),
+            (crate::fl_studio::browser::BrowserTab::Bass, "♩ 808"),
+            (crate::fl_studio::browser::BrowserTab::Instruments, "⌨ Inst"),
+            (crate::fl_studio::browser::BrowserTab::Fx, "⚡ FX"),
+            (crate::fl_studio::browser::BrowserTab::Plugins, "🔌 Plugins"),
+            (crate::fl_studio::browser::BrowserTab::Presets, "◧ Presets"),
         ];
 
         let mut tab_row = row![].spacing(2);
         for (tab_variant, tab_lbl) in tabs {
             let is_active = self.browser.active_tab == tab_variant;
             let tab_btn = button(text(tab_lbl).size(9))
-                .padding(3)
+                .padding([2, 5])
                 .style(self.theme.button_style(is_active))
                 .on_press(UiMessage::BrowserSelectTab(tab_variant));
             tab_row = tab_row.push(tab_btn);
@@ -1375,14 +1440,68 @@ impl CrystalWaveApp {
             .padding(3)
             .size(9);
 
+        // Tag filter chips (FL Studio 24 Browser 80/82)
+        let tag_list = ["All", "808", "Kicks", "Snares", "HiHats", "FX", "Instruments", "Vocals"];
+        let mut tag_chips = row![].spacing(2);
+        for tag_str in tag_list {
+            let is_all = tag_str == "All";
+            let is_selected = if is_all {
+                self.browser_tag_filter.is_none()
+            } else {
+                self.browser_tag_filter.as_deref() == Some(tag_str)
+            };
+            let chip_msg = if is_all {
+                UiMessage::BrowserSetTagFilter(None)
+            } else if is_selected {
+                UiMessage::BrowserSetTagFilter(None)
+            } else {
+                UiMessage::BrowserSetTagFilter(Some(tag_str.to_string()))
+            };
+            let chip_btn = button(
+                text(tag_str)
+                    .size(8)
+                    .color(if is_selected {
+                        Color::from_rgb8(0x00, 0x18, 0x20)
+                    } else {
+                        Color::from_rgb8(0xa0, 0xa8, 0xb8)
+                    }),
+            )
+            .padding([1, 4])
+            .style(move |_t, _s| button::Style {
+                background: Some(iced::Background::Color(if is_selected {
+                    Color::from_rgb8(0x00, 0xf2, 0xfe)
+                } else {
+                    Color::from_rgb8(0x22, 0x26, 0x30)
+                })),
+                border: iced::Border {
+                    color: if is_selected {
+                        Color::from_rgb8(0x00, 0xf2, 0xfe)
+                    } else {
+                        Color::from_rgb8(0x35, 0x3a, 0x48)
+                    },
+                    width: 0.8,
+                    radius: 3.0.into(),
+                },
+                ..button::Style::default()
+            })
+            .on_press(chip_msg);
+            tag_chips = tag_chips.push(chip_btn);
+        }
+
         let mut tree_col = column![].spacing(2).width(Length::Fill);
 
         // Hierarchical Tree Categories (1:1 FL Studio 2026 Ground Truth)
-        let is_searching = !self.browser.search_query.trim().is_empty();
+        let is_searching = !self.browser.search_query.trim().is_empty() || self.browser_tag_filter.is_some();
 
         if is_searching {
-            // Search Results Mode
+            // Search & Tag Results Mode
+            let tag_filter = self.browser_tag_filter.as_deref();
             for sample in self.browser.filtered_samples() {
+                if let Some(tag) = tag_filter {
+                    if sample.category != tag {
+                        continue;
+                    }
+                }
                 let s_id = sample.id;
                 let is_sel = self.browser.selected_sample_id == Some(s_id);
                 let is_prev = self.browser.previewing_sample_id == Some(s_id);
@@ -1663,6 +1782,7 @@ impl CrystalWaveApp {
                 browser_header,
                 tab_row,
                 search_input,
+                tag_chips,
                 scrollable(tree_col).height(Length::Fill),
                 preview_dock,
             ]
@@ -2184,30 +2304,102 @@ impl CrystalWaveApp {
             tool_row = tool_row.push(btn);
         }
 
+        let fl_midi_palette: [[u8; 3]; 16] = [
+            [0x59, 0xd0, 0x8a], // 1: Green (Default)
+            [0x38, 0xef, 0x7d], // 2: Mint / Neon
+            [0x2e, 0xcc, 0x71], // 3: Emerald
+            [0xa8, 0xe0, 0x63], // 4: Lime
+            [0xf9, 0xca, 0x24], // 5: Yellow
+            [0xf0, 0x93, 0x2b], // 6: Amber
+            [0xeb, 0x4d, 0x4b], // 7: Coral Red
+            [0xff, 0x52, 0x52], // 8: Bright Red
+            [0xe0, 0x56, 0xfd], // 9: Magenta
+            [0xbe, 0x2e, 0xdd], // 10: Purple
+            [0x68, 0x6d, 0xe0], // 11: Indigo
+            [0x48, 0x34, 0xd4], // 12: Deep Blue
+            [0x22, 0xa6, 0xb3], // 13: Teal
+            [0x7e, 0xde, 0xe8], // 14: Sky Blue
+            [0x00, 0xf2, 0xfe], // 15: Cyan
+            [0xff, 0xbe, 0x76], // 16: Peach
+        ];
+        let cur_color_idx = (self.selected_midi_color as usize).min(15);
+        let active_rgb = fl_midi_palette[cur_color_idx];
+
+        let mut palette_swatches = row![].spacing(1);
+        for (c_idx, rgb) in fl_midi_palette.iter().enumerate() {
+            let is_sel = c_idx == cur_color_idx;
+            let c_rgb = *rgb;
+            let swatch_btn = button(
+                container(column![])
+                    .width(Length::Fixed(7.0))
+                    .height(Length::Fixed(12.0))
+                    .style(move |_t| container::Style {
+                        background: Some(iced::Background::Color(Color::from_rgb8(c_rgb[0], c_rgb[1], c_rgb[2]))),
+                        border: iced::Border {
+                            color: if is_sel { Color::WHITE } else { Color::TRANSPARENT },
+                            width: if is_sel { 1.0 } else { 0.0 },
+                            radius: 1.0.into(),
+                        },
+                        ..Default::default()
+                    }),
+            )
+            .padding(0)
+            .style(|_t, _s| button::Style::default())
+            .on_press(UiMessage::PianoRollSelectMidiColor(c_idx as u8));
+            palette_swatches = palette_swatches.push(swatch_btn);
+        }
+
         let note_color_capsule = container(
             row![
                 container(
-                    text("COLOR")
-                        .size(8)
-                        .color(Color::from_rgb8(0x10, 0x20, 0x15))
+                    row![
+                        container(column![])
+                            .width(Length::Fixed(8.0))
+                            .height(Length::Fixed(8.0))
+                            .style(move |_t| container::Style {
+                                background: Some(iced::Background::Color(Color::from_rgb8(
+                                    active_rgb[0], active_rgb[1], active_rgb[2]
+                                ))),
+                                border: iced::Border {
+                                    radius: 2.0.into(),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }),
+                        text(format!("Ch {:02}", cur_color_idx + 1))
+                            .size(8)
+                            .color(Color::from_rgb8(0xd0, 0xd8, 0xe4)),
+                    ]
+                    .spacing(3)
+                    .align_y(iced::Alignment::Center)
                 )
-                .padding([2, 5])
+                .padding([2, 4])
                 .style(|_t| container::Style {
-                    background: Some(iced::Background::Color(Color::from_rgb8(0x59, 0xd0, 0x8a,))),
+                    background: Some(iced::Background::Color(Color::from_rgb8(0x1a, 0x1d, 0x24))),
                     border: iced::Border {
+                        color: Color::from_rgb8(0x35, 0x3a, 0x48),
+                        width: 1.0,
                         radius: 3.0.into(),
-                        ..Default::default()
                     },
                     ..Default::default()
                 }),
+                palette_swatches,
                 button(text("◿ Slide").size(8))
                     .padding([1, 4])
-                    .style(self.theme.button_style(false)),
+                    .style(self.theme.button_style(false))
+                    .on_press(UiMessage::PianoRollTogglePortamento),
                 button(text("⟋ Porta").size(8))
                     .padding([1, 4])
-                    .style(self.theme.button_style(false)),
+                    .style(self.theme.button_style(false))
+                    .on_press(UiMessage::PianoRollTogglePortamento),
+                button(text("⚙ Prop").size(8))
+                    .padding([1, 4])
+                    .style(self.theme.button_style(false))
+                    .on_press(UiMessage::PianoRollOpenNoteProperties(
+                        self.piano_roll_notes.first().map(|n| n.id).unwrap_or(1),
+                    )),
             ]
-            .spacing(2)
+            .spacing(3)
             .align_y(iced::Alignment::Center),
         )
         .padding(1);
@@ -3489,6 +3681,618 @@ impl CrystalWaveApp {
         .style(|_t| self.theme.oled_vfd_display_style())
         .width(Length::Fixed(640.0))
         .padding(12)
+        .into()
+    }
+
+    /// FL Studio 1:1 Theme Settings Modal (11_theme_settings.png)
+    fn view_theme_settings_modal(&self) -> Element<'_, UiMessage> {
+        let title_bar = row![
+            text("Settings — Look and feel").size(12).color(Color::WHITE),
+            Space::new().width(Length::Fill),
+            button(text("✕").size(11))
+                .padding([1, 4])
+                .style(self.theme.button_style(false))
+                .on_press(UiMessage::ToggleThemeSettingsModal),
+        ]
+        .align_y(iced::Alignment::Center);
+
+        // Top Settings Tabs (MIDI, Audio, General, File, Theme, Project, Info, Debug, About)
+        let tabs = [
+            "MIDI", "Audio", "General", "File", "Theme", "Project", "Info", "Debug", "About",
+        ];
+        let mut tabs_row = row![].spacing(2);
+        for tab in tabs {
+            let is_sel = tab == "Theme";
+            let btn = button(text(tab).size(10).color(if is_sel {
+                Color::from_rgb8(0x00, 0xf2, 0xfe)
+            } else {
+                Color::from_rgb8(0xa0, 0xa6, 0xb8)
+            }))
+            .padding([3, 8])
+            .style(self.theme.button_style(is_sel));
+            tabs_row = tabs_row.push(btn);
+        }
+
+        // Section 1: Presets
+        let theme_card = |name: &'static str, preset: crate::ui::theme::ThemePreset, is_current: bool| {
+            button(
+                column![
+                    container(column![])
+                        .width(Length::Fixed(120.0))
+                        .height(Length::Fixed(60.0))
+                        .style(move |_t| container::Style {
+                            background: Some(iced::Background::Color(match preset {
+                                crate::ui::theme::ThemePreset::FlStudioModern => Color::from_rgb8(0x10, 0x11, 0x14),
+                                crate::ui::theme::ThemePreset::FlDarkOrange => Color::from_rgb8(0x28, 0x1c, 0x14),
+                                crate::ui::theme::ThemePreset::Graphite => Color::from_rgb8(0x1b, 0x1d, 0x24),
+                            })),
+                            border: iced::Border {
+                                color: if is_current {
+                                    Color::from_rgb8(0x00, 0xf2, 0xfe)
+                                } else {
+                                    Color::from_rgb8(0x38, 0x3d, 0x4a)
+                                },
+                                width: if is_current { 1.5 } else { 1.0 },
+                                radius: 3.0.into(),
+                            },
+                            ..container::Style::default()
+                        }),
+                    text(name).size(9).color(Color::WHITE),
+                ]
+                .spacing(3)
+                .align_x(iced::Alignment::Center),
+            )
+            .padding(2)
+            .style(|_t, _s| button::Style::default())
+            .on_press(UiMessage::SetThemePreset(preset))
+        };
+
+        let presets_row = row![
+            theme_card("(Default)", crate::ui::theme::ThemePreset::FlStudioModern, self.theme.preset == crate::ui::theme::ThemePreset::FlStudioModern),
+            theme_card("Dark orange", crate::ui::theme::ThemePreset::FlDarkOrange, self.theme.preset == crate::ui::theme::ThemePreset::FlDarkOrange),
+            theme_card("Graphite Dark", crate::ui::theme::ThemePreset::Graphite, self.theme.preset == crate::ui::theme::ThemePreset::Graphite),
+        ]
+        .spacing(8);
+
+        // Section 2: Adjustments (Knobs: Hue, Saturation, Brightness, Contrast)
+        let hue_knob = crate::ui::canvas_knob::rotary_knob(
+            26.0,
+            -180.0,
+            180.0,
+            self.theme_hue,
+            true,
+            self.theme.accent,
+            UiMessage::ThemeSettingsAdjustHue,
+        );
+        let sat_knob = crate::ui::canvas_knob::rotary_knob(
+            26.0,
+            0.0,
+            2.0,
+            self.theme_sat,
+            false,
+            Color::from_rgb8(0x2e, 0xcc, 0x71),
+            UiMessage::ThemeSettingsAdjustSat,
+        );
+        let bright_knob = crate::ui::canvas_knob::rotary_knob(
+            26.0,
+            0.0,
+            2.0,
+            self.theme_bright,
+            false,
+            Color::from_rgb8(0xf1, 0xc4, 0x0f),
+            UiMessage::ThemeSettingsAdjustBright,
+        );
+        let contrast_knob = crate::ui::canvas_knob::rotary_knob(
+            26.0,
+            0.0,
+            2.0,
+            self.theme_contrast,
+            false,
+            Color::from_rgb8(0x00, 0xf2, 0xfe),
+            UiMessage::ThemeSettingsAdjustContrast,
+        );
+
+        let adjustments_row = row![
+            column![hue_knob, text("Hue").size(8)]
+                .align_x(iced::Alignment::Center)
+                .spacing(2),
+            column![sat_knob, text("Saturation").size(8)]
+                .align_x(iced::Alignment::Center)
+                .spacing(2),
+            column![bright_knob, text("Brightness").size(8)]
+                .align_x(iced::Alignment::Center)
+                .spacing(2),
+            column![contrast_knob, text("Contrast").size(8)]
+                .align_x(iced::Alignment::Center)
+                .spacing(2),
+        ]
+        .spacing(16)
+        .align_y(iced::Alignment::Center);
+
+        // Section 3: Color preview pills (Selection, Highlight, Mute, Steps, Meters, Waves)
+        let color_circle = |color: Color, lbl: &'static str| {
+            column![
+                container(column![])
+                    .width(Length::Fixed(20.0))
+                    .height(Length::Fixed(20.0))
+                    .style(move |_t| container::Style {
+                        background: Some(iced::Background::Color(color)),
+                        border: iced::Border {
+                            color: Color::from_rgba8(255, 255, 255, 0.3),
+                            width: 1.0,
+                            radius: 10.0.into(),
+                        },
+                        ..container::Style::default()
+                    }),
+                text(lbl).size(8).color(Color::from_rgb8(0xa0, 0xa6, 0xb8)),
+            ]
+            .align_x(iced::Alignment::Center)
+            .spacing(2)
+        };
+
+        let color_circles_row = row![
+            color_circle(Color::from_rgb8(0xa3, 0xe0, 0x48), "Selection"),
+            color_circle(Color::from_rgb8(0xf8, 0x8a, 0x36), "Highlight"),
+            color_circle(Color::from_rgb8(0x2e, 0xcc, 0x71), "Mute"),
+            color_circle(Color::from_rgb8(0xe7, 0x4c, 0x3c), "Option"),
+            color_circle(Color::from_rgb8(0x9a, 0x9e, 0xa8), "Steps"),
+            color_circle(Color::from_rgb8(0xf1, 0xc4, 0x0f), "Meters"),
+            color_circle(Color::from_rgb8(0x00, 0xf2, 0xfe), "Waves"),
+        ]
+        .spacing(12);
+
+        // Section 4: Options & Actions
+        let bottom_row = row![
+            button(text("A / B").size(9))
+                .padding([3, 10])
+                .style(self.theme.button_style(true)),
+            button(text("Reset").size(9))
+                .padding([3, 10])
+                .style(self.theme.button_style(false)),
+            Space::new().width(Length::Fill),
+            button(text("Save preset...").size(9))
+                .padding([3, 10])
+                .style(self.theme.button_style(false)),
+        ]
+        .align_y(iced::Alignment::Center);
+
+        container(
+            column![
+                title_bar,
+                tabs_row,
+                container(
+                    column![
+                        text("Presets").size(10).color(Color::from_rgb8(0xfa, 0x82, 0x31)),
+                        presets_row
+                    ]
+                    .spacing(6)
+                )
+                .padding(8)
+                .style(|_t| self.theme.inner_well_style()),
+                container(
+                    column![
+                        text("Adjustments")
+                            .size(10)
+                            .color(Color::from_rgb8(0xfa, 0x82, 0x31)),
+                        adjustments_row,
+                        color_circles_row
+                    ]
+                    .spacing(8)
+                )
+                .padding(8)
+                .style(|_t| self.theme.inner_well_style()),
+                bottom_row,
+            ]
+            .spacing(10),
+        )
+        .width(Length::Fixed(560.0))
+        .padding(12)
+        .style(|_t| self.theme.fl_modal_container_style())
+        .into()
+    }
+
+    /// FL Studio 1:1 Color Selector Modal (12_color_selector.png)
+    fn view_color_selector_modal(
+        &self,
+        _target: crate::ui::message::ColorPickerTarget,
+    ) -> Element<'_, UiMessage> {
+        let title_bar = row![
+            text("Color picker — Circle / Box / Preset")
+                .size(12)
+                .color(Color::WHITE),
+            Space::new().width(Length::Fill),
+            button(text("✕").size(11))
+                .padding([1, 4])
+                .style(self.theme.button_style(false))
+                .on_press(UiMessage::CloseColorPicker),
+        ]
+        .align_y(iced::Alignment::Center);
+
+        // Modes: Circle, Box, Preset
+        let cur_mode = self.color_picker_mode;
+        let mode_tabs = row![
+            button(text("CIRCLE MODE").size(9))
+                .padding([2, 6])
+                .style(
+                    self.theme
+                        .button_style(cur_mode == crate::ui::message::ColorPickerMode::Circle)
+                )
+                .on_press(UiMessage::ColorPickerSelectMode(
+                    crate::ui::message::ColorPickerMode::Circle
+                )),
+            button(text("BOX MODE").size(9))
+                .padding([2, 6])
+                .style(
+                    self.theme
+                        .button_style(cur_mode == crate::ui::message::ColorPickerMode::Box)
+                )
+                .on_press(UiMessage::ColorPickerSelectMode(
+                    crate::ui::message::ColorPickerMode::Box
+                )),
+            button(text("PRESET MODE").size(9))
+                .padding([2, 6])
+                .style(
+                    self.theme
+                        .button_style(cur_mode == crate::ui::message::ColorPickerMode::Preset)
+                )
+                .on_press(UiMessage::ColorPickerSelectMode(
+                    crate::ui::message::ColorPickerMode::Preset
+                )),
+        ]
+        .spacing(4);
+
+        // 16x8 Preset Color Grid
+        let mut palette_grid = column![].spacing(2);
+        let palette_rows: [[[u8; 3]; 8]; 4] = [
+            [
+                [0xe7, 0x4c, 0x3c],
+                [0xe6, 0x7e, 0x22],
+                [0xf1, 0xc4, 0x0f],
+                [0x2e, 0xcc, 0x71],
+                [0x1a, 0xbc, 0x9c],
+                [0x34, 0x98, 0xdb],
+                [0x9b, 0x59, 0xb6],
+                [0x34, 0x49, 0x5e],
+            ],
+            [
+                [0xff, 0x6b, 0x81],
+                [0xff, 0x88, 0x00],
+                [0xff, 0xc0, 0x48],
+                [0x38, 0xef, 0x7d],
+                [0x00, 0xf2, 0xfe],
+                [0x49, 0x77, 0xf6],
+                [0xa8, 0x55, 0xf7],
+                [0x70, 0x76, 0x88],
+            ],
+            [
+                [0xc0, 0x39, 0x2b],
+                [0xd3, 0x54, 0x00],
+                [0xf3, 0x9c, 0x12],
+                [0x27, 0xae, 0x60],
+                [0x16, 0xa0, 0x85],
+                [0x29, 0x80, 0xb9],
+                [0x8e, 0x44, 0xad],
+                [0x2c, 0x3e, 0x50],
+            ],
+            [
+                [0x7a, 0x56, 0x50],
+                [0xb0, 0xb4, 0xbe],
+                [0xd0, 0x8a, 0x20],
+                [0x1e, 0xbb, 0x5d],
+                [0x00, 0xaa, 0xcc],
+                [0x22, 0x66, 0xbb],
+                [0x66, 0x33, 0x99],
+                [0x18, 0x1b, 0x22],
+            ],
+        ];
+
+        for row_colors in palette_rows {
+            let mut r = row![].spacing(3);
+            for rgb in row_colors {
+                let col = Color::from_rgb8(rgb[0], rgb[1], rgb[2]);
+                let swatch = button(
+                    container(column![])
+                        .width(Length::Fixed(24.0))
+                        .height(Length::Fixed(18.0))
+                        .style(move |_t| container::Style {
+                            background: Some(iced::Background::Color(col)),
+                            border: iced::Border {
+                                color: Color::from_rgba8(255, 255, 255, 0.2),
+                                width: 0.5,
+                                radius: 2.0.into(),
+                            },
+                            ..container::Style::default()
+                        }),
+                )
+                .padding(0)
+                .style(|_t, _s| button::Style::default())
+                .on_press(UiMessage::ColorPickerSelectRgb(rgb));
+                r = r.push(swatch);
+            }
+            palette_grid = palette_grid.push(r);
+        }
+
+        // Preview Box and Hex/RGB Readout
+        let preview_box = row![
+            container(column![])
+                .width(Length::Fixed(48.0))
+                .height(Length::Fixed(36.0))
+                .style(|_t| container::Style {
+                    background: Some(iced::Background::Color(Color::from_rgb8(0xf8, 0x8a, 0x36))),
+                    border: iced::Border {
+                        color: Color::WHITE,
+                        width: 1.0,
+                        radius: 3.0.into(),
+                    },
+                    ..container::Style::default()
+                }),
+            column![
+                text("Chosen: #F88A36").size(9).color(Color::WHITE),
+                text("R: 248  G: 138  B: 54")
+                    .size(8)
+                    .color(Color::from_rgb8(0xa0, 0xa6, 0xb8)),
+            ]
+            .spacing(2),
+        ]
+        .spacing(8)
+        .align_y(iced::Alignment::Center);
+
+        let bottom_actions = row![
+            button(text("Reset").size(9))
+                .padding([3, 8])
+                .style(self.theme.button_style(false)),
+            Space::new().width(Length::Fill),
+            button(text("Accept").size(9))
+                .padding([3, 12])
+                .style(self.theme.button_style(true))
+                .on_press(UiMessage::CloseColorPicker),
+        ]
+        .align_y(iced::Alignment::Center);
+
+        container(
+            column![
+                title_bar,
+                mode_tabs,
+                container(palette_grid)
+                    .padding(6)
+                    .style(|_t| self.theme.inner_well_style()),
+                preview_box,
+                bottom_actions,
+            ]
+            .spacing(8),
+        )
+        .width(Length::Fixed(340.0))
+        .padding(10)
+        .style(|_t| self.theme.fl_modal_container_style())
+        .into()
+    }
+
+    /// FL Studio 1:1 Project Picker [Ctrl+F8] (28_project_picker.jpg)
+    fn view_project_picker(&self) -> Element<'_, UiMessage> {
+        let title_bar = row![
+            text("PROJECT PICKER — Patterns & Audio Clips")
+                .size(14)
+                .color(Color::WHITE),
+            Space::new().width(Length::Fill),
+            button(text("✕").size(12))
+                .padding([2, 6])
+                .style(self.theme.button_style(false))
+                .on_press(UiMessage::ToggleProjectPicker),
+        ]
+        .align_y(iced::Alignment::Center);
+
+        let mut patterns_row = row![].spacing(8);
+        for i in 1..=6 {
+            let pat_card = button(
+                column![
+                    container(
+                        column![
+                            text(format!("PAT {}", i))
+                                .size(9)
+                                .color(Color::from_rgb8(0xf8, 0x8a, 0x36)),
+                            text("16 steps | 4 beats")
+                                .size(7)
+                                .color(Color::from_rgb8(0x80, 0x86, 0x94)),
+                        ]
+                        .spacing(2)
+                    )
+                    .width(Length::Fixed(120.0))
+                    .height(Length::Fixed(70.0))
+                    .padding(4)
+                    .style(|_t| container::Style {
+                        background: Some(iced::Background::Color(Color::from_rgb8(
+                            0x18, 0x1b, 0x22
+                        ))),
+                        border: iced::Border {
+                            color: Color::from_rgb8(0x35, 0x3a, 0x48),
+                            width: 1.0,
+                            radius: 4.0.into(),
+                        },
+                        ..container::Style::default()
+                    }),
+                    text(format!("Pattern {}", i)).size(9).color(Color::WHITE),
+                ]
+                .spacing(3)
+                .align_x(iced::Alignment::Center),
+            )
+            .padding(2)
+            .style(|_t, _s| button::Style::default())
+            .on_press(UiMessage::SelectPattern(i));
+            patterns_row = patterns_row.push(pat_card);
+        }
+
+        container(
+            column![
+                title_bar,
+                text("Click on a pattern or audio clip to select it for placement in the Playlist")
+                    .size(10)
+                    .color(Color::from_rgb8(0xa0, 0xa6, 0xb8)),
+                container(patterns_row)
+                    .padding(10)
+                    .style(|_t| self.theme.inner_well_style()),
+            ]
+            .spacing(12),
+        )
+        .width(Length::Fixed(820.0))
+        .padding(16)
+        .style(|_t| self.theme.fl_modal_container_style())
+        .into()
+    }
+
+    /// FL Studio 1:1 Consolidate Track Modal (27_playlist_consolidate.png)
+    fn view_consolidate_modal(&self, trk_id: usize) -> Element<'_, UiMessage> {
+        let title_bar = row![
+            text(format!(
+                "Consolidate Track {} — Render Options",
+                trk_id + 1
+            ))
+            .size(12)
+            .color(Color::WHITE),
+            Space::new().width(Length::Fill),
+            button(text("✕").size(11))
+                .padding([1, 4])
+                .style(self.theme.button_style(false))
+                .on_press(UiMessage::ToggleConsolidateModal(None)),
+        ]
+        .align_y(iced::Alignment::Center);
+
+        let format_section = column![
+            text("Output File Format:")
+                .size(10)
+                .color(Color::from_rgb8(0xfa, 0x82, 0x31)),
+            row![
+                button(text("WAV (32-bit Float)").size(9))
+                    .padding([2, 6])
+                    .style(self.theme.button_style(true)),
+                button(text("WAV (24-bit PCM)").size(9))
+                    .padding([2, 6])
+                    .style(self.theme.button_style(false)),
+                button(text("MP3 (320kbps)").size(9))
+                    .padding([2, 6])
+                    .style(self.theme.button_style(false)),
+            ]
+            .spacing(4),
+        ]
+        .spacing(3);
+
+        let tail_section = column![
+            text("Tail Handling:")
+                .size(10)
+                .color(Color::from_rgb8(0xfa, 0x82, 0x31)),
+            row![
+                button(text("Cut Remainder").size(9))
+                    .padding([2, 6])
+                    .style(self.theme.button_style(false)),
+                button(text("Leave Remainder").size(9))
+                    .padding([2, 6])
+                    .style(self.theme.button_style(true)),
+                button(text("Wrap Remainder").size(9))
+                    .padding([2, 6])
+                    .style(self.theme.button_style(false)),
+            ]
+            .spacing(4),
+        ]
+        .spacing(3);
+
+        let bottom_actions = row![
+            button(text("Cancel").size(9))
+                .padding([3, 8])
+                .style(self.theme.button_style(false))
+                .on_press(UiMessage::ToggleConsolidateModal(None)),
+            Space::new().width(Length::Fill),
+            button(text("Start Render").size(9))
+                .padding([3, 12])
+                .style(self.theme.button_style(true))
+                .on_press(UiMessage::ConsolidateTrack(trk_id)),
+        ]
+        .align_y(iced::Alignment::Center);
+
+        container(
+            column![title_bar, format_section, tail_section, bottom_actions,].spacing(8),
+        )
+        .width(Length::Fixed(440.0))
+        .padding(12)
+        .style(|_t| self.theme.fl_modal_container_style())
+        .into()
+    }
+
+    /// FL Studio 1:1 Note Properties Modal (62_pianoroll_noteproperties.png)
+    fn view_note_properties_modal(&self, note_id: usize) -> Element<'_, UiMessage> {
+        let note = self.piano_roll_notes.iter().find(|n| n.id == note_id);
+        let key_str = note
+            .map(|n| crate::ui::canvas_piano_roll::midi_key_to_name(n.key))
+            .unwrap_or_else(|| "C5".to_string());
+        let start_tick = note.map(|n| n.start_tick).unwrap_or(0);
+        let len_tick = note.map(|n| n.length_ticks).unwrap_or(960);
+        let vel = note.map(|n| n.velocity).unwrap_or(0.78);
+        let pan = note.map(|n| n.pan).unwrap_or(0.0);
+        let note_key = note.map(|n| n.key).unwrap_or(60);
+
+        let title_bar = row![
+            text(format!("Note properties — {}", key_str))
+                .size(12)
+                .color(Color::WHITE),
+            Space::new().width(Length::Fill),
+            button(text("✕").size(11))
+                .padding([1, 4])
+                .style(self.theme.button_style(false))
+                .on_press(UiMessage::CloseNotePropertiesModal),
+        ]
+        .align_y(iced::Alignment::Center);
+
+        let info_col = column![
+            text(format!("Pitch: {} (MIDI {})", key_str, note_key))
+                .size(10)
+                .color(Color::WHITE),
+            text(format!(
+                "Start: {} ticks (Bar {:.1})",
+                start_tick,
+                start_tick as f32 / 3840.0 + 1.0
+            ))
+            .size(9)
+            .color(Color::from_rgb8(0xa0, 0xa6, 0xb8)),
+            text(format!(
+                "Duration: {} ticks ({:.2} beats)",
+                len_tick,
+                len_tick as f32 / 960.0
+            ))
+            .size(9)
+            .color(Color::from_rgb8(0xa0, 0xa6, 0xb8)),
+            text(format!("Velocity: {:.0}%", vel * 100.0))
+                .size(9)
+                .color(Color::from_rgb8(0x00, 0xf2, 0xfe)),
+            text(format!("Panning: {:+.0}%", pan * 100.0))
+                .size(9)
+                .color(Color::from_rgb8(0x2e, 0xcc, 0x71)),
+        ]
+        .spacing(4);
+
+        let bottom_actions = row![
+            button(text("Cancel").size(9))
+                .padding([3, 8])
+                .style(self.theme.button_style(false))
+                .on_press(UiMessage::CloseNotePropertiesModal),
+            Space::new().width(Length::Fill),
+            button(text("Accept").size(9))
+                .padding([3, 12])
+                .style(self.theme.button_style(true))
+                .on_press(UiMessage::CloseNotePropertiesModal),
+        ]
+        .align_y(iced::Alignment::Center);
+
+        container(
+            column![
+                title_bar,
+                container(info_col)
+                    .padding(8)
+                    .style(|_t| self.theme.inner_well_style()),
+                bottom_actions,
+            ]
+            .spacing(8),
+        )
+        .width(Length::Fixed(320.0))
+        .padding(10)
+        .style(|_t| self.theme.fl_modal_container_style())
         .into()
     }
 

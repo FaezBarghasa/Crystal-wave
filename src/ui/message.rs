@@ -22,8 +22,84 @@ impl AudioBackend {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ColorPickerMode {
+    #[default]
+    Circle,
+    Box,
+    Preset,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ColorPickerTarget {
+    Track(usize),
+    Channel(usize),
+    Note(usize),
+    ThemeCustom,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum MixerRouteMode {
+    #[default]
+    RouteToThis,
+    RouteToThisOnly,
+    SidechainToThis,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum UiMessage {
+    // Theme & Color Customizer (11, 12)
+    ToggleThemeSettingsModal,
+    ThemeSettingsAdjustHue(f32),
+    ThemeSettingsAdjustSat(f32),
+    ThemeSettingsAdjustBright(f32),
+    ThemeSettingsAdjustContrast(f32),
+    OpenColorPicker(ColorPickerTarget),
+    CloseColorPicker,
+    ColorPickerSelectMode(ColorPickerMode),
+    ColorPickerSelectRgb([u8; 3]),
+
+    // Project Picker & Consolidate (27, 28)
+    ToggleProjectPicker,
+    ToggleConsolidateModal(Option<usize>),
+    ConsolidateTrack(usize),
+
+    // Channel Rack Advanced Fill & Graph Editor (45, 49)
+    FillChannelSteps {
+        channel_id: usize,
+        interval: usize,
+    },
+    EuclideanFillChannel {
+        channel_id: usize,
+        hits: usize,
+        steps: usize,
+    },
+
+    // Piano Roll Expression & Palette (55, 60, 61, 62)
+    PianoRollSelectMidiColor(usize),
+    PianoRollTogglePortamento(usize),
+    PianoRollOpenNoteProperties(usize),
+    PianoRollSaveNoteProperties {
+        note_id: usize,
+        start: u64,
+        len: u64,
+        key: u8,
+        vel: f32,
+        pan: f32,
+        color_idx: usize,
+    },
+    CloseNotePropertiesModal,
+
+    // Mixer Routing (72, 74, 76)
+    MixerRouteAction {
+        from_track: usize,
+        to_track: usize,
+        mode: MixerRouteMode,
+    },
+
+    // Browser Tag Search Filter (82)
+    BrowserSetTagFilter(Option<String>),
+
     // Window & Drawer Toggles (Logic Pro shortcuts: I, E, X, O, F, Y)
     ToggleInspector,
     ToggleEditorDrawer,
