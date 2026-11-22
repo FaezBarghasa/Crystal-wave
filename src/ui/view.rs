@@ -28,13 +28,13 @@ impl CrystalWaveApp {
             .map(|w| w.is_maximized)
             .unwrap_or(false);
 
-        // FL Studio Menu Arrow (▾) and Speaker icon (🔊)
+        // FL Studio Menu Arrow (▾) and Speaker icon (☊)
         let menu_arrow = button(text("▾").size(9).color(Color::from_rgb8(0x9a, 0xa0, 0xb0)))
             .padding([1, 4])
             .style(|_t, _s| button::Style::default())
             .on_press(UiMessage::FocusSubWindow(view));
 
-        let icon_speaker = text("🔊").size(9).color(if is_focused {
+        let icon_speaker = text("☊").size(9).color(if is_focused {
             self.theme.accent
         } else {
             Color::from_rgb8(0x80, 0x86, 0x96)
@@ -278,19 +278,19 @@ impl CrystalWaveApp {
             (
                 crate::ui::layout::FlActiveView::ChannelRack,
                 "Channel Rack",
-                "◈",
+                "☵",
                 self.fl_windows.channel_rack_visible,
             ),
             (
                 crate::ui::layout::FlActiveView::PianoRoll,
                 "Piano Roll",
-                "🎹",
+                "⌨",
                 self.fl_windows.piano_roll_visible,
             ),
             (
                 crate::ui::layout::FlActiveView::Mixer,
                 "Mixer",
-                "🎚",
+                "☊",
                 self.fl_windows.mixer_visible,
             ),
             (
@@ -302,7 +302,7 @@ impl CrystalWaveApp {
             (
                 crate::ui::layout::FlActiveView::Fpc,
                 "FPC",
-                "🥁",
+                "▦",
                 self.fl_windows.fpc_visible,
             ),
             (
@@ -314,7 +314,7 @@ impl CrystalWaveApp {
             (
                 crate::ui::layout::FlActiveView::Patcher,
                 "Patcher",
-                "🔀",
+                "⤭",
                 self.fl_windows.patcher_visible,
             ),
         ];
@@ -1013,8 +1013,8 @@ impl CrystalWaveApp {
 
         let time_lcd = container(
             column![
-                text(format!("{:03}:{:02}:{:03}", bar, beat, tick))
-                    .size(14)
+                text(format!("{:03}:{:02}:{:02}", bar, beat, tick / 240))
+                    .size(17)
                     .color(Color::from_rgb8(0xff, 0xb3, 0x00))
                     .font(iced::Font::with_name("monospace")),
                 text(format!(
@@ -1024,13 +1024,15 @@ impl CrystalWaveApp {
                     secs,
                     millis / 10
                 ))
-                .size(9)
-                .color(Color::from_rgb8(0xd0, 0x8a, 0x20)),
+                .size(8)
+                .color(Color::from_rgb8(0xd0, 0x8a, 0x20))
+                .font(iced::Font::with_name("monospace")),
             ]
-            .spacing(1),
+            .spacing(0)
+            .align_x(iced::Alignment::Center),
         )
         .style(|_t| self.theme.vfd_amber_display_style())
-        .padding([3, 5]);
+        .padding([2, 6]);
 
         // Master Volume & Pitch Vertical Sliders (1:1 with FL Studio ref_02)
         let master_vol_slider =
@@ -1077,53 +1079,52 @@ impl CrystalWaveApp {
         .style(|_t| self.theme.knob_well_style())
         .padding(2);
 
-        // Tempo & Signature Hub + Performance LEDs
-        let tempo_lcd = container(
-            column![
+        // Tempo LCD Capsule (1:1 with FL Studio ref_04 curved off-white pill)
+        let tempo_pill = container(
+            row![
                 text(format!(
-                    "{:.2}",
+                    "{:.3}",
                     self.workspace.lcd_diagnostic.project_tempo_bpm
                 ))
-                .size(18)
-                .color(Color::from_rgb8(0x00, 0xff, 0xd4))
+                .size(17)
+                .color(Color::from_rgb8(0x10, 0x18, 0x24))
                 .font(iced::Font::with_name("monospace")),
-                row![
-                    text("BPM").size(8).color(Color::from_rgb8(0x00, 0xc0, 0xa0)),
-                    text(format!(
-                        "  {}/{}",
-                        self.workspace.lcd_diagnostic.time_signature.0,
-                        self.workspace.lcd_diagnostic.time_signature.1
-                    ))
-                    .size(8)
-                    .color(Color::from_rgb8(0x00, 0xc0, 0xa0)),
+                column![
+                    button(text("▲").size(6).color(Color::from_rgb8(0x40, 0x48, 0x54)))
+                        .padding([0, 2])
+                        .style(|_t, _s| button::Style::default())
+                        .on_press(UiMessage::NudgeTempo(1.0)),
+                    button(text("▼").size(6).color(Color::from_rgb8(0x40, 0x48, 0x54)))
+                        .padding([0, 2])
+                        .style(|_t, _s| button::Style::default())
+                        .on_press(UiMessage::NudgeTempo(-1.0)),
                 ]
-                .spacing(0),
-                text(format!(
-                    "A4: {:.0} Hz",
-                    self.workspace.lcd_diagnostic.master_tuning_hz
-                ))
-                .size(7)
-                .color(Color::from_rgb8(0x00, 0x90, 0x78)),
+                .spacing(0)
+                .align_x(iced::Alignment::Center),
             ]
-            .spacing(1),
+            .spacing(4)
+            .align_y(iced::Alignment::Center),
         )
-        .style(|_t| self.theme.vfd_cyan_display_style())
-        .padding([3, 6]);
+        .style(|_t| container::Style {
+            background: Some(iced::Background::Color(Color::from_rgb8(0xe4, 0xe8, 0xf0))),
+            border: iced::Border {
+                color: Color::from_rgb8(0x82, 0x8d, 0x9f),
+                width: 1.0,
+                radius: 6.0.into(),
+            },
+            shadow: iced::Shadow {
+                color: Color::from_rgba8(0, 0, 0, 0.35),
+                offset: iced::Vector::new(0.0, 1.0),
+                blur_radius: 2.0,
+            },
+            ..Default::default()
+        })
+        .padding([2, 7]);
 
         let btn_tap = button(text("TAP").size(8))
             .padding(2)
             .style(self.theme.button_style(false))
             .on_press(UiMessage::TapTempo);
-
-        let btn_tempo_minus = button(text("▼").size(7))
-            .padding(1)
-            .style(self.theme.button_style(false))
-            .on_press(UiMessage::NudgeTempo(-1.0));
-
-        let btn_tempo_plus = button(text("▲").size(7))
-            .padding(1)
-            .style(self.theme.button_style(false))
-            .on_press(UiMessage::NudgeTempo(1.0));
 
         let met_btn =
             button(
@@ -1207,92 +1208,60 @@ impl CrystalWaveApp {
         let is_fpc = self.layout.active_view == crate::ui::layout::FlActiveView::Fpc;
         let is_sl = self.layout.active_view == crate::ui::layout::FlActiveView::Slicex;
 
-        let win_playlist = button(
-            text(if is_pl {
-                "● Playlist [F5]"
+        let make_win_btn = |icon: &'static str, is_active: bool, msg: UiMessage| {
+            button(text(icon).size(12).color(if is_active {
+                Color::from_rgb8(0xff, 0xa5, 0x00)
             } else {
-                "○ Playlist [F5]"
-            })
-            .size(10),
-        )
-        .style(self.theme.button_style(is_pl))
-        .on_press(UiMessage::SelectFlView(
-            crate::ui::layout::FlActiveView::Playlist,
-        ));
+                Color::from_rgb8(0x9a, 0xa4, 0xb8)
+            }))
+            .padding([3, 6])
+            .style(self.theme.button_style(is_active))
+            .on_press(msg)
+        };
 
-        let win_channel_rack = button(
-            text(if is_cr {
-                "● Rack [F6]"
-            } else {
-                "○ Rack [F6]"
-            })
-            .size(10),
-        )
-        .style(self.theme.button_style(is_cr))
-        .on_press(UiMessage::SelectFlView(
-            crate::ui::layout::FlActiveView::ChannelRack,
-        ));
-
-        let win_piano_roll = button(
-            text(if is_pr {
-                "● Piano Roll [F7]"
-            } else {
-                "○ Piano Roll [F7]"
-            })
-            .size(10),
-        )
-        .style(self.theme.button_style(is_pr))
-        .on_press(UiMessage::SelectFlView(
-            crate::ui::layout::FlActiveView::PianoRoll,
-        ));
-
-        let win_browser = button(
-            text(if self.fl_windows.browser_visible {
-                "● Browser [F8]"
-            } else {
-                "○ Browser [F8]"
-            })
-            .size(10),
-        )
-        .style(self.theme.button_style(self.fl_windows.browser_visible))
-        .on_press(UiMessage::ToggleFlBrowser);
-
-        let win_mixer = button(
-            text(if is_mx {
-                "● Mixer [F9]"
-            } else {
-                "○ Mixer [F9]"
-            })
-            .size(10),
-        )
-        .style(self.theme.button_style(is_mx))
-        .on_press(UiMessage::SelectFlView(
-            crate::ui::layout::FlActiveView::Mixer,
-        ));
-
-        let win_edison = button(text(if is_ed { "● Edison" } else { "○ Edison" }).size(10))
-            .style(self.theme.button_style(is_ed))
-            .on_press(UiMessage::SelectFlView(
-                crate::ui::layout::FlActiveView::Edison,
-            ));
-
-        let win_fpc = button(text(if is_fpc { "● FPC" } else { "○ FPC" }).size(10))
-            .style(self.theme.button_style(is_fpc))
-            .on_press(UiMessage::SelectFlView(
-                crate::ui::layout::FlActiveView::Fpc,
-            ));
-
-        let win_slicex = button(text(if is_sl { "● Slicex" } else { "○ Slicex" }).size(10))
-            .style(self.theme.button_style(is_sl))
-            .on_press(UiMessage::SelectFlView(
-                crate::ui::layout::FlActiveView::Slicex,
-            ));
-
+        let win_playlist = make_win_btn(
+            "☲",
+            is_pl,
+            UiMessage::SelectFlView(crate::ui::layout::FlActiveView::Playlist),
+        );
+        let win_channel_rack = make_win_btn(
+            "☵",
+            is_cr,
+            UiMessage::SelectFlView(crate::ui::layout::FlActiveView::ChannelRack),
+        );
+        let win_piano_roll = make_win_btn(
+            "⌨",
+            is_pr,
+            UiMessage::SelectFlView(crate::ui::layout::FlActiveView::PianoRoll),
+        );
+        let win_browser = make_win_btn(
+            "▫",
+            self.fl_windows.browser_visible,
+            UiMessage::ToggleFlBrowser,
+        );
+        let win_mixer = make_win_btn(
+            "☊",
+            is_mx,
+            UiMessage::SelectFlView(crate::ui::layout::FlActiveView::Mixer),
+        );
+        let win_edison = make_win_btn(
+            "✂",
+            is_ed,
+            UiMessage::SelectFlView(crate::ui::layout::FlActiveView::Edison),
+        );
+        let win_fpc = make_win_btn(
+            "▦",
+            is_fpc,
+            UiMessage::SelectFlView(crate::ui::layout::FlActiveView::Fpc),
+        );
+        let win_slicex = make_win_btn(
+            "⚡",
+            is_sl,
+            UiMessage::SelectFlView(crate::ui::layout::FlActiveView::Slicex),
+        );
         let win_dual = {
             let is_dual = self.layout.secondary_view.is_some();
-            button(text(if is_dual { "◫ Dual" } else { "❐ Single" }).size(10))
-                .style(self.theme.button_style(is_dual))
-                .on_press(UiMessage::ToggleDualWorkspace(None))
+            make_win_btn("◫", is_dual, UiMessage::ToggleDualWorkspace(None))
         };
 
         let capsule_transport = container(
@@ -1312,14 +1281,9 @@ impl CrystalWaveApp {
             .padding(2);
 
         let capsule_tempo = container(
-            row![
-                tempo_lcd,
-                row![btn_tempo_minus, btn_tempo_plus].spacing(1),
-                btn_tap,
-                leds_row,
-            ]
-            .spacing(2)
-            .align_y(iced::Alignment::Center),
+            row![tempo_pill, btn_tap, leds_row,]
+                .spacing(3)
+                .align_y(iced::Alignment::Center),
         )
         .style(|_t| self.theme.machined_capsule_style())
         .padding(2);
@@ -1722,10 +1686,10 @@ impl CrystalWaveApp {
             PlaylistTool::Select,
             PlaylistTool::Zoom,
         ];
-        let mut tool_row = row![].spacing(2);
+        let mut tool_row = row![].spacing(1);
         for t in tools {
             let is_sel = self.active_playlist_tool == t;
-            let btn = button(text(format!("{} {}", t.icon(), t.label())).size(9))
+            let btn = button(text(t.icon()).size(12))
                 .padding([2, 5])
                 .style(self.theme.button_style(is_sel))
                 .on_press(UiMessage::SetPlaylistTool(t));
@@ -1967,15 +1931,82 @@ impl CrystalWaveApp {
                 .with_marquee(self.marquee_selection),
         );
 
+        // Authentic FL Studio Playlist Picker Panel (Left Dock, ref_20)
+        let mut picker_patterns = column![
+            row![
+                text("PATTERNS").size(9).color(self.theme.accent),
+                Space::new().width(Length::Fill),
+                button(text("+").size(8))
+                    .padding([0, 3])
+                    .style(self.theme.button_style(false))
+                    .on_press(UiMessage::SelectPattern(self.current_pattern_index + 1)),
+            ]
+            .align_y(iced::Alignment::Center)
+            .padding([2, 4]),
+        ]
+        .spacing(2);
+
+        for pat_idx in 0..6 {
+            let is_cur = pat_idx == self.current_pattern_index;
+            let pat_color = self.theme.track_accent_color(pat_idx);
+            let pat_card = button(
+                row![
+                    container(column![])
+                        .width(Length::Fixed(3.0))
+                        .height(Length::Fixed(12.0))
+                        .style(move |_t| container::Style {
+                            background: Some(iced::Background::Color(pat_color)),
+                            ..Default::default()
+                        }),
+                    text(format!("Pattern {}", pat_idx + 1))
+                        .size(9)
+                        .color(if is_cur {
+                            Color::WHITE
+                        } else {
+                            Color::from_rgb8(0x9a, 0xa2, 0xb2)
+                        }),
+                ]
+                .spacing(4)
+                .align_y(iced::Alignment::Center),
+            )
+            .padding([2, 4])
+            .style(self.theme.button_style(is_cur))
+            .width(Length::Fill)
+            .on_press(UiMessage::SelectPattern(pat_idx));
+
+            picker_patterns = picker_patterns.push(pat_card);
+        }
+
+        let picker_panel = container(
+            column![
+                container(
+                    row![
+                        text("PICKER").size(9).color(Color::from_rgb8(0xd0, 0xd6, 0xe2)),
+                        Space::new().width(Length::Fill),
+                        text("▾").size(8).color(Color::from_rgb8(0x70, 0x78, 0x88)),
+                    ]
+                    .align_y(iced::Alignment::Center),
+                )
+                .padding([2, 4])
+                .style(|_t| self.theme.machined_capsule_style()),
+                picker_patterns,
+            ]
+            .spacing(4),
+        )
+        .width(Length::Fixed(104.0))
+        .height(Length::Fill)
+        .padding(3)
+        .style(|_t| self.theme.sunken_container_style());
+
         let chrome = self.view_window_chrome(
             crate::ui::layout::FlActiveView::Playlist,
             "Playlist — Arrangement",
-            "◈",
+            "☲",
         );
 
         column![
             chrome,
-            row![track_header_column, arrangement_canvas]
+            row![picker_panel, track_header_column, arrangement_canvas]
                 .width(Length::Fill)
                 .height(Length::Fill)
                 .spacing(1)
@@ -2143,10 +2174,10 @@ impl CrystalWaveApp {
             PianoRollTool::Select,
             PianoRollTool::Zoom,
         ];
-        let mut tool_row = row![].spacing(2);
+        let mut tool_row = row![].spacing(1);
         for t in tools {
             let is_sel = self.active_pianoroll_tool == t;
-            let btn = button(text(format!("{} {}", t.icon(), t.label())).size(9))
+            let btn = button(text(t.icon()).size(12))
                 .padding([2, 5])
                 .style(self.theme.button_style(is_sel))
                 .on_press(UiMessage::SetPianoRollTool(t));
@@ -2283,7 +2314,7 @@ impl CrystalWaveApp {
         let chrome = self.view_window_chrome(
             crate::ui::layout::FlActiveView::PianoRoll,
             "Piano Roll",
-            "🎹",
+            "⌨",
         );
         let footer = self.view_window_resize_footer(crate::ui::layout::FlActiveView::PianoRoll);
 
@@ -2578,24 +2609,70 @@ impl CrystalWaveApp {
                 .copied()
                 .unwrap_or(1.0)
                 > 0.0;
-            let send_btn =
-                button(
-                    text(if is_sending_master {
-                        "▲ MST"
-                    } else {
-                        "△ MST"
-                    })
-                    .size(8),
+            let routing_element: Element<'_, UiMessage> = if is_selected {
+                container(
+                    row![
+                        text("▼").size(9).color(Color::from_rgb8(0x2e, 0xcc, 0x71)),
+                        text("SEND")
+                            .size(7)
+                            .color(Color::from_rgb8(0x2e, 0xcc, 0x71)),
+                    ]
+                    .spacing(2)
+                    .align_y(iced::Alignment::Center),
                 )
-                .padding(2)
-                .style(self.theme.toggle_accent_button_style(
-                    is_sending_master,
-                    Color::from_rgb8(0xff, 0x85, 0x00),
-                ))
+                .padding([2, 4])
+                .style(|_t| container::Style {
+                    background: Some(iced::Background::Color(Color::from_rgba8(
+                        0x2e, 0xcc, 0x71, 0.22,
+                    ))),
+                    border: iced::Border {
+                        color: Color::from_rgb8(0x2e, 0xcc, 0x71),
+                        width: 1.0,
+                        radius: 2.0.into(),
+                    },
+                    ..Default::default()
+                })
+                .into()
+            } else if is_sending_master {
+                button(
+                    row![
+                        text("▲").size(8).color(Color::from_rgb8(0x38, 0xef, 0x7d)),
+                        text("MST")
+                            .size(7)
+                            .color(Color::from_rgb8(0x38, 0xef, 0x7d)),
+                    ]
+                    .spacing(2)
+                    .align_y(iced::Alignment::Center),
+                )
+                .padding([2, 4])
+                .style(
+                    self.theme
+                        .toggle_accent_button_style(true, Color::from_rgb8(0x38, 0xef, 0x7d)),
+                )
                 .on_press(UiMessage::MixerToggleSend {
                     from_track: idx,
                     to_track: 0,
-                });
+                })
+                .into()
+            } else {
+                button(
+                    row![
+                        text("△").size(8).color(Color::from_rgb8(0x7a, 0x80, 0x8c)),
+                        text("OFF")
+                            .size(7)
+                            .color(Color::from_rgb8(0x7a, 0x80, 0x8c)),
+                    ]
+                    .spacing(2)
+                    .align_y(iced::Alignment::Center),
+                )
+                .padding([2, 4])
+                .style(self.theme.button_style(false))
+                .on_press(UiMessage::MixerToggleSend {
+                    from_track: idx,
+                    to_track: 0,
+                })
+                .into()
+            };
 
             let strip = container(
                 column![
@@ -2608,47 +2685,8 @@ impl CrystalWaveApp {
                         .spacing(3)
                         .align_y(iced::Alignment::Center),
                     text(format!("{:.1} dB", vol_db)).size(9),
-                    row![mute_btn, solo_btn, send_btn].spacing(2),
-                    container(if is_selected {
-                        row![
-                            text("⚡").size(9).color(Color::from_rgb8(0x2e, 0xcc, 0x71)),
-                            text("➔ Master")
-                                .size(8)
-                                .color(Color::from_rgb8(0x2e, 0xcc, 0x71)),
-                        ]
-                        .spacing(2)
-                        .align_y(iced::Alignment::Center)
-                    } else {
-                        row![
-                            text(if is_sending_master {
-                                "→ Master"
-                            } else {
-                                "→ Unrouted"
-                            })
-                            .size(8)
-                            .color(Color::from_rgb8(0x7a, 0x80, 0x8c))
-                        ]
-                    })
-                    .padding([1, 3])
-                    .style(move |_t| container::Style {
-                        background: if is_selected {
-                            Some(iced::Background::Color(Color::from_rgba8(
-                                0x2e, 0xcc, 0x71, 0.18,
-                            )))
-                        } else {
-                            None
-                        },
-                        border: iced::Border {
-                            color: if is_selected {
-                                Color::from_rgb8(0x2e, 0xcc, 0x71)
-                            } else {
-                                Color::TRANSPARENT
-                            },
-                            width: 1.0,
-                            radius: 2.0.into(),
-                        },
-                        ..container::Style::default()
-                    }),
+                    row![mute_btn, solo_btn].spacing(2),
+                    routing_element,
                 ]
                 .spacing(2)
                 .align_x(iced::Alignment::Center),
@@ -2880,7 +2918,7 @@ impl CrystalWaveApp {
         let chrome = self.view_window_chrome(
             crate::ui::layout::FlActiveView::Mixer,
             "Mixer — Master & 125 Inserts",
-            "🎚",
+            "☊",
         );
         let footer = self.view_window_resize_footer(crate::ui::layout::FlActiveView::Mixer);
 
@@ -3460,7 +3498,7 @@ impl CrystalWaveApp {
 
         // 1. Authentic FL Studio Edison Transport & Recording Strip (Top)
         let transport_strip = row![
-            button(text("🔗 SLAVE").size(9))
+            button(text("⚯ SLAVE").size(9))
                 .padding([2, 5])
                 .style(self.theme.button_style(true)),
             button(text("∞ LOOP").size(9))
@@ -4013,7 +4051,7 @@ impl CrystalWaveApp {
         let chrome = self.view_window_chrome(
             crate::ui::layout::FlActiveView::Fpc,
             "FPC (Fruity Pad Controller)",
-            "🥁",
+            "▦",
         );
         let footer = self.view_window_resize_footer(crate::ui::layout::FlActiveView::Fpc);
 
@@ -4178,7 +4216,7 @@ impl CrystalWaveApp {
         let chrome = self.view_window_chrome(
             crate::ui::layout::FlActiveView::Patcher,
             "Patcher — Modular Routing",
-            "🔀",
+            "⤭",
         );
         let footer = self.view_window_resize_footer(crate::ui::layout::FlActiveView::Patcher);
 
@@ -4298,26 +4336,42 @@ impl CrystalWaveApp {
             let is_sel = self.active_channel_settings == Some(chan_id);
 
             // Mute / Solo LED dot (10px circular green LED)
+            let trk_idx = chan.target_mixer_track.saturating_sub(1);
+            let is_ch_muted = self
+                .mixer
+                .channels
+                .get(trk_idx)
+                .map(|c| c.muted)
+                .unwrap_or(false);
+            let led_color = if is_ch_muted {
+                Color::from_rgb8(0x20, 0x24, 0x28)
+            } else {
+                Color::from_rgb8(0x2e, 0xcc, 0x71)
+            };
+            let led_border_color = if is_ch_muted {
+                Color::from_rgb8(0x35, 0x3a, 0x42)
+            } else {
+                Color::from_rgb8(0x38, 0xef, 0x7d)
+            };
+
+            // Mute / Solo LED dot (10px circular green LED with real-time state)
             let mute_btn = button(
                 container(column![])
                     .width(Length::Fixed(10.0))
                     .height(Length::Fixed(10.0))
                     .style(move |_t| container::Style {
-                        background: Some(iced::Background::Color(Color::from_rgb8(
-                            0x2e, 0xcc, 0x71,
-                        ))),
+                        background: Some(iced::Background::Color(led_color)),
                         border: iced::Border {
+                            color: led_border_color,
+                            width: 0.8,
                             radius: 5.0.into(),
-                            ..Default::default()
                         },
                         ..Default::default()
                     }),
             )
             .padding(1)
             .style(self.theme.button_style(false))
-            .on_press(UiMessage::ToggleTrackMute(
-                chan.target_mixer_track.saturating_sub(1),
-            ));
+            .on_press(UiMessage::ToggleTrackMute(trk_idx));
 
             // Pan mini rotary knob (FL style bipolar dial)
             let pan_knob = crate::ui::canvas_knob::rotary_knob(
@@ -4347,24 +4401,46 @@ impl CrystalWaveApp {
                 },
             );
 
-            // Target Mixer Track spinbox
+            // Target Mixer Track spinbox (authentic sunken number box)
             let track_num = chan.target_mixer_track;
-            let track_dec = button(text("◀").size(7)).padding(1).on_press(
-                UiMessage::ChannelRackSetTargetMixerTrack {
-                    channel_id: chan_id,
-                    track: track_num.saturating_sub(1).max(1),
+            let track_spinbox = container(
+                row![
+                    button(text("‹").size(7).color(Color::from_rgb8(0x70, 0x78, 0x8a)))
+                        .padding([0, 2])
+                        .style(|_t, _s| button::Style::default())
+                        .on_press(UiMessage::ChannelRackSetTargetMixerTrack {
+                            channel_id: chan_id,
+                            track: track_num.saturating_sub(1).max(1),
+                        }),
+                    container(
+                        text(format!("{:02}", track_num))
+                            .size(9)
+                            .color(Color::from_rgb8(0xd0, 0xd6, 0xe2))
+                            .font(iced::Font::with_name("monospace")),
+                    )
+                    .width(Length::Fixed(16.0))
+                    .align_x(iced::Alignment::Center),
+                    button(text("›").size(7).color(Color::from_rgb8(0x70, 0x78, 0x8a)))
+                        .padding([0, 2])
+                        .style(|_t, _s| button::Style::default())
+                        .on_press(UiMessage::ChannelRackSetTargetMixerTrack {
+                            channel_id: chan_id,
+                            track: (track_num + 1).min(125),
+                        }),
+                ]
+                .spacing(0)
+                .align_y(iced::Alignment::Center),
+            )
+            .style(|_t| container::Style {
+                background: Some(iced::Background::Color(Color::from_rgb8(0x15, 0x17, 0x1d))),
+                border: iced::Border {
+                    color: Color::from_rgb8(0x28, 0x2b, 0x35),
+                    width: 1.0,
+                    radius: 3.0.into(),
                 },
-            );
-            let track_txt = text(format!("{:02}", track_num)).size(9);
-            let track_inc = button(text("▶").size(7)).padding(1).on_press(
-                UiMessage::ChannelRackSetTargetMixerTrack {
-                    channel_id: chan_id,
-                    track: (track_num + 1).min(125),
-                },
-            );
-            let track_spinbox = row![track_dec, track_txt, track_inc]
-                .spacing(1)
-                .align_y(iced::Alignment::Center);
+                ..Default::default()
+            })
+            .padding([1, 2]);
 
             // Channel button (authentic FL rounded pill with left LED dot)
             let chan_btn = button(
@@ -4627,21 +4703,21 @@ impl CrystalWaveApp {
         ]
         .spacing(6);
 
-        let tab_smp = button(text("SMP").size(9))
+        let tab_smp = button(text("〰 SMP").size(9))
             .style(self.theme.button_style(
                 self.wrapper_state.active_tab == crate::fl_studio::wrapper::WrapperTab::Sampler,
             ))
             .on_press(UiMessage::WrapperSetTab(
                 crate::fl_studio::wrapper::WrapperTab::Sampler,
             ));
-        let tab_env = button(text("ENV").size(9))
+        let tab_env = button(text("☊ ENV").size(9))
             .style(self.theme.button_style(
                 self.wrapper_state.active_tab == crate::fl_studio::wrapper::WrapperTab::Envelope,
             ))
             .on_press(UiMessage::WrapperSetTab(
                 crate::fl_studio::wrapper::WrapperTab::Envelope,
             ));
-        let tab_misc = button(text("MISC").size(9))
+        let tab_misc = button(text("🔧 MISC").size(9))
             .style(self.theme.button_style(
                 self.wrapper_state.active_tab == crate::fl_studio::wrapper::WrapperTab::Misc,
             ))
@@ -4654,12 +4730,23 @@ impl CrystalWaveApp {
         let tab_content = match self.wrapper_state.active_tab {
             crate::fl_studio::wrapper::WrapperTab::Sampler => {
                 let wave_preview = crate::ui::canvas_knob::sample_preview_waveform(
-                    280.0,
-                    46.0,
+                    340.0,
+                    56.0,
                     false,
                     0.0,
                     Color::from_rgb8(0x00, 0xf2, 0xfe),
                 );
+                let sample_info_bar = row![
+                    text("130.003 BPM").size(8).color(Color::from_rgb8(0xd0, 0x8a, 0x20)),
+                    text("44100 Hz | 32-bit Float | Stereo")
+                        .size(8)
+                        .color(Color::from_rgb8(0x8a, 0x94, 0xa6)),
+                    Space::new().width(Length::Fill),
+                    text("Loop: Forward").size(8).color(Color::from_rgb8(0x2e, 0xcc, 0x71)),
+                ]
+                .padding([1, 4])
+                .align_y(iced::Alignment::Center);
+
                 let precalc_fx = row![
                     button(text("NORM").size(8))
                         .padding([2, 5])
@@ -4687,7 +4774,7 @@ impl CrystalWaveApp {
                 .align_y(iced::Alignment::Center);
 
                 column![
-                    container(wave_preview)
+                    container(column![wave_preview, sample_info_bar].spacing(2))
                         .padding(2)
                         .style(|_t| self.theme.inner_well_style()),
                     row![
