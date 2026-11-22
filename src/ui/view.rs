@@ -1013,42 +1013,40 @@ impl CrystalWaveApp {
 
         let time_lcd = container(
             column![
-                text(format!("{:03} : {:02} : {:03}", bar, beat, tick)).size(10),
+                text(format!("{:03}:{:02}:{:03}", bar, beat, tick))
+                    .size(14)
+                    .color(Color::from_rgb8(0xff, 0xb3, 0x00))
+                    .font(iced::Font::with_name("monospace")),
                 text(format!(
-                    "SMPTE {:02}:{:02}:{:02}.{:03}",
+                    "{:02}:{:02}:{:02}.{:02}",
                     mins / 60,
                     mins % 60,
                     secs,
-                    millis
+                    millis / 10
                 ))
-                .size(8),
+                .size(9)
+                .color(Color::from_rgb8(0xd0, 0x8a, 0x20)),
             ]
             .spacing(1),
         )
         .style(|_t| self.theme.vfd_amber_display_style())
-        .padding(2);
+        .padding([3, 5]);
 
-        // Master Volume & Pitch Rotary Dials
-        let master_vol_knob = crate::ui::canvas_knob::rotary_knob(
-            18.0,
-            0.0,
-            1.25,
-            self.master_volume,
-            false,
-            Color::from_rgb8(0x2e, 0xcc, 0x71),
-            UiMessage::SetMasterVolume,
-        );
+        // Master Volume & Pitch Vertical Sliders (1:1 with FL Studio ref_02)
+        let master_vol_slider =
+            vertical_slider(0.0..=1.25, self.master_volume, UiMessage::SetMasterVolume)
+                .step(0.01_f32)
+                .width(14.0)
+                .height(Length::Fixed(28.0));
         let master_vol_txt = text(format!("{:.0}%", self.master_volume * 100.0)).size(7);
 
-        let master_pitch_knob = crate::ui::canvas_knob::rotary_knob(
-            18.0,
-            -1200.0,
-            1200.0,
-            self.master_pitch_cents as f32,
-            true,
-            self.theme.accent,
-            |c| UiMessage::SetMasterPitchCents(c.round() as i32),
-        );
+        let master_pitch_slider =
+            vertical_slider(-1200.0..=1200.0, self.master_pitch_cents as f32, |c| {
+                UiMessage::SetMasterPitchCents(c.round() as i32)
+            })
+            .step(10.0_f32)
+            .width(14.0)
+            .height(Length::Fixed(28.0));
         let master_pitch_txt = text(if self.master_pitch_cents == 0 {
             "0 ct".to_string()
         } else {
@@ -1060,14 +1058,14 @@ impl CrystalWaveApp {
             row![
                 column![
                     text("VOL").size(6).color(self.theme.text_muted),
-                    master_vol_knob,
+                    master_vol_slider,
                     master_vol_txt
                 ]
                 .align_x(iced::Alignment::Center)
                 .spacing(1),
                 column![
                     text("PITCH").size(6).color(self.theme.text_muted),
-                    master_pitch_knob,
+                    master_pitch_slider,
                     master_pitch_txt
                 ]
                 .align_x(iced::Alignment::Center)
@@ -1083,22 +1081,34 @@ impl CrystalWaveApp {
         let tempo_lcd = container(
             column![
                 text(format!(
-                    "{:.2} BPM  {}/{}",
-                    self.workspace.lcd_diagnostic.project_tempo_bpm,
-                    self.workspace.lcd_diagnostic.time_signature.0,
-                    self.workspace.lcd_diagnostic.time_signature.1
+                    "{:.2}",
+                    self.workspace.lcd_diagnostic.project_tempo_bpm
                 ))
-                .size(10),
+                .size(18)
+                .color(Color::from_rgb8(0x00, 0xff, 0xd4))
+                .font(iced::Font::with_name("monospace")),
+                row![
+                    text("BPM").size(8).color(Color::from_rgb8(0x00, 0xc0, 0xa0)),
+                    text(format!(
+                        "  {}/{}",
+                        self.workspace.lcd_diagnostic.time_signature.0,
+                        self.workspace.lcd_diagnostic.time_signature.1
+                    ))
+                    .size(8)
+                    .color(Color::from_rgb8(0x00, 0xc0, 0xa0)),
+                ]
+                .spacing(0),
                 text(format!(
-                    "KEY: C min | A4: {:.1} Hz",
+                    "A4: {:.0} Hz",
                     self.workspace.lcd_diagnostic.master_tuning_hz
                 ))
-                .size(8),
+                .size(7)
+                .color(Color::from_rgb8(0x00, 0x90, 0x78)),
             ]
             .spacing(1),
         )
         .style(|_t| self.theme.vfd_cyan_display_style())
-        .padding(2);
+        .padding([3, 6]);
 
         let btn_tap = button(text("TAP").size(8))
             .padding(2)
@@ -2145,18 +2155,20 @@ impl CrystalWaveApp {
 
         let note_color_capsule = container(
             row![
-                container(text("COLOR").size(8).color(Color::from_rgb8(0x10, 0x20, 0x15)))
-                    .padding([2, 5])
-                    .style(|_t| container::Style {
-                        background: Some(iced::Background::Color(Color::from_rgb8(
-                            0x59, 0xd0, 0x8a,
-                        ))),
-                        border: iced::Border {
-                            radius: 3.0.into(),
-                            ..Default::default()
-                        },
+                container(
+                    text("COLOR")
+                        .size(8)
+                        .color(Color::from_rgb8(0x10, 0x20, 0x15))
+                )
+                .padding([2, 5])
+                .style(|_t| container::Style {
+                    background: Some(iced::Background::Color(Color::from_rgb8(0x59, 0xd0, 0x8a,))),
+                    border: iced::Border {
+                        radius: 3.0.into(),
                         ..Default::default()
-                    }),
+                    },
+                    ..Default::default()
+                }),
                 button(text("◿ Slide").size(8))
                     .padding([1, 4])
                     .style(self.theme.button_style(false)),
